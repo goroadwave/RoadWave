@@ -149,7 +149,7 @@ const INTEREST_EMOJI = Object.fromEntries(INTERESTS.map((i) => [i.slug, i.emoji]
 // ----------------------------------------------------------------------------
 
 export default function DemoPage() {
-  const [view, setView] = useState('welcome') // welcome | guest | owner
+  const [view, setView] = useState('welcome') // welcome | guest
 
   return (
     <>
@@ -175,13 +175,9 @@ export default function DemoPage() {
 
           <PhoneFrame>
             {view === 'welcome' && (
-              <WelcomeScreen
-                onGuest={() => setView('guest')}
-                onOwner={() => setView('owner')}
-              />
+              <WelcomeScreen onGuest={() => setView('guest')} />
             )}
             {view === 'guest' && <GuestApp onExit={() => setView('welcome')} />}
-            {view === 'owner' && <OwnerApp onExit={() => setView('welcome')} />}
           </PhoneFrame>
 
           <button
@@ -240,7 +236,7 @@ function PhoneFrame({ children }) {
 // Welcome
 // ----------------------------------------------------------------------------
 
-function WelcomeScreen({ onGuest, onOwner }) {
+function WelcomeScreen({ onGuest }) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 py-10 text-center gap-5">
       <Logo size="text-4xl" />
@@ -253,7 +249,7 @@ function WelcomeScreen({ onGuest, onOwner }) {
         Invisible when you do not.
       </p>
 
-      <div className="w-full pt-4 space-y-2.5">
+      <div className="w-full pt-4">
         <button
           type="button"
           onClick={onGuest}
@@ -261,17 +257,10 @@ function WelcomeScreen({ onGuest, onOwner }) {
         >
           Try as Guest <span aria-hidden>👋</span>
         </button>
-        <button
-          type="button"
-          onClick={onOwner}
-          className="w-full rounded-xl border border-white/15 bg-white/5 text-cream px-4 py-3 font-semibold hover:bg-white/10 transition-colors"
-        >
-          View Owner Dashboard
-        </button>
       </div>
 
       <p className="pt-3 text-[11px] text-mist/80 max-w-[260px]">
-        Switch any time — this is a sandbox with realistic but fake data.
+        A sandbox with realistic but fake data.
       </p>
     </div>
   )
@@ -888,283 +877,6 @@ function CrossedPathsScreen({ waved }) {
   )
 }
 
-// ----------------------------------------------------------------------------
-// Owner dashboard
-// ----------------------------------------------------------------------------
-
-function OwnerApp({ onExit }) {
-  const [tab, setTab] = useState('overview')
-  return (
-    <div className="flex h-full flex-col">
-      <AppHeader
-        onExit={onExit}
-        right={
-          <span className="rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-flame">
-            Host
-          </span>
-        }
-      />
-
-      <div className="px-4 pt-3">
-        <Eyebrow>Riverbend RV Park · Owner view</Eyebrow>
-        <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
-          Dashboard
-        </h1>
-        <p className="font-serif italic text-flame text-sm leading-snug">
-          Who&apos;s here. What&apos;s on. How it&apos;s going.
-        </p>
-      </div>
-
-      <nav className="px-4 pt-3 pb-2 grid grid-cols-4 gap-1 text-[11px]">
-        {[
-          ['overview', 'Overview'],
-          ['guests', 'Guests'],
-          ['meetups', 'Meetups'],
-          ['stats', 'Stats'],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={
-              tab === id
-                ? 'rounded-md bg-flame/15 text-flame px-2 py-1.5 font-semibold'
-                : 'rounded-md text-mist px-2 py-1.5 hover:text-cream'
-            }
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-
-      <div className="flex-1 overflow-y-auto px-4 pb-6">
-        {tab === 'overview' && <OwnerOverview />}
-        {tab === 'guests' && <OwnerGuests />}
-        {tab === 'meetups' && <OwnerMeetups />}
-        {tab === 'stats' && <OwnerStats />}
-      </div>
-    </div>
-  )
-}
-
-function OwnerOverview() {
-  return (
-    <div className="space-y-3 py-2">
-      <div className="grid grid-cols-2 gap-2">
-        <Stat label="Active guests" value={SAMPLE_CAMPERS.length} />
-        <Stat label="Today's meetups" value={MEETUPS.length} />
-        <Stat label="Avg. stay (h)" value="19" />
-        <Stat label="Mutual waves" value="11" />
-      </div>
-
-      <Section eyebrow="Tonight's meetups">
-        <ul className="space-y-2">
-          {MEETUPS.slice(0, 2).map((m) => (
-            <li
-              key={m.id}
-              className="rounded-xl border border-white/5 bg-card p-3 shadow shadow-black/20"
-            >
-              <p className="text-sm font-semibold text-cream">{m.title}</p>
-              <p className="text-[11px] text-mist mt-0.5">{m.time}</p>
-              <p className="text-[11px] text-cream/85 mt-0.5">{m.location}</p>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <Section eyebrow="Recent activity">
-        <ul className="space-y-1.5">
-          <ActivityRow text="@rolling_pines checked in" minutes={3} />
-          <ActivityRow text="@wandering_alex waved at @rolling_pines" minutes={12} />
-          <ActivityRow text="@browns_on_road posted to crossed paths" minutes={42} />
-          <ActivityRow text="Meetup 'Sunset campfire' got 4 RSVPs" minutes={55} />
-        </ul>
-      </Section>
-    </div>
-  )
-}
-
-function ActivityRow({ text, minutes }) {
-  return (
-    <li className="flex items-center justify-between rounded-lg bg-card/60 border border-white/5 px-3 py-1.5">
-      <span className="text-xs text-cream">{text}</span>
-      <span className="text-[10px] text-mist">{minutes}m</span>
-    </li>
-  )
-}
-
-function Stat({ label, value }) {
-  return (
-    <div className="rounded-xl border border-white/5 bg-card p-3 shadow shadow-black/20">
-      <p className="text-[10px] uppercase tracking-wide text-mist">{label}</p>
-      <p className="font-display text-2xl font-extrabold text-cream leading-none mt-0.5">
-        {value}
-      </p>
-    </div>
-  )
-}
-
-function OwnerGuests() {
-  return (
-    <div className="space-y-2 py-2">
-      <Eyebrow>Currently checked in · {SAMPLE_CAMPERS.length}</Eyebrow>
-      <ul className="space-y-2">
-        {SAMPLE_CAMPERS.map((c) => (
-          <li
-            key={c.id}
-            className="rounded-2xl border border-white/5 bg-card p-3 shadow shadow-black/20"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-sm font-semibold text-cream">{c.name}</p>
-                <p className="text-[11px] text-mist">@{c.username}</p>
-                <span className="mt-1 inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[10px] font-semibold text-flame">
-                  {c.style}
-                </span>
-              </div>
-              <span className="text-[10px] text-mist">
-                {c.years}y RVing
-              </span>
-            </div>
-            <ul className="mt-2 flex flex-wrap gap-1">
-              {c.interests.slice(0, 4).map((slug) => (
-                <li
-                  key={slug}
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-cream"
-                >
-                  <span aria-hidden>{INTEREST_EMOJI[slug]}</span>
-                  {INTEREST_LABEL[slug]}
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function OwnerMeetups() {
-  return (
-    <div className="space-y-3 py-2">
-      <button
-        type="button"
-        className="w-full rounded-xl bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400"
-      >
-        + Post a meetup
-      </button>
-      <ul className="space-y-2">
-        {MEETUPS.map((m) => (
-          <li
-            key={m.id}
-            className="rounded-2xl border border-white/5 bg-card p-3 shadow shadow-black/20"
-          >
-            <p className="text-sm font-semibold text-cream leading-tight">{m.title}</p>
-            <p className="text-[11px] text-mist mt-0.5">{m.time}</p>
-            <span className="mt-1.5 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-cream">
-              {m.location}
-            </span>
-            <p className="mt-2 text-xs text-cream/85 leading-snug">{m.description}</p>
-            <div className="mt-2 flex items-center gap-2 text-[11px] text-mist">
-              <span>4 RSVPs</span>
-              <span>·</span>
-              <button type="button" className="text-flame underline-offset-2 hover:underline">
-                Edit
-              </button>
-              <span>·</span>
-              <button type="button" className="text-mist hover:text-red-300">
-                Delete
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function OwnerStats() {
-  // Compute interest popularity from SAMPLE_CAMPERS
-  const interestCounts = {}
-  for (const c of SAMPLE_CAMPERS) {
-    for (const slug of c.interests) {
-      interestCounts[slug] = (interestCounts[slug] ?? 0) + 1
-    }
-  }
-  const interestRows = Object.entries(interestCounts)
-    .map(([slug, count]) => ({ slug, count }))
-    .sort((a, b) => b.count - a.count)
-
-  // Compute travel style breakdown
-  const styleCounts = {}
-  for (const c of SAMPLE_CAMPERS) {
-    styleCounts[c.style] = (styleCounts[c.style] ?? 0) + 1
-  }
-  const styleRows = Object.entries(styleCounts)
-    .map(([style, count]) => ({ style, count }))
-    .sort((a, b) => b.count - a.count)
-
-  const total = SAMPLE_CAMPERS.length
-
-  return (
-    <div className="space-y-5 py-2">
-      <Section eyebrow="Top interests">
-        <ul className="space-y-1.5">
-          {interestRows.map((row) => (
-            <BarRow
-              key={row.slug}
-              label={
-                <span className="inline-flex items-center gap-1.5">
-                  <span aria-hidden>{INTEREST_EMOJI[row.slug]}</span>
-                  {INTEREST_LABEL[row.slug]}
-                </span>
-              }
-              count={row.count}
-              total={total}
-            />
-          ))}
-        </ul>
-      </Section>
-
-      <Section eyebrow="Travel style breakdown">
-        <ul className="space-y-1.5">
-          {styleRows.map((row) => (
-            <BarRow key={row.style} label={row.style} count={row.count} total={total} />
-          ))}
-        </ul>
-      </Section>
-
-      <Section eyebrow="Engagement (last 7 days)">
-        <div className="grid grid-cols-3 gap-2">
-          <Stat label="Check-ins" value="42" />
-          <Stat label="Waves" value="89" />
-          <Stat label="Matches" value="23" />
-        </div>
-      </Section>
-    </div>
-  )
-}
-
-function BarRow({ label, count, total }) {
-  const pct = Math.round((count / total) * 100)
-  return (
-    <li className="rounded-lg border border-white/5 bg-card/70 px-3 py-2">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-cream">{label}</span>
-        <span className="text-mist">
-          {count} · {pct}%
-        </span>
-      </div>
-      <div className="mt-1.5 h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
-        <div
-          className="h-full bg-flame"
-          style={{ width: `${Math.max(8, pct)}%` }}
-          aria-hidden
-        />
-      </div>
-    </li>
-  )
-}
 
 // ----------------------------------------------------------------------------
 // Shared bits

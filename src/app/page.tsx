@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Eyebrow } from '@/components/ui/eyebrow'
+import { FirstVisitRedirect } from '@/components/ui/first-visit-redirect'
 import { Logo } from '@/components/ui/logo'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -18,6 +19,7 @@ export default async function RootPage() {
   // Unauthed visitors see the landing hero.
   return (
     <>
+      <FirstVisitRedirect />
       <header className="px-4 py-5 flex items-center justify-between">
         <Logo className="text-2xl" />
         <Link

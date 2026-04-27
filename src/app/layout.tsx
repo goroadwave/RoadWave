@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, DM_Sans, Instrument_Serif } from 'next/font/google'
+import { FloatingTourButton } from '@/components/ui/floating-tour-button'
 import './globals.css'
 
 const bricolage = Bricolage_Grotesque({
@@ -41,7 +42,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={`${bricolage.variable} ${dmSans.variable} ${instrument.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-night text-cream font-sans">{children}</body>
+      <body className="min-h-full bg-night text-cream font-sans">
+        {children}
+        <FloatingTourButton />
+      </body>
     </html>
   )
 }
