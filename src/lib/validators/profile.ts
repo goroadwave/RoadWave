@@ -1,7 +1,9 @@
 import { z } from 'zod'
 import { INTERESTS } from '@/lib/constants/interests'
+import { TRAVEL_STYLES } from '@/lib/constants/travel-styles'
 
 const interestSlugs = INTERESTS.map((i) => i.slug) as [string, ...string[]]
+const travelStyleSlugs = TRAVEL_STYLES.map((t) => t.slug) as [string, ...string[]]
 
 const optionalText = (max: number) =>
   z
@@ -17,6 +19,12 @@ const optionalInt = (min: number, max: number) =>
     .transform((v) => (v === '' ? null : v))
     .nullable()
 
+const optionalTravelStyle = z
+  .preprocess(
+    (v) => (typeof v === 'string' && v.length > 0 ? v : null),
+    z.enum(travelStyleSlugs).nullable(),
+  )
+
 export const profileSchema = z.object({
   display_name: z.string().trim().min(1, 'Display name is required').max(40),
   rig_type: optionalText(60),
@@ -27,6 +35,7 @@ export const profileSchema = z.object({
   years_rving: optionalInt(0, 100),
   has_pets: z.boolean(),
   pet_info: optionalText(120),
+  travel_style: optionalTravelStyle,
   privacy_mode: z.enum(['visible', 'quiet', 'invisible']),
   share_rig_type: z.boolean(),
   share_miles_driven: z.boolean(),
@@ -35,6 +44,7 @@ export const profileSchema = z.object({
   share_note: z.boolean(),
   share_years: z.boolean(),
   share_pet: z.boolean(),
+  share_travel_style: z.boolean(),
   share_interests: z.boolean(),
   interest_slugs: z.array(z.enum(interestSlugs)).default([]),
 })

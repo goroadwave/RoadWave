@@ -27,6 +27,7 @@ export async function saveProfileAction(
     years_rving: formData.get('years_rving') ?? '',
     has_pets: formData.get('has_pets') === 'on',
     pet_info: formData.get('pet_info') ?? '',
+    travel_style: formData.get('travel_style') ?? '',
     privacy_mode: formData.get('privacy_mode'),
     share_rig_type: formData.get('share_rig_type') === 'on',
     share_miles_driven: formData.get('share_miles_driven') === 'on',
@@ -35,6 +36,7 @@ export async function saveProfileAction(
     share_note: formData.get('share_note') === 'on',
     share_years: formData.get('share_years') === 'on',
     share_pet: formData.get('share_pet') === 'on',
+    share_travel_style: formData.get('share_travel_style') === 'on',
     share_interests: formData.get('share_interests') === 'on',
     interest_slugs: formData.getAll('interest_slugs'),
   })

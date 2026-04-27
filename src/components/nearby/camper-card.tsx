@@ -1,6 +1,7 @@
 'use client'
 
 import { INTEREST_EMOJI, INTEREST_LABEL } from '@/lib/constants/interests'
+import { TRAVEL_STYLE_LABEL } from '@/lib/constants/travel-styles'
 import type { NearbyCamper } from '@/lib/types/db'
 import { WaveButton, type WaveState } from '@/components/waves/wave-button'
 
@@ -23,11 +24,20 @@ export function CamperCard({ camper, campgroundId, waveState }: Props) {
   if (camper.has_pets && camper.pet_info)
     pills.push({ label: 'Pets', value: camper.pet_info })
 
+  const styleLabel = camper.travel_style
+    ? TRAVEL_STYLE_LABEL[camper.travel_style] ?? camper.travel_style
+    : null
+
   return (
     <article className="flex h-full flex-col gap-3 rounded-2xl border border-white/5 bg-card p-4 shadow-lg shadow-black/20">
       <header>
         <h3 className="font-semibold text-cream leading-tight">{name}</h3>
         <p className="text-xs text-mist">@{camper.username}</p>
+        {styleLabel && (
+          <span className="mt-2 inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2.5 py-0.5 text-xs font-semibold text-flame">
+            {styleLabel}
+          </span>
+        )}
         {camper.status_tag && (
           <p className="mt-2 font-serif italic text-flame text-base sm:text-lg leading-snug">
             &ldquo;{camper.status_tag}&rdquo;

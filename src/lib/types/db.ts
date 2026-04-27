@@ -1,6 +1,17 @@
 export type PrivacyMode = 'visible' | 'quiet' | 'invisible'
 export type CheckInStatus = 'active' | 'expired' | 'departed'
 export type CampgroundRole = 'owner' | 'host'
+export type TravelStyle =
+  | 'full_timer'
+  | 'weekender'
+  | 'snowbird'
+  | 'seasonal_guest'
+  | 'camp_host'
+  | 'work_camper'
+  | 'solo_traveler'
+  | 'traveling_for_work'
+  | 'family_traveler'
+  | 'prefer_quiet'
 
 export interface Profile {
   id: string
@@ -14,6 +25,7 @@ export interface Profile {
   years_rving: number | null
   has_pets: boolean
   pet_info: string | null
+  travel_style: TravelStyle | null
   privacy_mode: PrivacyMode
   share_rig_type: boolean
   share_miles_driven: boolean
@@ -22,6 +34,7 @@ export interface Profile {
   share_note: boolean
   share_years: boolean
   share_pet: boolean
+  share_travel_style: boolean
   share_interests: boolean
   email_verified_at: string | null
   created_at: string
@@ -106,5 +119,6 @@ export interface NearbyCamper {
   years_rving: number | null
   has_pets: boolean | null
   pet_info: string | null
+  travel_style: string | null
   interests: string[] | null
 }

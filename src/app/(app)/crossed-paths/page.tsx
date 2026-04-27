@@ -3,6 +3,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { PageHeading } from '@/components/ui/page-heading'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { INTEREST_EMOJI, INTEREST_LABEL } from '@/lib/constants/interests'
+import { TRAVEL_STYLE_LABEL } from '@/lib/constants/travel-styles'
 
 type ProfileRow = {
   id: string
@@ -16,6 +17,7 @@ type ProfileRow = {
   years_rving: number | null
   has_pets: boolean
   pet_info: string | null
+  travel_style: string | null
   share_rig_type: boolean
   share_miles_driven: boolean
   share_hometown: boolean
@@ -23,6 +25,7 @@ type ProfileRow = {
   share_note: boolean
   share_years: boolean
   share_pet: boolean
+  share_travel_style: boolean
   share_interests: boolean
 }
 
@@ -63,7 +66,7 @@ export default async function CrossedPathsPage() {
   const { data: profiles } = await supabase
     .from('profiles')
     .select(
-      'id, username, display_name, rig_type, miles_driven, hometown, status_tag, personal_note, years_rving, has_pets, pet_info, share_rig_type, share_miles_driven, share_hometown, share_status, share_note, share_years, share_pet, share_interests',
+      'id, username, display_name, rig_type, miles_driven, hometown, status_tag, personal_note, years_rving, has_pets, pet_info, travel_style, share_rig_type, share_miles_driven, share_hometown, share_status, share_note, share_years, share_pet, share_travel_style, share_interests',
     )
     .in('id', otherIds)
 
@@ -166,12 +169,22 @@ function CrossedPathCard({
   if (profile.share_pet && profile.has_pets && profile.pet_info)
     pills.push({ label: 'Pets', value: profile.pet_info })
 
+  const styleLabel =
+    profile.share_travel_style && profile.travel_style
+      ? TRAVEL_STYLE_LABEL[profile.travel_style] ?? profile.travel_style
+      : null
+
   return (
     <article className="rounded-2xl border border-flame/30 bg-card p-4 shadow-lg shadow-black/20">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-semibold text-cream leading-tight">{name}</h3>
           <p className="text-xs text-mist">@{profile.username}</p>
+          {styleLabel && (
+            <span className="mt-2 inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2.5 py-0.5 text-xs font-semibold text-flame">
+              {styleLabel}
+            </span>
+          )}
         </div>
         <span className="inline-flex items-center gap-1 rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-xs font-semibold text-flame">
           <span aria-hidden>👋</span> Crossed paths

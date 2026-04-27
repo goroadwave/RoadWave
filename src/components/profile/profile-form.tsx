@@ -7,6 +7,7 @@ import {
   type ProfileSaveState,
 } from '@/app/(app)/profile/setup/actions'
 import { Eyebrow } from '@/components/ui/eyebrow'
+import { TRAVEL_STYLES } from '@/lib/constants/travel-styles'
 import type { Profile, PrivacyMode } from '@/lib/types/db'
 
 const initialState: ProfileSaveState = { error: null, ok: false }
@@ -20,6 +21,7 @@ type Props = {
 export function ProfileForm({ profile, interests, myInterestSlugs }: Props) {
   const [state, formAction, pending] = useActionState(saveProfileAction, initialState)
   const [hasPets, setHasPets] = useState(profile?.has_pets ?? false)
+  const [travelStyle, setTravelStyle] = useState<string>(profile?.travel_style ?? '')
 
   return (
     <form action={formAction} className="space-y-8">
@@ -37,7 +39,7 @@ export function ProfileForm({ profile, interests, myInterestSlugs }: Props) {
         </FieldRow>
       </Section>
 
-      <Section eyebrow="Travel style" hint="Each row has its own share toggle.">
+      <Section eyebrow="About your rig" hint="Each row has its own share toggle.">
         <ToggleRow
           label="Rig type"
           name="rig_type"
@@ -74,6 +76,38 @@ export function ProfileForm({ profile, interests, myInterestSlugs }: Props) {
           type="number"
           placeholder="0"
         />
+      </Section>
+
+      <Section eyebrow="Travel style" hint="Pick the one that fits best. Click again to clear.">
+        <FieldRow>
+          <ShareToggle
+            name="share_travel_style"
+            defaultChecked={profile?.share_travel_style ?? true}
+            label="Share my travel style"
+          />
+        </FieldRow>
+        <input type="hidden" name="travel_style" value={travelStyle} />
+        <div className="flex flex-wrap gap-2 mt-2">
+          {TRAVEL_STYLES.map((t) => {
+            const active = travelStyle === t.slug
+            return (
+              <button
+                key={t.slug}
+                type="button"
+                onClick={() =>
+                  setTravelStyle((prev) => (prev === t.slug ? '' : t.slug))
+                }
+                className={
+                  active
+                    ? 'rounded-full bg-flame px-3 py-1.5 text-sm font-semibold text-night shadow-md shadow-flame/20'
+                    : 'rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-cream hover:border-flame/40'
+                }
+              >
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
       </Section>
 
       <Section eyebrow="Right now">
