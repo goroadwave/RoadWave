@@ -17,7 +17,7 @@ export default async function RootPage() {
 
   // Unauthed visitors see the landing hero.
   return (
-    <div className="min-h-screen flex flex-col">
+    <>
       <header className="px-4 py-5 flex items-center justify-between">
         <Logo className="text-2xl" />
         <Link
@@ -28,8 +28,8 @@ export default async function RootPage() {
         </Link>
       </header>
 
-      <main className="flex-1 flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-xl text-center space-y-6">
+      <main className="px-4 pt-10 pb-12 sm:pt-16 sm:pb-20">
+        <div className="w-full max-w-xl mx-auto text-center space-y-6">
           <Eyebrow>Made for the campground</Eyebrow>
           <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
             Pull into camp.
@@ -67,9 +67,9 @@ export default async function RootPage() {
         </div>
       </main>
 
-      <footer className="px-4 py-6 text-center text-xs text-mist/70">
+      <footer className="px-4 pb-6 text-center text-xs text-mist/70">
         <p>Privacy-first campground connections for RVers.</p>
       </footer>
-    </div>
+    </>
   )
 }
