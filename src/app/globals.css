@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-bricolage);
+  --font-serif: var(--font-instrument);
+
+  --color-night: #0a0f1c;
+  --color-card: #131a2e;
+  --color-flame: #f59e0b;
+  --color-ember: #c2410c;
+  --color-cream: #f5ecd9;
+  --color-mist: #94a3b8;
+  --color-leaf: #22c55e;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-night);
+  color: var(--color-cream);
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--color-flame);
+  color: var(--color-night);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+@keyframes wave {
+  0%, 60%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-8deg); }
+  30% { transform: rotate(14deg); }
+  40% { transform: rotate(-4deg); }
+  50% { transform: rotate(10deg); }
+}
+
+.wave-emoji {
+  display: inline-block;
+  animation: wave 2.8s ease-in-out infinite;
+  transform-origin: 70% 70%;
+  margin: 0 -1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave-emoji {
+    animation: none;
+  }
+}
