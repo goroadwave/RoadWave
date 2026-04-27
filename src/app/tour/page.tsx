@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Volume2, VolumeX } from 'lucide-react'
 
 type Mood =
   | 'curious'
@@ -82,6 +83,8 @@ const SLIDES: Slide[] = [
 
 export default function TourPage() {
   const [index, setIndex] = useState(0)
+  const [muted, setMuted] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const total = SLIDES.length
   const slide = SLIDES[index]
 
@@ -101,6 +104,81 @@ export default function TourPage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [next, prev])
+
+  // Hydrate mute preference + reduced-motion default from localStorage / OS.
+  useEffect(() => {
+    const stored = localStorage.getItem('roadwave-tour-muted')
+    const shouldMute =
+      stored === 'true' ||
+      (stored === null &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+    if (shouldMute) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration from a non-React store
+      setMuted(true)
+    }
+  }, [])
+
+  // Persist mute toggle.
+  useEffect(() => {
+    localStorage.setItem('roadwave-tour-muted', String(muted))
+  }, [muted])
+
+  // Speak the current slide whenever it changes (or unmute fires).
+  useEffect(() => {
+    // Stop any audio from the previous slide.
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+    }
+    if (muted) return
+
+    const controller = new AbortController()
+    let cancelled = false
+    let blobUrl: string | null = null
+    let audio: HTMLAudioElement | null = null
+
+    ;(async () => {
+      try {
+        const res = await fetch('/api/speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: `${slide.title} ${slide.body}` }),
+          signal: controller.signal,
+        })
+        if (cancelled || !res.ok) return
+        const blob = await res.blob()
+        if (cancelled) return
+        blobUrl = URL.createObjectURL(blob)
+        audio = new Audio(blobUrl)
+        audioRef.current = audio
+        const cleanup = () => {
+          if (blobUrl) {
+            URL.revokeObjectURL(blobUrl)
+            blobUrl = null
+          }
+        }
+        audio.addEventListener('ended', cleanup)
+        audio.addEventListener('error', cleanup)
+        // Autoplay may be blocked until the user interacts; that's fine.
+        await audio.play().catch(() => {})
+      } catch {
+        // Aborted, network error, or upstream failure — fail silently.
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      controller.abort()
+      if (audio) {
+        audio.pause()
+      }
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl)
+        blobUrl = null
+      }
+      audioRef.current = null
+    }
+  }, [slide.id, slide.title, slide.body, muted])
 
   const isLast = index === total - 1
 
@@ -128,9 +206,20 @@ export default function TourPage() {
         >
           ← Exit
         </Link>
-        <span className="text-xs text-mist tabular-nums">
-          {index + 1} / {total}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-mist tabular-nums">
+            {index + 1} / {total}
+          </span>
+          <button
+            type="button"
+            onClick={() => setMuted((m) => !m)}
+            className="grid h-8 w-8 place-items-center rounded-full text-mist hover:text-cream hover:bg-white/5 transition-colors"
+            aria-label={muted ? 'Unmute narration' : 'Mute narration'}
+            aria-pressed={muted}
+          >
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </button>
+        </div>
       </header>
 
       {/* Slide content */}
