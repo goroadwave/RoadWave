@@ -30,17 +30,19 @@ export default async function RootPage() {
 
       <main className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-xl text-center space-y-6">
-          <Eyebrow>Welcome to RoadWave</Eyebrow>
+          <Eyebrow>Made for the campground</Eyebrow>
           <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
-            Connections without the surveillance.
+            Pull into camp.
+            <br />
+            Find your people.
           </h1>
 
           <div className="space-y-1">
             <p className="font-serif italic text-flame text-xl sm:text-2xl leading-snug">
-              Meet the right neighbors without making it weird.
+              Coffee at sunrise. Campfire at dusk. New friends at the next site over.
             </p>
             <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
-              Open when you want. Invisible when you do not.
+              Wave when the vibe&apos;s right. Stay parked when it isn&apos;t.
             </p>
           </div>
 
@@ -60,7 +62,7 @@ export default async function RootPage() {
           </div>
 
           <p className="pt-2 text-sm text-mist">
-            No account needed for the demo. It&apos;s a sandbox with mock data.
+            Take a quick tour — the demo runs on mock data, no signup needed.
           </p>
         </div>
       </main>
