@@ -24,7 +24,7 @@ export default async function RootPage() {
         <Logo className="text-2xl" />
         <Link
           href="/login"
-          className="text-sm font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
+          className="rounded-lg border border-white/15 bg-white/5 text-cream px-4 py-1.5 text-sm font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors"
         >
           Sign in
         </Link>
