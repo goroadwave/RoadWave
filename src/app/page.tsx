@@ -65,10 +65,10 @@ export default async function RootPage() {
                 activities, or meeting around shared interests.
               </p>
               <Link
-                href="/signup"
+                href="/demo"
                 className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
               >
-                Join the Waitlist <span aria-hidden>👋</span>
+                Try the Demo <span aria-hidden>👋</span>
               </Link>
             </article>
 
@@ -236,22 +236,22 @@ export default async function RootPage() {
           </div>
         </section>
 
-        {/* Waitlist CTA */}
+        {/* Get started CTA */}
         <section className="px-4 py-16 border-t border-flame/30 bg-flame/[0.06]">
           <div className="mx-auto max-w-xl text-center space-y-5">
-            <Eyebrow>Join the waitlist</Eyebrow>
+            <Eyebrow>Get started</Eyebrow>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
               Ready to find your people?
             </h2>
             <p className="font-serif italic text-flame text-lg sm:text-xl leading-snug">
-              Be first to wave when RoadWave rolls into your campground.
+              Try the demo, or jump straight in and create your account.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
               <Link
                 href="/signup"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
               >
-                Join the Waitlist <span aria-hidden>👋</span>
+                Get Started <span aria-hidden>👋</span>
               </Link>
               <Link
                 href="/demo"

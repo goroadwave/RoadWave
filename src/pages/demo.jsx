@@ -267,6 +267,7 @@ const INTEREST_EMOJI = Object.fromEntries(INTERESTS.map((i) => [i.slug, i.emoji]
 
 export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) {
   const [view, setView] = useState('welcome') // welcome | guest
+  const [bannerDismissed, setBannerDismissed] = useState(false)
 
   return (
     <>
@@ -279,7 +280,7 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
       </Head>
 
       <main className="min-h-screen bg-night text-cream font-sans">
-        <div className="mx-auto max-w-5xl px-4 py-10 flex flex-col items-center gap-8">
+        <div className="mx-auto max-w-5xl px-4 py-10 pb-28 flex flex-col items-center gap-8">
           <header className="text-center space-y-3">
             <Logo size="text-4xl sm:text-5xl" />
             <p className="font-serif italic text-flame text-lg sm:text-xl">
@@ -311,6 +312,27 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
           </button>
         </div>
       </main>
+
+      {!bannerDismissed && (
+        <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:pb-4">
+          <div className="mx-auto max-w-3xl flex items-center gap-2 rounded-2xl border border-flame/40 bg-flame text-night px-4 py-3 shadow-2xl shadow-black/50">
+            <a
+              href="/signup"
+              className="flex-1 font-semibold text-sm sm:text-base hover:underline"
+            >
+              Love what you see? Create your free account →
+            </a>
+            <button
+              type="button"
+              onClick={() => setBannerDismissed(true)}
+              aria-label="Dismiss"
+              className="shrink-0 grid h-7 w-7 place-items-center rounded-full text-night/70 hover:bg-night/10 hover:text-night transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }

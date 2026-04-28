@@ -87,7 +87,7 @@ const STEPS = [
   },
   {
     id: "done",
-    speech: "And that's RoadWave! Check in, set your vibe, meet your neighbors — or don't, totally up to you. Ready to hit the road? Tap Get Started and let's go!",
+    speech: "And that's RoadWave! Check in, set your vibe, meet your neighbors — or don't, totally up to you. Ready to hit the road? Try the demo, or create your account and let's go!",
     screen: "home",
     highlight: "none",
     bubble: null,
@@ -427,7 +427,10 @@ export default function RileyWalkthrough() {
         <div style={{ color: "#6b7280", fontSize: "10px" }}>{stepIdx+1} / {STEPS.length}</div>
         {stepIdx < STEPS.length-1
           ? <button onClick={next} style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)", border: "none", borderRadius: "10px", padding: "7px 18px", color: "#0a0f1c", fontSize: "12px", fontWeight: "700", cursor: "pointer", fontFamily: "Georgia" }}>Next →</button>
-          : <a href="/signup" style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)", border: "none", borderRadius: "10px", padding: "7px 14px", color: "white", fontSize: "11px", fontWeight: "700", textDecoration: "none", fontFamily: "Georgia" }}>Get Started! 🏕️</a>
+          : <div style={{ display: "flex", gap: "6px" }}>
+              <a href="/demo" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "7px 12px", color: "white", fontSize: "11px", fontWeight: "700", textDecoration: "none", fontFamily: "Georgia" }}>Try the Demo</a>
+              <a href="/signup" style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)", border: "none", borderRadius: "10px", padding: "7px 12px", color: "white", fontSize: "11px", fontWeight: "700", textDecoration: "none", fontFamily: "Georgia" }}>Create Your Account</a>
+            </div>
         }
       </div>
 
