@@ -9,7 +9,6 @@ export function CheckInControls() {
   const router = useRouter()
   const [scanError, setScanError] = useState<string | null>(null)
   const [pasteValue, setPasteValue] = useState('')
-  const [scannerOpen, setScannerOpen] = useState(false)
 
   function handleScanResult(scanned: string) {
     const token = extractToken(scanned)
@@ -17,7 +16,6 @@ export function CheckInControls() {
       setScanError("That QR doesn't look like a RoadWave check-in.")
       return
     }
-    setScannerOpen(false)
     router.push(`/checkin?token=${token}`)
   }
 
@@ -34,24 +32,8 @@ export function CheckInControls() {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-white/5 bg-card p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-cream">Scan a campground QR</h2>
-          <button
-            type="button"
-            onClick={() => {
-              setScannerOpen((v) => !v)
-              setScanError(null)
-            }}
-            className="text-sm font-semibold text-flame underline-offset-2 hover:underline"
-          >
-            {scannerOpen ? 'Stop' : 'Start camera'}
-          </button>
-        </div>
-        {scannerOpen && (
-          <div className="mt-3">
-            <QrScanner onResult={handleScanResult} onError={setScanError} />
-          </div>
-        )}
+        <h2 className="mb-3 font-semibold text-cream">Scan a campground QR</h2>
+        <QrScanner onResult={handleScanResult} onError={setScanError} />
       </div>
 
       <div className="rounded-2xl border border-white/5 bg-card p-4">
