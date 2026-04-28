@@ -38,7 +38,7 @@ const SLIDES: Slide[] = [
     id: 'arrive',
     title: 'You Just Pulled In',
     narration:
-      "You just pulled into a new campground. New scenery, new neighbors. Let me walk you through what RoadWave can do for you.",
+      "Hey there, neighbor! I'm Riley — your RoadWave campground host. Pull up a chair, because I'm about to show you everything this app can do. It's gonna make your whole camping experience feel like coming home.",
   },
   {
     id: 'vibe',
