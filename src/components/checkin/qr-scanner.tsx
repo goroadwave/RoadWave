@@ -1,217 +1,238 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Props = {
   onResult: (text: string) => void
   onError?: (message: string) => void
 }
 
-// 'idle'    — initial; shows "Scan QR Code" button
-// 'reading' — file picker returned, decode in progress
-// 'error'   — last decode failed; user can retry
-type Phase = 'idle' | 'reading' | 'error'
+// 'idle'        — initial; shows the "Allow Camera Access" button
+// 'starting'    — getUserMedia in flight, native permission prompt visible
+// 'scanning'    — stream is live, BarcodeDetector loop running
+// 'denied'      — user said no to permission
+// 'unsupported' — browser missing getUserMedia or BarcodeDetector
+// 'error'       — anything else (no rear camera, hardware failure, etc.)
+type State = 'idle' | 'starting' | 'scanning' | 'denied' | 'unsupported' | 'error'
 
-// File-based QR scanner. Uses a hidden <input type="file" capture="environment">
-// which on phones opens the native camera UI, and on desktop opens the file
-// picker. Once an image is selected we draw it into a canvas and decode with
-// jsQR. This avoids getUserMedia permissions entirely, which is the only way
-// QR scanning works in iOS Chrome (Apple disallows getUserMedia in 3rd-party
-// browsers there) and the most reliable path on Android Chrome too.
+// Live camera + native QR detection. Calls navigator.mediaDevices.getUserMedia
+// directly on the user's tap (synchronous from the gesture's perspective —
+// what iOS Safari 17+ requires to show its permission prompt). Decoding uses
+// the native BarcodeDetector API. If either is missing — most commonly iOS
+// Chrome/Firefox where Apple disallows getUserMedia in third-party browsers —
+// we fall back to a clear message pointing the user at the paste-a-link form.
 export function QrScanner({ onResult, onError }: Props) {
-  const inputRef = useRef<HTMLInputElement | null>(null)
-  const [phase, setPhase] = useState<Phase>('idle')
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  // BarcodeDetector isn't in lib.dom.d.ts yet. Loose typing is fine — we only
+  // use .detect(video) which returns Promise<{ rawValue: string }[]>.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const detectorRef = useRef<any>(null)
+  const rafRef = useRef<number | null>(null)
+  const [state, setState] = useState<State>('idle')
   const [errMsg, setErrMsg] = useState<string | null>(null)
 
-  function openPicker() {
-    console.log('[QR] Scan button tapped — opening file picker')
-    setErrMsg(null)
-    inputRef.current?.click()
+  // Detect feature support on mount. Drives the initial UI: if we already
+  // know the browser can't do it, we show the paste-link fallback instead
+  // of an "Allow Camera Access" button that would just fail.
+  const [supported, setSupported] = useState<boolean | null>(null)
+  useEffect(() => {
+    const hasGetUserMedia =
+      typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hasDetector = typeof (window as any).BarcodeDetector === 'function'
+    console.log('[QR] feature check:', { hasGetUserMedia, hasDetector })
+    setSupported(hasGetUserMedia && hasDetector)
+  }, [])
+
+  function stopCamera() {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    streamRef.current = null
+    if (videoRef.current) videoRef.current.srcObject = null
   }
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    console.log('[QR] file input change event fired', { files: e.target.files })
-    const file = e.target.files?.[0]
-    // Reset the input so picking the same file twice in a row still triggers
-    // a change event.
-    e.target.value = ''
-    if (!file) {
-      console.log('[QR] no file selected (user cancelled)')
-      return
-    }
-    console.log('[QR] got file:', {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-    })
+  useEffect(() => () => stopCamera(), [])
 
-    setPhase('reading')
+  async function startCamera() {
     setErrMsg(null)
-
+    setState('starting')
+    console.log('[QR] requesting camera (facingMode: environment)')
     try {
-      const text = await decodeQrFromFile(file)
-      console.log('[QR] jsQR result:', text)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      })
+      streamRef.current = stream
 
-      if (!text) {
-        const msg = 'QR code not recognized — try again.'
-        setErrMsg(msg)
-        setPhase('error')
-        onError?.(msg)
+      const video = videoRef.current
+      if (!video) {
+        // Component unmounted between request and grant. Tear down.
+        stream.getTracks().forEach((t) => t.stop())
         return
       }
+      video.srcObject = stream
+      // iOS Safari needs both. JSX props set these too; setAttribute is
+      // belt-and-suspenders against serialization quirks.
+      video.setAttribute('playsinline', 'true')
+      video.setAttribute('muted', 'true')
+      await video.play().catch(() => {
+        /* iOS sometimes throws on play(); the stream still renders */
+      })
 
-      // Hand the raw decoded text up to the parent. The parent owns the
-      // routing decision (extractToken + router.push), and any "scanned but
-      // not a RoadWave token" feedback comes back via onError.
-      console.log('[QR] handing scanned text to parent:', text)
-      setPhase('idle')
-      onResult(text)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Detector = (window as any).BarcodeDetector
+      detectorRef.current = new Detector({ formats: ['qr_code'] })
+      setState('scanning')
+      console.log('[QR] camera live, scanning loop started')
+      tick()
     } catch (err) {
-      console.error('[QR] decode threw:', err)
-      const msg = err instanceof Error ? err.message : 'Could not read that image.'
-      setErrMsg(msg)
-      setPhase('error')
-      onError?.(msg)
+      const e = err as DOMException | Error
+      const name = (e as DOMException)?.name
+      console.error('[QR] startCamera failed:', name, err)
+      if (
+        name === 'NotAllowedError' ||
+        name === 'PermissionDeniedError' ||
+        name === 'SecurityError'
+      ) {
+        setState('denied')
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        setErrMsg("Couldn't find a rear-facing camera on this device.")
+        setState('error')
+      } else {
+        const msg = e instanceof Error ? e.message : 'Could not start camera.'
+        setErrMsg(msg)
+        setState('error')
+        onError?.(msg)
+      }
     }
   }
 
-  return (
-    <div className="space-y-3 text-center">
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFile}
-        className="sr-only"
-      />
-      <button
-        type="button"
-        onClick={openPicker}
-        disabled={phase === 'reading'}
-        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-4 py-3 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        {phase === 'reading' ? (
-          <>
-            <Spinner />
-            Reading QR…
-          </>
-        ) : (
-          <>
-            <span aria-hidden>📷</span>
-            Scan QR Code
-          </>
-        )}
-      </button>
+  async function tick() {
+    const video = videoRef.current
+    const detector = detectorRef.current
+    if (!video || !detector) return
+    try {
+      const codes = await detector.detect(video)
+      if (codes && codes.length > 0) {
+        const text: string = codes[0].rawValue
+        if (text) {
+          console.log('[QR] BarcodeDetector hit:', text)
+          stopCamera()
+          onResult(text)
+          return
+        }
+      }
+    } catch {
+      // BarcodeDetector occasionally throws on partial frames — keep going.
+    }
+    rafRef.current = requestAnimationFrame(tick)
+  }
 
-      {phase === 'reading' && (
-        <p className="text-xs text-flame">
-          Decoding your photo — this should only take a second.
-        </p>
-      )}
+  // Wait until feature detection has run before rendering. A single frame
+  // of "Allow Camera Access" on a browser that can't actually start one
+  // would be a worse experience than a blank flash.
+  if (supported === null) return null
 
-      {phase === 'idle' && !errMsg && (
+  if (!supported) {
+    return (
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-cream">
+        Live QR scanning isn&apos;t supported in this browser. Use the
+        paste-a-link option below to check in.
+      </div>
+    )
+  }
+
+  if (state === 'idle') {
+    return (
+      <div className="space-y-3 text-center">
+        <button
+          type="button"
+          onClick={startCamera}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-4 py-3 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
+        >
+          <span aria-hidden>📷</span>
+          Allow Camera Access
+        </button>
         <p className="text-xs text-mist">
-          On phone: opens your camera. On desktop: pick an image.
+          Tap to turn on your rear camera. Point at the QR on the campground
+          sign — it scans automatically.
         </p>
-      )}
+      </div>
+    )
+  }
 
-      {errMsg && (
-        <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-left">
-          <p className="text-sm font-semibold text-red-300">{errMsg}</p>
-          <p className="mt-1 text-xs text-red-200/80">
-            Make sure the QR is centered, well lit, and fully in frame. Or paste
-            the link below.
-          </p>
-        </div>
-      )}
+  if (state === 'denied') {
+    return (
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-cream space-y-2">
+        <p>
+          Camera access was denied. You can still check in by pasting your
+          campground link below.
+        </p>
+        <button
+          type="button"
+          onClick={startCamera}
+          className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
+
+  if (state === 'error') {
+    return (
+      <div className="space-y-2">
+        <p className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+          {errMsg ?? 'Could not start camera.'}
+        </p>
+        <button
+          type="button"
+          onClick={startCamera}
+          className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
+
+  // starting | scanning
+  return (
+    <div className="space-y-2">
+      <div className="relative mx-auto w-full max-w-sm aspect-square rounded-lg overflow-hidden border border-white/10 bg-black">
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          autoPlay
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        {/* Light reticle hint for where to point. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-6 rounded-lg border-2 border-flame/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
+        />
+      </div>
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <p className="text-mist">
+          {state === 'starting'
+            ? 'Starting camera…'
+            : 'Point at the QR code on the campground sign.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            stopCamera()
+            setState('idle')
+          }}
+          className="text-mist hover:text-cream underline-offset-2 hover:underline"
+        >
+          Stop
+        </button>
+      </div>
     </div>
   )
-}
-
-function Spinner() {
-  return (
-    <span
-      aria-hidden
-      className="inline-block h-3.5 w-3.5 rounded-full border-2 border-night/30 border-t-night animate-spin"
-    />
-  )
-}
-
-// Decode a QR from an image File using jsQR. Paints the image at full
-// natural resolution into a canvas, hands the pixel data to jsQR, and
-// retries with different inversion strategies because color-cast quirks
-// from phone cameras make some QRs decode under one strategy but not
-// another. Returns the decoded text or null.
-async function decodeQrFromFile(file: File): Promise<string | null> {
-  console.log('[QR] decodeQrFromFile: reading file as data URL')
-  const dataUrl = await readFileAsDataUrl(file)
-  console.log('[QR] data URL ready, length:', dataUrl.length)
-
-  console.log('[QR] loading <img>')
-  const img = await loadImage(dataUrl)
-  // Use the *natural* pixel dimensions, not the layout dimensions.
-  // .width/.height can return zero or layout-affected values on some
-  // browsers; .naturalWidth/.naturalHeight always reflect the file.
-  const naturalW = img.naturalWidth || img.width
-  const naturalH = img.naturalHeight || img.height
-  console.log('[QR] image natural dimensions:', { w: naturalW, h: naturalH })
-
-  // Mobile browsers cap canvas size around 4096x4096 (especially iOS
-  // Safari). Clamp the long edge to 4000 to stay safe; otherwise honor
-  // the full resolution — downsampling kills small QRs in big photos.
-  const MAX_EDGE = 4000
-  const scale = Math.min(1, MAX_EDGE / Math.max(naturalW, naturalH))
-  const w = Math.max(1, Math.round(naturalW * scale))
-  const h = Math.max(1, Math.round(naturalH * scale))
-  console.log('[QR] canvas size after clamp:', { w, h, scale })
-
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })
-  if (!ctx) {
-    console.error('[QR] could not get 2d canvas context')
-    throw new Error("Couldn't open a canvas to decode that image.")
-  }
-  ctx.drawImage(img, 0, 0, w, h)
-  const imageData = ctx.getImageData(0, 0, w, h)
-  console.log('[QR] got ImageData, pixel count:', imageData.data.length / 4)
-
-  console.log('[QR] importing jsqr…')
-  const mod = await import('jsqr')
-  const jsQR = mod.default ?? (mod as unknown as typeof mod.default)
-  if (typeof jsQR !== 'function') {
-    console.error('[QR] jsQR import did not return a function:', mod)
-    throw new Error('QR decoder failed to load.')
-  }
-
-  // Try multiple inversion strategies. jsQR mutates the input buffer
-  // during decode, so each attempt needs a fresh copy of the pixel data.
-  const strategies = ['attemptBoth', 'dontInvert', 'onlyInvert', 'invertFirst'] as const
-  for (const inversionAttempts of strategies) {
-    const dataCopy = new Uint8ClampedArray(imageData.data)
-    const code = jsQR(dataCopy, w, h, { inversionAttempts })
-    console.log(`[QR] jsQR(${inversionAttempts}) returned:`, code ? `"${code.data}"` : 'null')
-    if (code?.data) return code.data
-  }
-  return null
-}
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error("Couldn't read that image."))
-    reader.onload = () => resolve(String(reader.result))
-    reader.readAsDataURL(file)
-  })
-}
-
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onerror = () => reject(new Error("Couldn't decode that image."))
-    img.onload = () => resolve(img)
-    img.src = src
-  })
 }
