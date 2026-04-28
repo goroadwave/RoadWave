@@ -11,12 +11,27 @@ export function CheckInControls() {
   const [pasteValue, setPasteValue] = useState('')
 
   function handleScanResult(scanned: string) {
+    console.log('[checkin] scanned text from QR:', scanned)
+    setScanError(null)
     const token = extractToken(scanned)
+    console.log('[checkin] extractToken returned:', token)
+
     if (!token) {
-      setScanError("That QR doesn't look like a RoadWave check-in.")
+      const msg =
+        "That QR scanned, but it doesn't include a RoadWave check-in token. Make sure you're scanning the QR from the campground."
+      setScanError(msg)
       return
     }
-    router.push(`/checkin?token=${token}`)
+
+    const dest = `/checkin?token=${token}`
+    console.log('[checkin] redirecting to:', dest)
+    router.push(dest)
+  }
+
+  function handleScannerError(message: string) {
+    // The scanner already shows its own error inside the scan card. Mirroring
+    // it into scanError would double up; we just log for debugging.
+    console.warn('[checkin] scanner error:', message)
   }
 
   function handlePasteSubmit(e: React.FormEvent) {
@@ -26,14 +41,20 @@ export function CheckInControls() {
       setScanError('Paste a full check-in link or just the token.')
       return
     }
+    setScanError(null)
     router.push(`/checkin?token=${token}`)
   }
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-white/5 bg-card p-4">
-        <h2 className="mb-3 font-semibold text-cream">Scan a campground QR</h2>
-        <QrScanner onResult={handleScanResult} onError={setScanError} />
+      <div className="rounded-2xl border border-white/5 bg-card p-4 space-y-3">
+        <h2 className="font-semibold text-cream">Scan a campground QR</h2>
+        <QrScanner onResult={handleScanResult} onError={handleScannerError} />
+        {scanError && (
+          <p className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-300">
+            {scanError}
+          </p>
+        )}
       </div>
 
       <div className="rounded-2xl border border-white/5 bg-card p-4">
@@ -53,12 +74,6 @@ export function CheckInControls() {
           </button>
         </form>
       </div>
-
-      {scanError && (
-        <p className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-300">
-          {scanError}
-        </p>
-      )}
     </div>
   )
 }
