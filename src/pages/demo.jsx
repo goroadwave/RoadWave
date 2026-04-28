@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 
 // ----------------------------------------------------------------------------
@@ -95,6 +95,47 @@ const SAMPLE_CAMPERS = [
     years: 5,
     style: 'Family traveler',
     interests: ['campfire', 'sports', 'kayaking', 'dogs'],
+  },
+]
+
+// Pre-populated chat opener used when a match opens the chat screen. Three
+// messages already exchanged between the matched camper and the user, so it
+// feels like a conversation in progress.
+const INITIAL_CHAT = [
+  {
+    id: 'init1',
+    from: 'them',
+    text: 'Hey neighbor! 👋 Saw your wave — nice rig!',
+  },
+  {
+    id: 'init2',
+    from: 'you',
+    text: "Thanks! Yours too — how long have you been full-timing?",
+  },
+  {
+    id: 'init3',
+    from: 'them',
+    text: 'Three years now — best decision we ever made. Coffee at the firepit at 9?',
+  },
+]
+
+// Quick replies the user can tap. Each maps to a friendly camper response
+// that lands ~1.5s later (after a brief typing indicator).
+const QUICK_REPLIES = [
+  {
+    id: 'qr1',
+    text: 'Yes! See you there ☕',
+    reply: "Awesome! I'll bring the donuts 🍩",
+  },
+  {
+    id: 'qr2',
+    text: 'What site are you on?',
+    reply: "Site 12, big oak tree out front. Can't miss us!",
+  },
+  {
+    id: 'qr3',
+    text: 'Sounds perfect! 🔥',
+    reply: 'Perfect — gonna be a good night.',
   },
 ]
 
@@ -405,6 +446,43 @@ function GuestApp({ onExit }) {
 // ----------------------------------------------------------------------------
 
 function ChatScreen({ camper, onBack }) {
+  const [messages, setMessages] = useState(INITIAL_CHAT)
+  const [typing, setTyping] = useState(false)
+  const [usedReplyIds, setUsedReplyIds] = useState(new Set())
+  const scrollRef = useRef(null)
+
+  // Auto-scroll to the bottom whenever a new message lands or typing starts.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }, [messages, typing])
+
+  function handleQuickReply(qr) {
+    if (typing) return
+    setMessages((prev) => [
+      ...prev,
+      { id: `u${Date.now()}`, from: 'you', text: qr.text },
+    ])
+    setUsedReplyIds((prev) => {
+      const next = new Set(prev)
+      next.add(qr.id)
+      return next
+    })
+    // Brief pause before the typing indicator appears, like a real reply.
+    window.setTimeout(() => setTyping(true), 350)
+    // Camper's reply lands 1.5s after the user tapped.
+    window.setTimeout(() => {
+      setTyping(false)
+      setMessages((prev) => [
+        ...prev,
+        { id: `t${Date.now()}`, from: 'them', text: qr.reply },
+      ])
+    }, 1500)
+  }
+
+  const visibleReplies = QUICK_REPLIES.filter((qr) => !usedReplyIds.has(qr.id))
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 border-b border-white/5 bg-card px-3 py-2.5">
@@ -422,19 +500,45 @@ function ChatScreen({ camper, onBack }) {
           </p>
           <p className="flex items-center gap-1 text-[10px] text-leaf">
             <span className="h-1.5 w-1.5 rounded-full bg-leaf" />
-            Online
+            {typing ? 'typing…' : 'Online'}
           </p>
         </div>
         <span className="rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[9px] font-semibold text-flame">
           MATCHED
         </span>
       </div>
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
         <p className="text-center text-[10px] text-mist/70 my-2">Just now</p>
-        <ChatBubble side="them">Hey neighbor! 👋</ChatBubble>
-        <ChatBubble side="them">Saw your wave — nice rig!</ChatBubble>
-        <ChatBubble side="them">Coffee at the firepit at 9?</ChatBubble>
+        {messages.map((m) => (
+          <ChatBubble key={m.id} side={m.from === 'them' ? 'them' : 'you'}>
+            {m.text}
+          </ChatBubble>
+        ))}
+        {typing && <TypingBubble />}
       </div>
+
+      {visibleReplies.length > 0 && (
+        <div className="border-t border-white/5 bg-card/60 px-3 pt-2 pb-1.5">
+          <p className="mb-1.5 text-[9px] uppercase tracking-[0.2em] text-mist/70">
+            Quick replies
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {visibleReplies.map((qr) => (
+              <button
+                key={qr.id}
+                type="button"
+                disabled={typing}
+                onClick={() => handleQuickReply(qr)}
+                className="rounded-full border border-white/10 bg-white/5 text-cream text-[11px] px-2.5 py-1 hover:border-flame/40 hover:bg-flame/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {qr.text}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-2 border-t border-white/5 bg-card px-3 py-2">
         <input
           className="flex-1 rounded-full bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-cream placeholder:text-mist focus:outline-none focus:ring-1 focus:ring-flame"
@@ -448,6 +552,36 @@ function ChatScreen({ camper, onBack }) {
         >
           →
         </button>
+      </div>
+
+      <style>{`
+        @keyframes typingBounce {
+          0%, 60%, 100% { transform: translateY(0);   opacity: 0.4; }
+          30%           { transform: translateY(-4px); opacity: 1;   }
+        }
+        .typing-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: rgba(245, 236, 217, 0.85);
+          display: inline-block;
+          animation: typingBounce 1.2s infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .typing-dot { animation: none; opacity: 0.7; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+function TypingBubble() {
+  return (
+    <div className="flex justify-start">
+      <div className="inline-flex items-center gap-1 rounded-2xl rounded-bl-sm bg-white/10 px-3 py-2.5">
+        <span className="typing-dot" style={{ animationDelay: '0s' }} aria-hidden />
+        <span className="typing-dot" style={{ animationDelay: '0.18s' }} aria-hidden />
+        <span className="typing-dot" style={{ animationDelay: '0.36s' }} aria-hidden />
       </div>
     </div>
   )
