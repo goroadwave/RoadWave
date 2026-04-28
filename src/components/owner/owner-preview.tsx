@@ -44,6 +44,7 @@ type Props = {
     amenities: string[]
     timezone: string
     address: string | null
+    phone: string | null
     website: string | null
   }
   bulletin: { message: string; category: string } | null
@@ -166,6 +167,15 @@ export function OwnerPreview({
 // Tab content
 // ---------------------------------------------------------------------------
 
+// Example data shown when the owner hasn't filled in their profile yet, so
+// they can see what the card would look like fully populated.
+const EXAMPLE_CAMPGROUND = {
+  address: '123 Campground Rd, Asheville, NC 28801',
+  phone: '(828) 555-0142',
+  website: 'www.avaloncampground.com',
+  amenities: ['full_hookups', 'wifi', 'dog_friendly', 'pool'],
+}
+
 function HomeTab({
   campground,
   bulletin,
@@ -173,10 +183,31 @@ function HomeTab({
   campground: Props['campground']
   bulletin: Props['bulletin']
 }) {
-  const amenityLabels = campground.amenities
+  const realAmenities = campground.amenities
     .map((a) => AMENITY_LABEL[a] ?? a)
     .filter(Boolean)
-  const websiteHref = normalizeUrl(campground.website)
+  const realAddress = campground.address?.trim() || null
+  const realPhone = campground.phone?.trim() || null
+  const realWebsite = normalizeUrl(campground.website)
+
+  // If literally every field is empty, fall back to the example data so the
+  // owner can see what a populated card looks like.
+  const allEmpty =
+    !realAddress &&
+    !realPhone &&
+    !realWebsite &&
+    realAmenities.length === 0
+  const showExample = allEmpty
+
+  const address = showExample ? EXAMPLE_CAMPGROUND.address : realAddress
+  const phone = showExample ? EXAMPLE_CAMPGROUND.phone : realPhone
+  const website = showExample
+    ? normalizeUrl(EXAMPLE_CAMPGROUND.website)
+    : realWebsite
+  const amenityLabels = showExample
+    ? EXAMPLE_CAMPGROUND.amenities.map((a) => AMENITY_LABEL[a] ?? a)
+    : realAmenities
+
   return (
     <div className="space-y-5">
       {bulletin && (
@@ -231,47 +262,76 @@ function HomeTab({
         </p>
       </div>
 
-      {amenityLabels.length > 0 && (
-        <section className="space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-flame font-semibold">
-            What&apos;s here
-          </p>
-          <ul className="flex flex-wrap gap-1.5">
-            {amenityLabels.map((label) => (
-              <li
-                key={label}
-                className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-cream"
-              >
-                {label}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* Single campground info card. Shows address + phone + website +
+          amenity chips. Falls back to example data when nothing is set,
+          with a note pointing the owner at /owner/profile. */}
+      <section className="rounded-2xl border border-white/5 bg-card p-4 space-y-3">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-flame font-semibold">
+          About this campground
+        </p>
 
-      {(campground.address || websiteHref) && (
-        <section className="space-y-1.5 rounded-2xl border border-white/5 bg-card p-4">
-          {campground.address && (
-            <p className="flex items-start gap-2 text-sm text-cream">
-              <span aria-hidden className="text-mist">📍</span>
-              <span>{campground.address}</span>
+        {(address || phone || website) && (
+          <ul className="space-y-1.5">
+            {address && (
+              <li className="flex items-start gap-2 text-sm text-cream">
+                <span aria-hidden className="text-mist">📍</span>
+                <span>{address}</span>
+              </li>
+            )}
+            {phone && (
+              <li className="flex items-start gap-2 text-sm text-cream">
+                <span aria-hidden className="text-mist">📞</span>
+                <a
+                  href={`tel:${phone.replace(/[^0-9+]/g, '')}`}
+                  className="hover:text-flame underline-offset-2 hover:underline"
+                >
+                  {phone}
+                </a>
+              </li>
+            )}
+            {website && (
+              <li className="flex items-start gap-2 text-sm">
+                <span aria-hidden className="text-mist">🔗</span>
+                <a
+                  href={website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-flame underline-offset-2 hover:underline break-all"
+                >
+                  {prettyUrl(website)}
+                </a>
+              </li>
+            )}
+          </ul>
+        )}
+
+        {amenityLabels.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-mist font-semibold">
+              Amenities
             </p>
-          )}
-          {websiteHref && (
-            <p className="flex items-start gap-2 text-sm">
-              <span aria-hidden className="text-mist">🔗</span>
-              <a
-                href={websiteHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-flame underline-offset-2 hover:underline break-all"
-              >
-                {prettyUrl(websiteHref)}
-              </a>
-            </p>
-          )}
-        </section>
-      )}
+            <ul className="flex flex-wrap gap-1.5">
+              {amenityLabels.map((label) => (
+                <li
+                  key={label}
+                  className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-cream"
+                >
+                  {label}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {showExample && (
+          <p className="rounded-md border border-purple-500/30 bg-purple-500/10 px-2.5 py-2 text-[11px] text-purple-200/90 italic leading-snug">
+            Add your real info in <a
+              href="/owner/profile"
+              className="text-purple-100 font-semibold underline-offset-2 hover:underline"
+            >Profile</a> to replace this example.
+          </p>
+        )}
+      </section>
     </div>
   )
 }
