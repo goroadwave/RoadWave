@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { LoginForm } from '@/components/auth/login-form'
-import { OAuthButtons } from '@/components/auth/oauth-buttons'
 import { PageHeading } from '@/components/ui/page-heading'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -42,8 +41,6 @@ export default async function LoginPage({
           )}
         </div>
       )}
-
-      <OAuthButtons />
 
       <LoginForm />
     </div>
