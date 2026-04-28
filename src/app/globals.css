@@ -72,7 +72,7 @@ body {
  * so the animation doesn't fight Tailwind's hover/active classes on the
  * button itself. */
 .riley-fab {
-  position: fixed; /* override needed because we add ::after */
+  position: relative; /* anchor for the ::after ring */
 }
 .riley-fab::after {
   content: '';
@@ -102,5 +102,26 @@ body {
   .riley-fab::after {
     animation: none;
     opacity: 0;
+  }
+}
+
+/* Popup pop-in when Riley is tapped. */
+.riley-popup {
+  animation: rileyPopupIn 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom right;
+}
+@keyframes rileyPopupIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .riley-popup {
+    animation: none;
   }
 }
