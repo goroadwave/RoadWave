@@ -29,7 +29,7 @@ export default async function AuthedOwnerLayout({
       <header className="border-b border-white/5 bg-night/80 backdrop-blur sticky top-0 z-20">
         <div className="mx-auto max-w-3xl flex items-center justify-between px-4 py-3 h-14">
           <Link href="/owner/dashboard" className="inline-block">
-            <Logo className="text-2xl" wordmark />
+            <Logo className="text-2xl" />
           </Link>
           <form action="/auth/sign-out" method="post">
             <button

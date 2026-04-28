@@ -80,7 +80,8 @@ export function FloatingTourButton() {
   // Hide on /tour (Riley already there) and /campgrounds (its own
   // host-pitch Riley with a different popup lives on that page). Also
   // hide on auth pages — Riley shouldn't pop up while someone is signing
-  // in or confirming an email.
+  // in or confirming an email. And hide on the entire owner dashboard:
+  // Riley is a guest mascot, not part of the operator experience.
   if (
     !pathname ||
     pathname === '/tour' ||
@@ -88,7 +89,8 @@ export function FloatingTourButton() {
     pathname === '/signup' ||
     pathname === '/login' ||
     pathname === '/verify' ||
-    pathname.startsWith('/auth')
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/owner')
   ) {
     return null
   }
