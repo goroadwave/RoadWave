@@ -364,18 +364,22 @@ export default function RileyWalkthrough() {
           <AppScreen screen={step.screen} highlight={step.highlight} />
         </div>
 
-        {/* Callout bubble */}
-        {step.bubble && (
-          <div key={`bubble-${animKey}`} style={{ position: "absolute", bottom: "28px", left: "50%", transform: "translateX(-50%)", background: "#f59e0b", borderRadius: "20px", padding: "6px 14px", fontSize: "11px", fontWeight: "700", color: "#0a0f1c", whiteSpace: "nowrap", boxShadow: "0 4px 16px rgba(245,158,11,0.5)", animation: "bubblePop 0.4s cubic-bezier(0.34,1.56,0.64,1)", zIndex: 10, fontFamily: "Georgia" }}>
-            {step.bubble.text}
-          </div>
-        )}
-
         {/* Home bar */}
         <div style={{ background: "#060d0a", height: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ width: "46px", height: "4px", background: "#1a2a1f", borderRadius: "2px" }} />
         </div>
       </div>
+
+      {/* Callout bubble — below the phone, centered, with an upward arrow
+          pointing at the phone. No longer floats over the screen UI. */}
+      {step.bubble && (
+        <div key={`bubble-${animKey}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "10px", animation: "bubblePop 0.4s cubic-bezier(0.34,1.56,0.64,1)" }}>
+          <div aria-hidden style={{ width: 0, height: 0, borderLeft: "7px solid transparent", borderRight: "7px solid transparent", borderBottom: "7px solid #f59e0b" }} />
+          <div style={{ background: "#f59e0b", borderRadius: "20px", padding: "7px 16px", fontSize: "12px", fontWeight: "700", color: "#0a0f1c", whiteSpace: "nowrap", boxShadow: "0 4px 16px rgba(245,158,11,0.5)", fontFamily: "Georgia" }}>
+            {step.bubble.text}
+          </div>
+        </div>
+      )}
 
       <div style={{ height: "20px" }} />
 
@@ -383,7 +387,7 @@ export default function RileyWalkthrough() {
         @keyframes rileyIn { from{transform:scale(0.93) translateY(8px);opacity:0}to{transform:scale(1);opacity:1} }
         @keyframes slideUp { from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1} }
         @keyframes fadeIn { from{opacity:0}to{opacity:1} }
-        @keyframes bubblePop { from{transform:translateX(-50%) scale(0.5);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1} }
+        @keyframes bubblePop { from{transform:scale(0.5);opacity:0}to{transform:scale(1);opacity:1} }
         @keyframes glow { from{opacity:0.5}to{opacity:1} }
         @keyframes bar { from{height:4px}to{height:14px} }
         @keyframes float { 0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)} }
