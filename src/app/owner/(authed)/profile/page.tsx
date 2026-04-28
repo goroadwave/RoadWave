@@ -1,17 +1,19 @@
-import { PageHeading } from '@/components/ui/page-heading'
+import { CampgroundRecoveryForm } from '@/components/owner/campground-recovery-form'
 import { OwnerProfileForm } from '@/components/owner/owner-profile-form'
+import { PageHeading } from '@/components/ui/page-heading'
 import { loadOwnerCampground } from '../_helpers'
 
 export default async function OwnerProfilePage() {
   const { campground } = await loadOwnerCampground()
   if (!campground) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-6">
         <PageHeading
           eyebrow="Campground profile"
-          title="No campground linked"
-          subtitle="Refresh, or contact support if this persists."
+          title="Let's finish setting up"
+          subtitle="Looks like signup didn't quite finish provisioning your campground."
         />
+        <CampgroundRecoveryForm />
       </div>
     )
   }

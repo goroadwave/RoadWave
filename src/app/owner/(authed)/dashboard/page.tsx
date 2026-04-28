@@ -12,16 +12,13 @@ export default async function OwnerDashboardPage() {
           Welcome to RoadWave
         </h1>
         <p className="text-mist">
-          We don&apos;t see a campground linked to your account yet. If you just
-          signed up, your campground is provisioning — refresh in a moment. If
-          this persists,{' '}
-          <a
-            href="mailto:markhalesmith@gmail.com"
-            className="text-flame underline-offset-2 hover:underline"
+          We don&apos;t see a campground linked to your account yet.{' '}
+          <Link
+            href="/owner/profile"
+            className="font-semibold text-flame underline-offset-2 hover:underline"
           >
-            email us
-          </a>
-          .
+            Finish setup on the profile page →
+          </Link>
         </p>
       </div>
     )
