@@ -222,18 +222,22 @@ function SectionLabel({
 
 function PostYourOwnMeetup({ canPost }: { canPost: boolean }) {
   if (canPost) {
-    // Admins already have the post form at the top of the page; this CTA
+    // Admins already have the post form at the top of the page; this notice
     // would be redundant for them.
     return null
   }
+  // Pure informational notice — no button affordance. Solid (not dashed)
+  // border, no "+" glyph, no centered call-to-action text. Reads as a
+  // status note so users don't expect tapping it to do anything.
   return (
-    <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-5 text-center space-y-1.5">
-      <p className="text-base font-semibold text-cream">＋ Post Your Own Meetup</p>
-      <p className="text-xs text-mist leading-snug">
-        Camper-posted meetups are coming soon. For now, your campground hosts the
-        list — ask them to add yours.
-      </p>
-    </div>
+    <p
+      role="note"
+      className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-xs text-mist leading-snug"
+    >
+      <span aria-hidden>💡</span>{' '}
+      <span className="text-cream">Camper-posted meetups are coming soon.</span>{' '}
+      For now, your campground hosts the list — ask them to add yours.
+    </p>
   )
 }
 
