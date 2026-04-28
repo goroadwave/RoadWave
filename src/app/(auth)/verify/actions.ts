@@ -3,6 +3,7 @@
 import { headers } from 'next/headers'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { resendSchema } from '@/lib/validators/auth'
+import { getSiteOrigin } from '@/lib/utils'
 
 export type ResendState = { error: string | null; ok: boolean }
 
@@ -17,9 +18,7 @@ export async function resendAction(
 
   const supabase = await createSupabaseServerClient()
   const headerList = await headers()
-  const origin =
-    headerList.get('origin') ??
-    (headerList.get('host') ? `http://${headerList.get('host')}` : 'http://localhost:3000')
+  const origin = getSiteOrigin(headerList)
 
   const { error } = await supabase.auth.resend({
     type: 'signup',

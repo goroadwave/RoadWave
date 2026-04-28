@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { signupSchema } from '@/lib/validators/auth'
 import { TERMS_VERSION, PRIVACY_VERSION } from '@/lib/constants/interests'
-import { getRequestIp } from '@/lib/utils'
+import { getRequestIp, getSiteOrigin } from '@/lib/utils'
 
 export type SignupState = { error: string | null }
 
@@ -31,9 +31,7 @@ export async function signupAction(
 
   const supabase = await createSupabaseServerClient()
   const headerList = await headers()
-  const origin =
-    headerList.get('origin') ??
-    (headerList.get('host') ? `http://${headerList.get('host')}` : 'http://localhost:3000')
+  const origin = getSiteOrigin(headerList)
 
   const { data, error } = await supabase.auth.signUp({
     email,
