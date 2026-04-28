@@ -440,12 +440,22 @@ function WelcomeScreen({ onGuest }) {
 
 function GuestApp({ onExit, campgroundName }) {
   const [screen, setScreen] = useState('home')
-  const [travelStyle, setTravelStyle] = useState('Full-timer')
+  // Multi-select travel styles. Empty Set = "All" (no preference declared).
+  const [travelStyles, setTravelStyles] = useState(() => new Set())
   const [chosenInterests, setChosenInterests] = useState(['coffee', 'campfire', 'dogs'])
   const [privacy, setPrivacy] = useState('visible')
   const [waved, setWaved] = useState({}) // id -> 'waved' | 'matched'
   const [match, setMatch] = useState(null) // { id, name } during celebration
   const [chatWith, setChatWith] = useState(null) // { id, name } when chat is open
+
+  function toggleTravelStyle(style) {
+    setTravelStyles((prev) => {
+      const next = new Set(prev)
+      if (next.has(style)) next.delete(style)
+      else next.add(style)
+      return next
+    })
+  }
 
   function toggleInterest(slug) {
     setChosenInterests((prev) =>
@@ -545,8 +555,9 @@ function GuestApp({ onExit, campgroundName }) {
         )}
         {screen === 'checkin' && (
           <CheckInScreen
-            travelStyle={travelStyle}
-            onTravelStyle={setTravelStyle}
+            travelStyles={travelStyles}
+            onToggleStyle={toggleTravelStyle}
+            onClearStyles={() => setTravelStyles(new Set())}
             chosenInterests={chosenInterests}
             onToggleInterest={toggleInterest}
             privacyMode={privacy}
@@ -560,7 +571,6 @@ function GuestApp({ onExit, campgroundName }) {
             waved={waved}
             onWave={handleWave}
             onMessage={handleMessage}
-            myStyle={travelStyle}
             campgroundName={campgroundName}
           />
         )}
@@ -1041,8 +1051,9 @@ function ArrowIcon() {
 // ----------------------------------------------------------------------------
 
 function CheckInScreen({
-  travelStyle,
-  onTravelStyle,
+  travelStyles,
+  onToggleStyle,
+  onClearStyles,
   chosenInterests,
   onToggleInterest,
   privacyMode,
@@ -1070,15 +1081,31 @@ function CheckInScreen({
         <p className="text-xs text-mist">Asheville, NC</p>
       </div>
 
-      <Section eyebrow="Travel style" hint="Pick one. Tap again to clear.">
+      <Section
+        eyebrow="Travel style"
+        hint="Pick your style — choose as many as you like."
+      >
         <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={onClearStyles}
+            aria-pressed={travelStyles.size === 0}
+            className={
+              travelStyles.size === 0
+                ? 'rounded-full bg-flame px-3 py-1 text-xs font-semibold text-night shadow-md shadow-flame/20'
+                : 'rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-cream hover:border-flame/40'
+            }
+          >
+            All
+          </button>
           {TRAVEL_STYLES.map((s) => {
-            const active = travelStyle === s
+            const active = travelStyles.has(s)
             return (
               <button
                 key={s}
                 type="button"
-                onClick={() => onTravelStyle(active ? '' : s)}
+                onClick={() => onToggleStyle(s)}
+                aria-pressed={active}
                 className={
                   active
                     ? 'rounded-full bg-flame px-3 py-1 text-xs font-semibold text-night shadow-md shadow-flame/20'
@@ -1153,7 +1180,7 @@ function CheckInScreen({
 // Nearby
 // ----------------------------------------------------------------------------
 
-function NearbyScreen({ waved, onWave, onMessage, myStyle, campgroundName }) {
+function NearbyScreen({ waved, onWave, onMessage, campgroundName }) {
   // Multi-select style + interest filters. Both use OR semantics — adding
   // more selections *broadens* the result set. Empty set = "All".
   const [filterStyles, setFilterStyles] = useState(() => new Set())
