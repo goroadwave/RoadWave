@@ -14,13 +14,13 @@ type LogoProps = {
 export function Logo({ className }: LogoProps) {
   return (
     <span
-      className={`inline-block whitespace-nowrap font-display font-extrabold tracking-[-0.02em] leading-none ${className ?? 'text-3xl'}`}
+      className={`inline-block whitespace-nowrap font-display font-extrabold tracking-[-0.02em] leading-none text-cream ${className ?? 'text-3xl'}`}
       aria-label="RoadWave"
     >
       <span className="text-cream">Road</span>
       <span className="whitespace-nowrap text-flame">
         Wave
-        <span className="wave-emoji select-none" aria-hidden>
+        <span className="wave-emoji select-none text-flame" aria-hidden>
           👋
         </span>
       </span>
