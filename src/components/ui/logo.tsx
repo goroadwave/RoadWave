@@ -1,38 +1,29 @@
 type LogoProps = {
   className?: string
-  // When true, render the plain text wordmark — "RoadWave" with no waving
-  // hand, no animation, no surprises. Use on auth pages and other contexts
-  // where the playful emoji read as broken at larger sizes.
-  wordmark?: boolean
 }
 
-// Renders "RoadWa👋e" with "Road" in cream and "Wa[👋]e" in flame.
-// The hand emoji is tightened against the surrounding letters and waves
-// continuously via the .wave-emoji rule defined in globals.css.
-export function Logo({ className, wordmark }: LogoProps) {
-  if (wordmark) {
-    return (
-      <span
-        className={`font-display font-extrabold tracking-[-0.02em] leading-none ${className ?? 'text-3xl'}`}
-        aria-label="RoadWave"
-      >
-        <span className="text-cream">Road</span>
-        <span className="text-flame">Wave</span>
-      </span>
-    )
-  }
-
+// One canonical RoadWave logo, used everywhere on the site:
+//   "Road" (cream)  "Wave" (flame)  👋
+//
+// All inline, single line, no exceptions. Wrap prevention is enforced two
+// ways: the outer span is whitespace-nowrap so the browser cannot break
+// between any of the children, and the "Wave"+emoji pair lives inside a
+// nested whitespace-nowrap span as belt-and-suspenders against any parent
+// that resets the rule. Sizing is em-relative so the wave matches the
+// letters at every breakpoint — from text-base to text-6xl.
+export function Logo({ className }: LogoProps) {
   return (
     <span
-      className={`font-display font-extrabold tracking-[-0.02em] leading-none ${className ?? 'text-3xl'}`}
+      className={`inline-block whitespace-nowrap font-display font-extrabold tracking-[-0.02em] leading-none ${className ?? 'text-3xl'}`}
       aria-label="RoadWave"
     >
       <span className="text-cream">Road</span>
-      <span className="text-flame">Wa</span>
-      <span className="wave-emoji select-none" aria-hidden>
-        👋
+      <span className="whitespace-nowrap text-flame">
+        Wave
+        <span className="wave-emoji select-none" aria-hidden>
+          👋
+        </span>
       </span>
-      <span className="text-flame">e</span>
     </span>
   )
 }
