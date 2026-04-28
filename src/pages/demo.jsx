@@ -96,48 +96,110 @@ const SAMPLE_CAMPERS = [
     style: 'Family traveler',
     interests: ['campfire', 'sports', 'kayaking', 'dogs'],
   },
+  {
+    id: 'c6',
+    name: 'Pat & Linda',
+    username: 'pat_and_linda',
+    status: 'Just unpacked — exploring',
+    rig: 'Travel trailer',
+    from: 'Phoenix, AZ',
+    years: 6,
+    style: 'Seasonal guest',
+    interests: ['hiking', 'campfire', 'cards'],
+  },
+  {
+    id: 'c7',
+    name: 'Marcus',
+    username: 'marcus_camphost',
+    status: 'On duty — say hi at the office!',
+    rig: 'Class C',
+    from: 'Bend, OR',
+    years: 15,
+    style: 'Camp host',
+    interests: ['coffee', 'hiking', 'live_music'],
+  },
+  {
+    id: 'c8',
+    name: 'Dani',
+    username: 'dani_works_remote',
+    status: 'Done with Zoom calls — beer time',
+    rig: 'Sprinter van',
+    from: 'Asheville, NC',
+    years: 4,
+    style: 'Work camper',
+    interests: ['ebikes', 'paddle_boarding', 'coffee'],
+  },
+  {
+    id: 'c9',
+    name: 'Rob',
+    username: 'rob_thru_town',
+    status: 'In town for a job, leaving Sunday',
+    rig: 'Class B',
+    from: 'Denver, CO',
+    years: 2,
+    style: 'Traveling for work',
+    interests: ['coffee', 'live_music'],
+  },
+  {
+    id: 'c10',
+    name: 'The Carters',
+    username: 'quiet_carters',
+    status: null,
+    rig: 'Truck camper',
+    from: 'Missoula, MT',
+    years: 9,
+    style: 'Prefer quiet',
+    interests: ['cats', 'hiking'],
+  },
 ]
 
-// Pre-populated chat opener used when a match opens the chat screen. Three
-// messages already exchanged between the matched camper and the user, so it
-// feels like a conversation in progress.
-const INITIAL_CHAT = [
-  {
-    id: 'init1',
-    from: 'them',
-    text: 'Hey neighbor! 👋 Saw your wave — nice rig!',
+// Conversation script — a small state machine. Each step is keyed by an id
+// and has the camper's message (`them`) plus the quick replies the user sees
+// after that message. Each reply points to the next step. A step with
+// replies: null is a leaf — conversation ends warmly there.
+const CHAT_SCRIPT = {
+  start: {
+    them: 'Hey neighbor! 👋 Saw your wave — nice rig!',
+    replies: [
+      { you: 'Thanks! How long have you been full-timing?', next: 'a' },
+      { you: 'Same campground last year?', next: 'b' },
+      { you: 'Coffee sounds amazing ☕', next: 'c' },
+    ],
   },
-  {
-    id: 'init2',
-    from: 'you',
-    text: "Thanks! Yours too — how long have you been full-timing?",
+  a: {
+    them: 'Three years now. Honestly the best decision we ever made. You?',
+    replies: [
+      { you: "Just six months — still figuring it out 🚐", next: 'a1' },
+      { you: 'About a year, loving it', next: 'a2' },
+      { you: 'Just a weekender for now', next: 'a3' },
+    ],
   },
-  {
-    id: 'init3',
-    from: 'them',
-    text: 'Three years now — best decision we ever made. Coffee at the firepit at 9?',
+  a1: { them: 'Welcome to the road! It gets better every year. ❤️', replies: null },
+  a2: { them: 'Awesome — that first year is magic. The road hooks you.', replies: null },
+  a3: { them: "Hey, weekends count! Full-time finds you when it's ready.", replies: null },
+  b: {
+    them: 'Sure was — we come back every fall. Best fire ring around.',
+    replies: [
+      { you: 'Which site are you on?', next: 'b1' },
+      { you: 'Fall is the best season', next: 'b2' },
+      { you: 'I was here in summer once', next: 'b3' },
+    ],
   },
-]
-
-// Quick replies the user can tap. Each maps to a friendly camper response
-// that lands ~1.5s later (after a brief typing indicator).
-const QUICK_REPLIES = [
-  {
-    id: 'qr1',
-    text: 'Yes! See you there ☕',
-    reply: "Awesome! I'll bring the donuts 🍩",
+  b1: { them: "Site 12 — the one with the big oak out front. Stop by!", replies: null },
+  b2: { them: "Couldn't agree more. Crisp mornings, no bugs, all good.", replies: null },
+  b3: { them: "Whole different vibe in fall — you'd love it. 🍂", replies: null },
+  c: {
+    them: "There's a great pour-over spot right by the lake. 7am tomorrow?",
+    replies: [
+      { you: "I'm in! 7am ☕", next: 'c1' },
+      { you: 'Make it 8 and I am there', next: 'c2' },
+      { you: "I'm a tea person but I'll come anyway 🍵", next: 'c3' },
+    ],
   },
-  {
-    id: 'qr2',
-    text: 'What site are you on?',
-    reply: "Site 12, big oak tree out front. Can't miss us!",
-  },
-  {
-    id: 'qr3',
-    text: 'Sounds perfect! 🔥',
-    reply: 'Perfect — gonna be a good night.',
-  },
-]
+  c1: { them: 'See you tomorrow! Bring the wave 👋', replies: null },
+  c2: { them: "8 it is. I'll save you a seat.", replies: null },
+  c3: { them: "Ha! They have tea too. See you at 7am.", replies: null },
+}
 
 // Wave-back script for the demo. Three of the five sample campers wave back
 // (with varying delays so it feels like real people responding); the other
@@ -446,42 +508,68 @@ function GuestApp({ onExit }) {
 // ----------------------------------------------------------------------------
 
 function ChatScreen({ camper, onBack }) {
-  const [messages, setMessages] = useState(INITIAL_CHAT)
+  const [messages, setMessages] = useState([])
+  const [currentStep, setCurrentStep] = useState('start')
   const [typing, setTyping] = useState(false)
-  const [usedReplyIds, setUsedReplyIds] = useState(new Set())
+  // 'opening'  — camper is about to send the first message
+  // 'waiting'  — quick replies visible
+  // 'replying' — user just tapped, camper is typing
+  // 'done'     — leaf reached, no more quick replies
+  const [phase, setPhase] = useState('opening')
   const scrollRef = useRef(null)
 
-  // Auto-scroll to the bottom whenever a new message lands or typing starts.
+  // On mount: typing indicator first, then deliver the opener after 1s.
+  useEffect(() => {
+    let cancelled = false
+    setTyping(true)
+    const timer = window.setTimeout(() => {
+      if (cancelled) return
+      const step = CHAT_SCRIPT.start
+      setMessages([{ id: `t-start-${Date.now()}`, from: 'them', text: step.them }])
+      setTyping(false)
+      setPhase(step.replies ? 'waiting' : 'done')
+    }, 1000)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [])
+
+  // Smooth auto-scroll on new content.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
   }, [messages, typing])
 
-  function handleQuickReply(qr) {
-    if (typing) return
+  function handleQuickReply(reply) {
+    if (phase !== 'waiting') return
     setMessages((prev) => [
       ...prev,
-      { id: `u${Date.now()}`, from: 'you', text: qr.text },
+      { id: `u-${Date.now()}`, from: 'you', text: reply.you },
     ])
-    setUsedReplyIds((prev) => {
-      const next = new Set(prev)
-      next.add(qr.id)
-      return next
-    })
-    // Brief pause before the typing indicator appears, like a real reply.
+    setPhase('replying')
+    // Brief pause before the typing indicator shows up.
     window.setTimeout(() => setTyping(true), 350)
-    // Camper's reply lands 1.5s after the user tapped.
+    // Camper's response lands 1.5s after the user tapped.
     window.setTimeout(() => {
+      const nextStep = CHAT_SCRIPT[reply.next]
       setTyping(false)
+      if (!nextStep) {
+        setPhase('done')
+        return
+      }
       setMessages((prev) => [
         ...prev,
-        { id: `t${Date.now()}`, from: 'them', text: qr.reply },
+        { id: `t-${reply.next}-${Date.now()}`, from: 'them', text: nextStep.them },
       ])
+      setCurrentStep(reply.next)
+      setPhase(nextStep.replies ? 'waiting' : 'done')
     }, 1500)
   }
 
-  const visibleReplies = QUICK_REPLIES.filter((qr) => !usedReplyIds.has(qr.id))
+  const currentReplies =
+    phase === 'waiting' ? CHAT_SCRIPT[currentStep]?.replies ?? null : null
 
   return (
     <div className="flex h-full flex-col">
@@ -509,7 +597,6 @@ function ChatScreen({ camper, onBack }) {
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
-        <p className="text-center text-[10px] text-mist/70 my-2">Just now</p>
         {messages.map((m) => (
           <ChatBubble key={m.id} side={m.from === 'them' ? 'them' : 'you'}>
             {m.text}
@@ -518,21 +605,20 @@ function ChatScreen({ camper, onBack }) {
         {typing && <TypingBubble />}
       </div>
 
-      {visibleReplies.length > 0 && (
+      {currentReplies && currentReplies.length > 0 && (
         <div className="border-t border-white/5 bg-card/60 px-3 pt-2 pb-1.5">
           <p className="mb-1.5 text-[9px] uppercase tracking-[0.2em] text-mist/70">
             Quick replies
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {visibleReplies.map((qr) => (
+            {currentReplies.map((r, i) => (
               <button
-                key={qr.id}
+                key={`${currentStep}-${i}`}
                 type="button"
-                disabled={typing}
-                onClick={() => handleQuickReply(qr)}
-                className="rounded-full border border-white/10 bg-white/5 text-cream text-[11px] px-2.5 py-1 hover:border-flame/40 hover:bg-flame/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={() => handleQuickReply(r)}
+                className="rounded-full border border-white/10 bg-white/5 text-cream text-[11px] px-2.5 py-1 hover:border-flame/40 hover:bg-flame/10 transition-colors"
               >
-                {qr.text}
+                {r.you}
               </button>
             ))}
           </div>
@@ -559,6 +645,10 @@ function ChatScreen({ camper, onBack }) {
           0%, 60%, 100% { transform: translateY(0);   opacity: 0.4; }
           30%           { transform: translateY(-4px); opacity: 1;   }
         }
+        @keyframes msgSlideIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         .typing-dot {
           width: 5px;
           height: 5px;
@@ -567,8 +657,10 @@ function ChatScreen({ camper, onBack }) {
           display: inline-block;
           animation: typingBounce 1.2s infinite;
         }
+        .chat-msg { animation: msgSlideIn 0.32s ease-out both; }
         @media (prefers-reduced-motion: reduce) {
           .typing-dot { animation: none; opacity: 0.7; }
+          .chat-msg { animation: none; }
         }
       `}</style>
     </div>
@@ -590,7 +682,7 @@ function TypingBubble() {
 function ChatBubble({ side, children }) {
   const them = side === 'them'
   return (
-    <div className={`flex ${them ? 'justify-start' : 'justify-end'}`}>
+    <div className={`chat-msg flex ${them ? 'justify-start' : 'justify-end'}`}>
       <div
         className={
           them
@@ -993,7 +1085,13 @@ function NearbyScreen({ waved, onWave, myStyle }) {
         ))}
         {list.length === 0 && (
           <li className="rounded-xl border border-dashed border-white/10 bg-card/40 p-4 text-center text-xs text-mist">
-            No campers match those filters. {myStyle ? `(You picked ${myStyle}.)` : ''}
+            No campers match those filters.
+            {filterStyle && (
+              <>
+                {' '}
+                <span className="text-cream">(filtering for: {filterStyle})</span>
+              </>
+            )}
           </li>
         )}
       </ul>

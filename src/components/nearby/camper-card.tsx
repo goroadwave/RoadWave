@@ -28,22 +28,27 @@ export function CamperCard({ camper, campgroundId, waveState }: Props) {
     ? TRAVEL_STYLE_LABEL[camper.travel_style] ?? camper.travel_style
     : null
 
+  const initial = name.charAt(0).toUpperCase() || '?'
+
   return (
     <article className="flex h-full flex-col gap-3 rounded-2xl border border-white/5 bg-card p-4 shadow-lg shadow-black/20">
-      <header>
-        <h3 className="font-semibold text-cream leading-tight">{name}</h3>
-        <p className="text-xs text-mist">@{camper.username}</p>
-        {styleLabel && (
-          <span className="mt-2 inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2.5 py-0.5 text-xs font-semibold text-flame">
-            {styleLabel}
-          </span>
-        )}
-        {camper.status_tag && (
-          <p className="mt-2 font-serif italic text-flame text-base sm:text-lg leading-snug">
-            &ldquo;{camper.status_tag}&rdquo;
-          </p>
-        )}
+      <header className="flex items-start gap-3">
+        <CamperAvatar url={camper.avatar_url} initial={initial} />
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-cream leading-tight truncate">{name}</h3>
+          <p className="text-xs text-mist truncate">@{camper.username}</p>
+          {styleLabel && (
+            <span className="mt-1.5 inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[11px] font-semibold text-flame">
+              {styleLabel}
+            </span>
+          )}
+        </div>
       </header>
+      {camper.status_tag && (
+        <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
+          &ldquo;{camper.status_tag}&rdquo;
+        </p>
+      )}
 
       {camper.personal_note && (
         <p className="text-sm text-cream/90">{camper.personal_note}</p>
@@ -85,5 +90,26 @@ export function CamperCard({ camper, campgroundId, waveState }: Props) {
         />
       </div>
     </article>
+  )
+}
+
+function CamperAvatar({ url, initial }: { url: string | null; initial: string }) {
+  if (url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- user-uploaded URL; remote-image config in next.config is more setup than this needs
+      <img
+        src={url}
+        alt=""
+        className="h-12 w-12 rounded-full object-cover border border-flame/30 shrink-0"
+      />
+    )
+  }
+  return (
+    <div
+      className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-flame/30 bg-flame/10 font-display text-base font-extrabold text-flame"
+      aria-hidden
+    >
+      {initial}
+    </div>
   )
 }

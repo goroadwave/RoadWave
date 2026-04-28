@@ -6,6 +6,7 @@ import {
   saveProfileAction,
   type ProfileSaveState,
 } from '@/app/(app)/profile/setup/actions'
+import { AvatarUpload } from '@/components/profile/avatar-upload'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { TRAVEL_STYLES } from '@/lib/constants/travel-styles'
 import type { Profile, PrivacyMode } from '@/lib/types/db'
@@ -13,18 +14,31 @@ import type { Profile, PrivacyMode } from '@/lib/types/db'
 const initialState: ProfileSaveState = { error: null, ok: false }
 
 type Props = {
+  userId: string
   profile: Profile | null
   interests: { slug: string; label: string; emoji: string }[]
   myInterestSlugs: string[]
 }
 
-export function ProfileForm({ profile, interests, myInterestSlugs }: Props) {
+export function ProfileForm({ userId, profile, interests, myInterestSlugs }: Props) {
   const [state, formAction, pending] = useActionState(saveProfileAction, initialState)
   const [hasPets, setHasPets] = useState(profile?.has_pets ?? false)
   const [travelStyle, setTravelStyle] = useState<string>(profile?.travel_style ?? '')
 
+  const initial = (
+    profile?.display_name?.[0] ??
+    profile?.username?.[0] ??
+    '?'
+  ).toUpperCase()
+
   return (
     <form action={formAction} className="space-y-8">
+      <AvatarUpload
+        userId={userId}
+        initialUrl={profile?.avatar_url ?? null}
+        displayInitial={initial}
+      />
+
       <Section eyebrow="Public name">
         <FieldRow>
           <Label>Display name</Label>

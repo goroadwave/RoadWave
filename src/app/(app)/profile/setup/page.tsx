@@ -38,6 +38,7 @@ export default async function ProfileSetupPage() {
         subtitle="Share what you want. Skip what you don't."
       />
       <ProfileForm
+        userId={user.id}
         profile={profile}
         interests={INTERESTS as unknown as { slug: string; label: string; emoji: string }[]}
         myInterestSlugs={interestSlugs}

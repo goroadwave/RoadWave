@@ -7,6 +7,32 @@ import { profileSchema } from '@/lib/validators/profile'
 
 export type ProfileSaveState = { error: string | null; ok: boolean }
 
+export type AvatarSaveState = { error: string | null }
+
+// Called by AvatarUpload after the browser uploads the file directly to
+// Supabase Storage. We only persist the URL on the profile row here.
+export async function saveAvatarUrlAction(url: string): Promise<AvatarSaveState> {
+  if (typeof url !== 'string' || url.length === 0 || url.length > 1024) {
+    return { error: 'Invalid avatar URL.' }
+  }
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in.' }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ avatar_url: url })
+    .eq('id', user.id)
+  if (error) return { error: error.message }
+
+  revalidatePath('/profile/setup')
+  revalidatePath('/home')
+  revalidatePath('/nearby')
+  return { error: null }
+}
+
 export async function saveProfileAction(
   _prev: ProfileSaveState,
   formData: FormData,

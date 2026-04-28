@@ -17,6 +17,7 @@ export interface Profile {
   id: string
   username: string
   display_name: string | null
+  avatar_url: string | null
   rig_type: string | null
   miles_driven: number | null
   hometown: string | null
@@ -111,6 +112,7 @@ export interface NearbyCamper {
   profile_id: string
   username: string
   display_name: string | null
+  avatar_url: string | null
   rig_type: string | null
   miles_driven: number | null
   hometown: string | null
