@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { OwnerLoginForm } from '@/components/owner/owner-login-form'
-import { Logo } from '@/components/ui/logo'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export default async function OwnerLoginPage() {
@@ -13,8 +12,25 @@ export default async function OwnerLoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10">
-      <Link href="/" className="mb-8 inline-block">
-        <Logo className="text-4xl" />
+      {/* Inlined logo with explicit hex colors — same pattern as the
+          (authed) owner layout. Bypasses any class-cascade issues that
+          made the shared Logo component render Wave in the wrong color. */}
+      <Link
+        href="/"
+        className="mb-8 inline-block font-display font-extrabold tracking-[-0.02em] leading-none text-4xl whitespace-nowrap"
+        aria-label="RoadWave"
+      >
+        <span style={{ color: '#f5ecd9' }}>Road</span>
+        <span className="whitespace-nowrap" style={{ color: '#f59e0b' }}>
+          Wave
+          <span
+            className="wave-emoji select-none"
+            aria-hidden
+            style={{ color: '#f59e0b' }}
+          >
+            👋
+          </span>
+        </span>
       </Link>
       <main className="w-full max-w-md rounded-2xl border border-white/5 bg-card p-6 shadow-2xl shadow-black/50">
         <div className="space-y-1.5 mb-5 text-center">

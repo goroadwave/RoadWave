@@ -186,7 +186,7 @@ export default function CampgroundsPage() {
                 "Site numbers are not shared in the app.",
                 "A wave is private until both sides wave back.",
                 "Three privacy modes — including a true Invisible.",
-                "Guest data leaves your campground when their stay does.",
+                'Campground check-ins expire after 24 hours.',
                 'No ads. No scraping. No selling guest data.',
               ].map((p) => (
                 <li
@@ -285,8 +285,8 @@ export default function CampgroundsPage() {
             </div>
             <CampgroundLeadForm />
             <p className="mt-4 text-center text-sm text-mist leading-snug">
-              We will send you a personalized demo link within 24 hours. No
-              commitment required.
+              We&apos;ll follow up with a personalized demo link. No commitment
+              required.
             </p>
           </div>
         </section>

@@ -96,7 +96,7 @@ export function CampgroundRequestForm() {
           disabled={submitting}
           className="w-full rounded-xl bg-flame text-night px-4 py-3 font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {submitting ? 'Sending…' : 'Request This Campground'}
+          {submitting ? 'Sending…' : 'Request RoadWave at My Campground'}
         </button>
       </form>
     </div>
