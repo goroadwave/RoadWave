@@ -25,15 +25,26 @@ export function CampgroundLeadForm() {
           email: data.get('email'),
         }),
       })
-      // Even if the route 404s, treat as a success for the demo. The lead
-      // can be wired to Supabase or an email service later.
-      if (res.status >= 500) throw new Error(`Server error ${res.status}`)
+      if (res.ok) {
+        setDone(true)
+        return
+      }
+      if (res.status >= 400 && res.status < 500) {
+        const message = (await res.text().catch(() => '')) || 'Please check your fields.'
+        setError(message)
+        return
+      }
+      // 5xx — soft-fail so a Resend outage doesn't block the user. The
+      // server has the lead in Supabase regardless of whether the email
+      // went out.
+      console.warn('lead submit returned', res.status)
+      setDone(true)
     } catch (err) {
-      // Soft-fail — don't block the user.
+      // Network error — soft-fail.
       console.warn('lead submit non-fatal:', err)
+      setDone(true)
     } finally {
       setSubmitting(false)
-      setDone(true)
     }
   }
 
