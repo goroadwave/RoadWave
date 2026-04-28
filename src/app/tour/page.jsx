@@ -102,7 +102,7 @@ const AppScreen = ({ screen, highlight }) => {
     <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px", height: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ color: "white", fontSize: "16px", fontWeight: "800", display:"flex", alignItems:"center" }}>
-          <span>RoadWa</span><span style={{ display:"inline-block", fontSize:"18px", lineHeight:1, margin:"0 -2px" }}>👋</span><span style={{ color: "#f59e0b" }}>e</span>
+          <span>Road</span><span style={{ color: "#f59e0b" }}>Wa</span><span style={{ display:"inline-block", fontSize:"18px", lineHeight:1, margin:"0 -2px" }}>👋</span><span style={{ color: "#f59e0b" }}>e</span>
         </div>
         <div style={{ background: "#22c55e", borderRadius: "20px", padding: "3px 10px", fontSize: "9px", color: "white", fontWeight: "600" }}>VISIBLE</div>
       </div>
@@ -231,25 +231,50 @@ export default function RileyWalkthrough() {
   const [talking, setTalking] = useState(false);
   const [muted, setMuted] = useState(false);
   const audioRef = useRef(null);
+  // Cache: stepIdx -> object URL for the prefetched MP3 blob.
+  const audioCache = useRef(new Map());
   const step = STEPS[stepIdx];
 
-  const speak = async (text) => {
+  // Fetch (and memoize) the audio for a given step. Subsequent calls for the
+  // same idx return the cached blob URL instantly.
+  const fetchAudio = async (text, idx) => {
+    if (audioCache.current.has(idx)) return audioCache.current.get(idx);
+    try {
+      const res = await fetch("/api/speak", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      audioCache.current.set(idx, url);
+      return url;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const speak = async (text, idx) => {
     if (muted) return;
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     window.speechSynthesis?.cancel();
     setTalking(true);
-    try {
-      const res = await fetch("/api/speak", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audioRef.current = audio;
-        audio.onended = () => { setTalking(false); URL.revokeObjectURL(url); };
-        audio.onerror = () => setTalking(false);
-        await audio.play(); return;
+
+    const url = await fetchAudio(text, idx);
+    if (url) {
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => setTalking(false);
+      audio.onerror = () => setTalking(false);
+      await audio.play().catch(() => setTalking(false));
+
+      // Kick off the next slide's fetch in the background so it's ready
+      // the instant the user taps Next.
+      const nextIdx = idx + 1;
+      if (nextIdx < STEPS.length) {
+        fetchAudio(STEPS[nextIdx].speech, nextIdx).catch(() => {});
       }
-    } catch (e) {}
+      return;
+    }
+
+    // Web Speech fallback if /api/speak is unavailable.
     const utt = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices();
     const v = voices.find(v => v.name === "Samantha") || voices.find(v => v.lang.startsWith("en"));
@@ -262,9 +287,19 @@ export default function RileyWalkthrough() {
 
   useEffect(() => {
     setAnimKey(k => k + 1);
-    const t = setTimeout(() => speak(step.speech), 400);
+    // Tightened from 400 → 120 ms; the perceptible lag was mostly this.
+    const t = setTimeout(() => speak(step.speech, stepIdx), 120);
     return () => { clearTimeout(t); audioRef.current?.pause(); window.speechSynthesis?.cancel(); setTalking(false); };
   }, [stepIdx, muted]);
+
+  // Revoke any cached blob URLs when the page unmounts so we don't leak memory.
+  useEffect(() => {
+    const cache = audioCache.current;
+    return () => {
+      cache.forEach((url) => URL.revokeObjectURL(url));
+      cache.clear();
+    };
+  }, []);
 
   const next = () => { if (stepIdx < STEPS.length - 1) setStepIdx(i => i + 1); };
   const back = () => { if (stepIdx > 0) setStepIdx(i => i - 1); };
@@ -281,7 +316,7 @@ export default function RileyWalkthrough() {
       <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 16px" }}>
         <a href="/" style={{ color: "rgba(255,255,255,0.5)", fontSize: "12px", textDecoration: "none" }}>← Exit</a>
         <div style={{ color: "white", fontSize: "13px", fontWeight: "700", display:"flex", alignItems:"center" }}>
-          <span>RoadWa</span><span style={{ display:"inline-block", fontSize:"15px", lineHeight:1, margin:"0 -1px" }}>👋</span><span style={{ color: "#f59e0b" }}>e</span>
+          <span>Road</span><span style={{ color: "#f59e0b" }}>Wa</span><span style={{ display:"inline-block", fontSize:"15px", lineHeight:1, margin:"0 -1px" }}>👋</span><span style={{ color: "#f59e0b" }}>e</span>
         </div>
         <button onClick={() => setMuted(m => !m)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", opacity: 0.7 }}>{muted ? "🔇" : "🔊"}</button>
       </div>
