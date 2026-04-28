@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
+import { Logo } from '@/components/ui/logo'
 
 // ----------------------------------------------------------------------------
 // Mock data
@@ -227,71 +228,6 @@ const WAVE_BACK_DELAYS = {
 // Time after which a non-matcher's card flips to the "no response" state.
 const NO_RESPONSE_TIMEOUT = 5500
 
-// Coach-mark tour. Each step targets a `[data-tour="..."]` element in the
-// rendered demo. `screen` is the GuestApp screen the step needs visible
-// so its target can be measured. `placement` controls whether the bubble
-// sits above or below the target — default 'auto' picks based on rect.
-const TOUR_STEPS = [
-  {
-    target: 'tab-home',
-    screen: 'home',
-    title: 'Home',
-    text: 'This is your home base. You can see your check-in status and privacy setting here.',
-  },
-  {
-    target: 'tab-checkin',
-    screen: 'home',
-    title: 'Check in',
-    text: 'Tap Check In when you arrive at a campground. You are visible for 24 hours then automatically invisible again.',
-  },
-  {
-    target: 'tab-nearby',
-    screen: 'home',
-    title: 'Nearby',
-    text: 'See other campers who are open to connecting. Filter by travel style and interests.',
-  },
-  {
-    target: 'tab-meetups',
-    screen: 'home',
-    title: 'Meetups',
-    text: 'Browse activities posted by the campground and fellow campers. Or post your own.',
-  },
-  {
-    target: 'tab-waves',
-    screen: 'home',
-    title: 'Waves',
-    text: 'All the people you have waved at — matched or not — live here.',
-  },
-  {
-    target: 'tab-privacy',
-    screen: 'home',
-    title: 'Privacy',
-    text: 'Choose Visible, Quiet, or Invisible. You are always in control.',
-  },
-  {
-    target: 'tab-paths',
-    screen: 'home',
-    title: 'Crossed paths',
-    text: 'People you have camped near before. Your road connections, saved forever.',
-  },
-  {
-    target: 'privacy-badge',
-    screen: 'home',
-    title: 'Privacy mode',
-    text: 'This shows your current privacy mode. Tap it anytime to change.',
-  },
-  {
-    target: 'action-section',
-    screen: 'home',
-    title: 'Where the action is',
-    text: 'Jump straight to Nearby campers, Meetup spots, or Crossed paths from here.',
-  },
-  {
-    isFinal: true,
-    title: "That's RoadWave!",
-    text: 'Try tapping around or tap Next to see the wave mechanic in action.',
-  },
-]
 
 const HOSTED_MEETUPS = [
   {
@@ -381,7 +317,7 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
       <main className="min-h-screen bg-night text-cream font-sans">
         <div className="mx-auto max-w-5xl px-4 py-10 pb-28 flex flex-col items-center gap-8">
           <header className="text-center space-y-3">
-            <Logo size="text-4xl sm:text-5xl" />
+            <Logo className="text-4xl sm:text-5xl" />
             <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-flame font-semibold">
               Private campground check-ins for RVers
             </p>
@@ -436,20 +372,6 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
 // Logo + phone frame
 // ----------------------------------------------------------------------------
 
-function Logo({ size = 'text-3xl' }) {
-  return (
-    <span
-      className={`font-display font-extrabold tracking-[-0.02em] leading-none ${size}`}
-      aria-label="RoadWave"
-    >
-      <span className="text-cream">Road</span>
-      <span className="text-flame">Wave</span>
-      <span className="wave-emoji select-none ml-2" aria-hidden>
-        👋
-      </span>
-    </span>
-  )
-}
 
 function PhoneFrame({ children }) {
   return (
@@ -489,58 +411,6 @@ function GuestApp({ onExit, campgroundName }) {
   const [chatWith, setChatWith] = useState(null) // { id, name } when chat is open
   const [blocked, setBlocked] = useState(() => new Set()) // ids the user has blocked
   const [toast, setToast] = useState(null) // { msg } banner shown on Nearby/Waves
-  // Coach-mark tour. null = not running. 0..N-1 = current step. Stored
-  // completion in localStorage so we only auto-prompt once; the "Take the
-  // guided tour" chip stays available for replays.
-  const [tourStep, setTourStep] = useState(null)
-  const tourRootRef = useRef(null)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const seen = window.localStorage.getItem('roadwave-demo-tour-seen')
-      if (!seen) setTourStep(0)
-    } catch {
-      // localStorage may be blocked (private mode etc.) — silently skip auto-prompt.
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on first mount
-  }, [])
-
-  // Each step may need a particular screen visible before its target can
-  // be measured. Apply the screen as the step changes.
-  useEffect(() => {
-    if (tourStep == null) return
-    const step = TOUR_STEPS[tourStep]
-    if (step?.screen) setScreen(step.screen)
-  }, [tourStep])
-
-  function startTour() {
-    setTourStep(0)
-  }
-  function nextTourStep() {
-    setTourStep((idx) => {
-      if (idx == null) return null
-      const next = idx + 1
-      if (next >= TOUR_STEPS.length) {
-        markTourSeen()
-        return null
-      }
-      return next
-    })
-  }
-  function skipTour() {
-    markTourSeen()
-    setTourStep(null)
-  }
-  function markTourSeen() {
-    if (typeof window === 'undefined') return
-    try {
-      window.localStorage.setItem('roadwave-demo-tour-seen', '1')
-    } catch {
-      // ignore
-    }
-  }
-
   function toggleTravelStyle(style) {
     setTravelStyles((prev) => {
       const next = new Set(prev)
@@ -639,7 +509,7 @@ function GuestApp({ onExit, campgroundName }) {
   }
 
   return (
-    <div ref={tourRootRef} className="relative flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
       <AppHeader
         onExit={onExit}
         right={
@@ -648,18 +518,6 @@ function GuestApp({ onExit, campgroundName }) {
           </span>
         }
       />
-
-      {tourStep == null && screen !== 'chat' && screen !== 'matchchoice' && (
-        <div className="px-3 pt-1 pb-2">
-          <button
-            type="button"
-            onClick={startTour}
-            className="w-full rounded-lg border border-flame/40 bg-flame/10 text-flame px-3 py-1.5 text-[11px] font-semibold hover:bg-flame/20 transition-colors"
-          >
-            ✨ Take the guided tour
-          </button>
-        </div>
-      )}
 
       {screen !== 'chat' && screen !== 'matchchoice' && (
         <nav className="grid grid-cols-4 gap-1 px-3 pb-2 text-[11px]">
@@ -766,14 +624,6 @@ function GuestApp({ onExit, campgroundName }) {
         )}
       </div>
       {match && <MatchCelebration name={match.name} />}
-      {tourStep != null && (
-        <DemoTour
-          stepIdx={tourStep}
-          rootRef={tourRootRef}
-          onNext={nextTourStep}
-          onSkip={skipTour}
-        />
-      )}
     </div>
   )
 }
@@ -1284,170 +1134,6 @@ function LeaveConfirmScreen({ camperName, onCancel, onConfirm }) {
 }
 
 // ----------------------------------------------------------------------------
-// DemoTour — a step-by-step coach mark tour overlaid on the simulated
-// phone screen. Spotlights one element at a time with a dim backdrop and
-// a small bubble explaining the feature. The parent (GuestApp) drives
-// step state and screen navigation; this component just measures the
-// target and renders the spotlight + bubble.
-// ----------------------------------------------------------------------------
-
-function DemoTour({ stepIdx, rootRef, onNext, onSkip }) {
-  const step = TOUR_STEPS[stepIdx]
-  const [rect, setRect] = useState(null)
-
-  // Re-measure on step change. Two requestAnimationFrames give the parent
-  // time to apply the screen change and React to commit the new layout
-  // before we read getBoundingClientRect.
-  useEffect(() => {
-    if (!step || step.isFinal) {
-      setRect(null)
-      return
-    }
-    let cancelled = false
-    const raf1 = requestAnimationFrame(() => {
-      const raf2 = requestAnimationFrame(() => {
-        if (cancelled) return
-        const root = rootRef.current
-        const target = root?.querySelector(`[data-tour="${step.target}"]`)
-        if (!target || !root) {
-          setRect(null)
-          return
-        }
-        const rootRect = root.getBoundingClientRect()
-        const tRect = target.getBoundingClientRect()
-        setRect({
-          top: tRect.top - rootRect.top,
-          left: tRect.left - rootRect.left,
-          width: tRect.width,
-          height: tRect.height,
-          rootHeight: rootRect.height,
-        })
-      })
-      // Store inner raf id so cleanup cancels both.
-      // (We deliberately don't return raf2 here; the outer cleanup handles
-      // raf1 and the second frame fires almost immediately after.)
-      void raf2
-    })
-    return () => {
-      cancelled = true
-      cancelAnimationFrame(raf1)
-    }
-  }, [stepIdx])
-
-  if (!step) return null
-
-  if (step.isFinal) {
-    return (
-      <div className="absolute inset-0 z-40 flex items-center justify-center bg-night/80 backdrop-blur-sm px-4">
-        <div className="w-full max-w-[280px] rounded-2xl border border-flame/40 bg-card p-5 space-y-3 text-center shadow-2xl shadow-black/60">
-          <p className="text-3xl" aria-hidden>🏕️</p>
-          <h3 className="font-display text-lg font-extrabold text-cream leading-tight">
-            {step.title}
-          </h3>
-          <p className="text-xs text-mist leading-snug">{step.text}</p>
-          <div className="flex flex-col gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onSkip}
-              className="w-full rounded-lg bg-flame text-night px-4 py-2 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
-            >
-              Try the Demo
-            </button>
-            <button
-              type="button"
-              onClick={onSkip}
-              className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Decide tooltip placement: below the target if it sits in the top
-  // half of the phone, above otherwise. Falls back to centered when we
-  // don't have measurements yet.
-  const placeBelow = rect ? rect.top + rect.height / 2 < rect.rootHeight / 2 : true
-  const tooltipTop = rect
-    ? placeBelow
-      ? rect.top + rect.height + 14
-      : Math.max(rect.top - 14, 12)
-    : null
-  const tooltipTransform = !placeBelow ? 'translateY(-100%)' : undefined
-
-  return (
-    <div className="absolute inset-0 z-40">
-      {/* Dim everything except the target. We do this with a transparent
-          box positioned exactly over the highlight, using a very large
-          box-shadow as the "rest of the screen" mask. */}
-      {rect ? (
-        <div
-          className="absolute pointer-events-none transition-all duration-300 ease-out"
-          style={{
-            top: rect.top - 4,
-            left: rect.left - 4,
-            width: rect.width + 8,
-            height: rect.height + 8,
-            borderRadius: 10,
-            boxShadow:
-              '0 0 0 9999px rgba(10, 15, 28, 0.72), 0 0 0 2px rgba(245,158,11,0.85), 0 0 24px 4px rgba(245,158,11,0.45)',
-          }}
-        />
-      ) : (
-        // Couldn't measure — still dim the whole screen so the tour feels intentional.
-        <div className="absolute inset-0 bg-night/70" />
-      )}
-
-      {/* Tooltip */}
-      <div
-        className="absolute left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[300px] pointer-events-auto"
-        style={{
-          top: tooltipTop ?? '50%',
-          transform: `translateX(-50%) ${tooltipTransform ?? ''}`,
-        }}
-      >
-        <div className="relative rounded-xl border border-flame/50 bg-card p-3 shadow-2xl shadow-black/60">
-          <span
-            aria-hidden
-            className="absolute h-2.5 w-2.5 rotate-45 bg-card border-flame/50"
-            style={
-              placeBelow
-                ? { top: -6, left: '50%', transform: 'translateX(-50%) rotate(45deg)', borderTop: '1px solid rgba(245,158,11,0.5)', borderLeft: '1px solid rgba(245,158,11,0.5)' }
-                : { bottom: -6, left: '50%', transform: 'translateX(-50%) rotate(45deg)', borderBottom: '1px solid rgba(245,158,11,0.5)', borderRight: '1px solid rgba(245,158,11,0.5)' }
-            }
-          />
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-flame">
-            Step {stepIdx + 1} of {TOUR_STEPS.length}
-          </p>
-          <h3 className="mt-0.5 font-display text-sm font-extrabold text-cream leading-tight">
-            {step.title}
-          </h3>
-          <p className="mt-1 text-xs text-cream/90 leading-snug">{step.text}</p>
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={onSkip}
-              className="text-[11px] text-mist hover:text-cream underline-offset-2 hover:underline"
-            >
-              Skip tour
-            </button>
-            <button
-              type="button"
-              onClick={onNext}
-              className="rounded-md bg-flame text-night px-3 py-1.5 text-xs font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
-            >
-              {stepIdx === TOUR_STEPS.length - 2 ? 'Finish →' : 'Next →'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ----------------------------------------------------------------------------
 // Match celebration overlay — the "magic moment". Hands fly in from both
 // sides, sparkle bursts in the center, text pops in. Auto-dismisses after
 // the parent's 2s timeout fires.
@@ -1542,7 +1228,7 @@ function MatchCelebration({ name }) {
 function AppHeader({ onExit, right }) {
   return (
     <header className="flex items-center justify-between px-4 pt-2 pb-3 border-b border-white/5">
-      <Logo size="text-lg" />
+      <Logo className="text-lg" />
       <div className="flex items-center gap-3">
         {right}
         <button
