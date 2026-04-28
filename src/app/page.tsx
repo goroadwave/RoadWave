@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { FirstVisitRedirect } from '@/components/ui/first-visit-redirect'
 import { Logo } from '@/components/ui/logo'
+import { RileyTour } from '@/components/tour/riley-tour'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export default async function RootPage() {
@@ -68,6 +69,21 @@ export default async function RootPage() {
           </p>
         </div>
       </main>
+
+      <section className="border-t border-white/5 px-4 pt-12 pb-10 sm:pt-16">
+        <div className="mx-auto max-w-xl text-center mb-6">
+          <Eyebrow>Take the tour</Eyebrow>
+          <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream leading-[1.1] mt-2">
+            Meet Riley.
+          </h2>
+          <p className="font-serif italic text-flame text-lg sm:text-xl leading-snug mt-1">
+            She&apos;ll show you around in nine quick slides.
+          </p>
+        </div>
+        <div className="mx-auto max-w-md">
+          <RileyTour />
+        </div>
+      </section>
 
       <footer className="px-4 pb-6 text-center text-xs text-mist/70">
         <p>Privacy-first campground connections for RVers.</p>
