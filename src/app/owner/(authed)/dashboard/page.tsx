@@ -86,6 +86,21 @@ export default async function OwnerDashboardPage() {
         </div>
       </header>
 
+      <Link
+        href="/owner/preview"
+        className="block rounded-2xl border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 px-4 py-3 text-center transition-colors"
+      >
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-purple-300">
+          Preview
+        </p>
+        <p className="mt-0.5 text-sm font-semibold text-cream">
+          Preview Guest View →
+        </p>
+        <p className="mt-0.5 text-[11px] text-mist">
+          See exactly what guests see after scanning your QR code.
+        </p>
+      </Link>
+
       <section className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/5 bg-card p-4">
           <p className="text-xs uppercase tracking-wide text-mist">
