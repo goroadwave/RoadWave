@@ -908,7 +908,7 @@ function CamperCard({ camper, state, onWave }) {
           </div>
         ) : state === 'noresponse' ? (
           <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-center text-[11px] italic text-mist/70">
-            They didn&apos;t wave back — and nobody knows. <span aria-hidden>😌</span>
+            No response yet — only you know you waved. <span aria-hidden>😊</span>
           </div>
         ) : state === 'waved' ? (
           <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-center text-xs text-mist">
