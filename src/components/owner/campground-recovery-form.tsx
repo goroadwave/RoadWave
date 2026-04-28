@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useTransition, type FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   provisionCampgroundAction,
   type ProvisionState,
@@ -13,26 +12,27 @@ const initialState: ProvisionState = {
   campgroundId: null,
 }
 
-// Manual recovery card. Does NOT use useActionState because the redirect
-// pattern there was making it look like nothing was happening on success.
-// Instead we call the server action directly via useTransition, console
-// log every step, and surface errors + success states explicitly.
+// Manual recovery card. Calls the server action directly via useTransition
+// so we can surface ok/error states explicitly. On success, does a HARD
+// browser navigation back to /owner/profile — full HTTP request, fresh
+// connection, server re-runs loadOwnerCampground() with no client-side
+// cache in the way. router.refresh() was unreliable here because the
+// Next.js Router Cache held onto the previous "no campground" payload.
 export function CampgroundRecoveryForm() {
-  const router = useRouter()
   const [state, setState] = useState<ProvisionState>(initialState)
   const [isPending, startTransition] = useTransition()
 
-  // After a successful provision, refresh so /owner/profile re-runs
-  // loadOwnerCampground() and finds the new row → renders the regular
-  // editor instead of this recovery form.
   useEffect(() => {
-    if (state.ok) {
-      console.log(
-        '[recovery-form] success → refreshing route to load the new profile',
-      )
-      router.refresh()
-    }
-  }, [state.ok, router])
+    if (!state.ok) return
+    console.log(
+      '[recovery-form] success → hard navigating to /owner/profile to bypass Router Cache',
+    )
+    // Brief delay so the success panel is visible before reload.
+    const t = window.setTimeout(() => {
+      window.location.replace('/owner/profile')
+    }, 800)
+    return () => window.clearTimeout(t)
+  }, [state.ok])
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
