@@ -40,9 +40,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${bricolage.variable} ${dmSans.variable} ${instrument.variable} h-full antialiased`}
+      className={`${bricolage.variable} ${dmSans.variable} ${instrument.variable} antialiased`}
     >
-      <body className="min-h-full bg-night text-cream font-sans">
+      <body className="bg-night text-cream font-sans">
         {children}
         <FloatingTourButton />
       </body>
