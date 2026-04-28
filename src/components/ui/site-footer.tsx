@@ -50,9 +50,9 @@ const SOCIAL_LINKS: {
   href: string
   Icon: (props: IconProps) => React.ReactElement
 }[] = [
-  { label: 'Instagram', href: 'https://instagram.com/', Icon: InstagramIcon },
-  { label: 'Facebook', href: 'https://facebook.com/', Icon: FacebookIcon },
-  { label: 'YouTube', href: 'https://youtube.com/', Icon: YoutubeIcon },
+  { label: 'Instagram', href: 'https://www.instagram.com/getroadwave', Icon: InstagramIcon },
+  { label: 'Facebook', href: 'https://www.facebook.com/getroadwave', Icon: FacebookIcon },
+  { label: 'YouTube', href: 'https://www.youtube.com/@getroadwave', Icon: YoutubeIcon },
 ]
 
 export function SiteFooter() {

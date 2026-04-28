@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { OAuthButtons } from '@/components/auth/oauth-buttons'
 import { SignupForm } from '@/components/auth/signup-form'
 import { PageHeading } from '@/components/ui/page-heading'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -18,6 +19,7 @@ export default async function SignupPage() {
         subtitle="Connections without the surveillance."
         compact
       />
+      <OAuthButtons />
       <SignupForm />
     </div>
   )

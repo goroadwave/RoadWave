@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { CampgroundRequestForm } from '@/components/campgrounds/request-form'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { FirstVisitRedirect } from '@/components/ui/first-visit-redirect'
 import { Logo } from '@/components/ui/logo'
@@ -167,6 +168,44 @@ export default async function RootPage() {
           </div>
         </section>
 
+        {/* Works like an app */}
+        <section className="px-4 py-10 border-t border-white/5">
+          <div className="mx-auto max-w-3xl text-center space-y-5">
+            <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-cream">
+              Works like an app — no download needed.
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 text-left">
+              <div className="rounded-2xl border border-white/5 bg-card p-4 flex items-start gap-3">
+                <span className="text-2xl shrink-0" aria-hidden>
+                  📱
+                </span>
+                <div>
+                  <p className="font-semibold text-cream text-sm leading-tight">iPhone</p>
+                  <p className="text-xs text-mist leading-snug mt-0.5">
+                    Tap the Share button in Safari, then{' '}
+                    <span className="text-cream">Add to Home Screen</span>.
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/5 bg-card p-4 flex items-start gap-3">
+                <span className="text-2xl shrink-0" aria-hidden>
+                  🤖
+                </span>
+                <div>
+                  <p className="font-semibold text-cream text-sm leading-tight">Android</p>
+                  <p className="text-xs text-mist leading-snug mt-0.5">
+                    Tap the three dots in Chrome, then{' '}
+                    <span className="text-cream">Add to Home Screen</span>.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-mist/80 italic">
+              RoadWave runs in your browser. No app store. No updates. Just open and go.
+            </p>
+          </div>
+        </section>
+
         {/* Privacy modes */}
         <section className="px-4 py-14 border-t border-white/5 bg-flame/[0.03]">
           <div className="mx-auto max-w-3xl text-center space-y-5">
@@ -225,6 +264,11 @@ export default async function RootPage() {
                 </div>
               ))}
             </div>
+
+            <div className="mt-8 max-w-md mx-auto">
+              <CampgroundRequestForm />
+            </div>
+
             <div className="mt-8 text-center">
               <Link
                 href="/campgrounds"
