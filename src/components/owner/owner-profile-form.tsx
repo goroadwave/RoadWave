@@ -6,6 +6,7 @@ import {
   type ProfileSaveState,
 } from '@/app/owner/(authed)/profile/actions'
 import type { OwnerCampground } from '@/app/owner/(authed)/_helpers'
+import { OwnerLogoUpload } from '@/components/owner/owner-logo-upload'
 
 const AMENITIES: { slug: string; label: string }[] = [
   { slug: 'full_hookups', label: 'Full hookups' },
@@ -80,16 +81,19 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
         </Field>
       </div>
 
-      <Field label="Logo URL" hint="Paste a public image URL. Direct upload coming soon.">
-        <input
-          name="logo_url"
-          type="url"
-          defaultValue={campground.logo_url ?? ''}
-          maxLength={500}
-          placeholder="https://"
-          className={inputCls}
-        />
-      </Field>
+      {/* Logo is uploaded via its own widget (writes to Storage + persists
+          the public URL directly). The hidden input below keeps the URL in
+          the main save action, so any in-flight Replace-logo upload that
+          completed since the form mounted still wins on Save. */}
+      <input
+        type="hidden"
+        name="logo_url"
+        defaultValue={campground.logo_url ?? ''}
+      />
+      <OwnerLogoUpload
+        campgroundId={campground.id}
+        currentLogoUrl={campground.logo_url}
+      />
 
       <Field label="Timezone">
         <select

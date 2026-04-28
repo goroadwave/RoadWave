@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { sendOwnerWelcomeEmail } from '@/lib/email/owner-welcome'
 
 export type ProfileSaveState = { error: string | null; ok: boolean }
 
@@ -65,7 +67,69 @@ export async function saveOwnerProfileAction(
     .eq('id', parsed.data.campground_id)
   if (error) return { error: error.message, ok: false }
 
+  // Welcome email side-effect: send only the first time a profile is saved.
+  // We use the admin client because welcome_email_sent_at + owner_email read
+  // benefit from bypassing RLS (the column was added in 0010 and the read
+  // policy on campgrounds is owner-restricted; both are fine, but admin is
+  // simpler and email send shouldn't depend on policy edge cases).
+  await maybeSendWelcomeEmail(parsed.data.campground_id)
+
   revalidatePath('/owner/dashboard')
   revalidatePath('/owner/profile')
   return { error: null, ok: true }
+}
+
+async function maybeSendWelcomeEmail(campgroundId: string): Promise<void> {
+  const admin = createSupabaseAdminClient()
+  const { data: cg } = await admin
+    .from('campgrounds')
+    .select('id, name, owner_email, welcome_email_sent_at')
+    .eq('id', campgroundId)
+    .single()
+  if (!cg || cg.welcome_email_sent_at || !cg.owner_email) return
+
+  // Look up the campground's QR token + owner display name in parallel.
+  const [{ data: token }, { data: adminLink }] = await Promise.all([
+    admin
+      .from('campground_qr_tokens')
+      .select('token')
+      .eq('campground_id', cg.id)
+      .maybeSingle(),
+    admin
+      .from('campground_admins')
+      .select('user_id')
+      .eq('campground_id', cg.id)
+      .eq('role', 'owner')
+      .maybeSingle(),
+  ])
+  if (!token?.token) return
+
+  let ownerName: string | null = null
+  if (adminLink?.user_id) {
+    const { data: prof } = await admin
+      .from('profiles')
+      .select('display_name')
+      .eq('id', adminLink.user_id)
+      .single()
+    ownerName = prof?.display_name ?? null
+  }
+
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.getroadwave.com'
+
+  const result = await sendOwnerWelcomeEmail({
+    toEmail: cg.owner_email,
+    ownerName,
+    campgroundName: cg.name,
+    qrCheckInUrl: `${siteUrl}/checkin?token=${token.token}`,
+    dashboardUrl: `${siteUrl}/owner/dashboard`,
+  })
+
+  if (result.ok) {
+    await admin
+      .from('campgrounds')
+      .update({ welcome_email_sent_at: new Date().toISOString() })
+      .eq('id', cg.id)
+  }
+  // If !result.ok we don't stamp — let the next save attempt try again.
 }

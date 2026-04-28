@@ -6,6 +6,62 @@ import {
   type RotateState,
 } from '@/app/owner/(authed)/qr/actions'
 
+// Builds a print-ready letter-size PDF: campground name centered up top,
+// QR centered, "Scan to check in for 24 hours" caption, RoadWave footer.
+async function buildQrPdf(args: {
+  qrDataUrl: string
+  campgroundName: string
+  checkInUrl: string
+}): Promise<Blob> {
+  const { default: JsPDF } = await import('jspdf')
+  // Letter size in inches → 72 dpi points. We use the default 'pt' unit and
+  // 'letter' size; jsPDF gives us 612 × 792.
+  const doc = new JsPDF({ unit: 'pt', format: 'letter' })
+  const pageWidth = doc.internal.pageSize.getWidth() // 612
+  const pageHeight = doc.internal.pageSize.getHeight() // 792
+
+  // Title
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(28)
+  doc.setTextColor(10, 15, 28) // #0a0f1c
+  doc.text(args.campgroundName, pageWidth / 2, 96, { align: 'center' })
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(13)
+  doc.setTextColor(120, 120, 120)
+  doc.text('Welcome to RoadWave', pageWidth / 2, 122, { align: 'center' })
+
+  // QR — centered, 320pt square (≈4.4 inches).
+  const qrSize = 320
+  const qrX = (pageWidth - qrSize) / 2
+  const qrY = 160
+  doc.addImage(args.qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize)
+
+  // Caption
+  doc.setFontSize(20)
+  doc.setTextColor(245, 158, 11) // flame
+  doc.text('Scan to check in', pageWidth / 2, qrY + qrSize + 48, {
+    align: 'center',
+  })
+  doc.setFontSize(13)
+  doc.setTextColor(80, 80, 80)
+  doc.text(
+    'You are visible for 24 hours, then automatically invisible again.',
+    pageWidth / 2,
+    qrY + qrSize + 72,
+    { align: 'center' },
+  )
+
+  // Footer
+  doc.setFontSize(10)
+  doc.setTextColor(160, 160, 160)
+  doc.text('getroadwave.com', pageWidth / 2, pageHeight - 48, {
+    align: 'center',
+  })
+
+  return doc.output('blob')
+}
+
 const initialState: RotateState = { error: null, ok: false }
 
 type Props = {
@@ -77,8 +133,34 @@ export function OwnerQrPanel({
     )
   }
 
-  const filename =
-    `${slug(campgroundName)}-roadwave-qr.png`
+  const baseFilename = `${slug(campgroundName)}-roadwave-qr`
+  const [pdfBusy, setPdfBusy] = useState(false)
+
+  async function downloadPdf() {
+    if (!dataUrl || !checkInUrl) return
+    setPdfBusy(true)
+    try {
+      const blob = await buildQrPdf({
+        qrDataUrl: dataUrl,
+        campgroundName,
+        checkInUrl,
+      })
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = `${baseFilename}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      // Defer revoke so the browser has time to start the download.
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'PDF render failed.'
+      setRenderError(msg)
+    } finally {
+      setPdfBusy(false)
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -112,7 +194,7 @@ export function OwnerQrPanel({
           <a
             ref={downloadRef}
             href={dataUrl ?? '#'}
-            download={filename}
+            download={`${baseFilename}.png`}
             aria-disabled={!dataUrl}
             className={
               dataUrl
@@ -122,6 +204,14 @@ export function OwnerQrPanel({
           >
             Download PNG
           </a>
+          <button
+            type="button"
+            onClick={downloadPdf}
+            disabled={!dataUrl || pdfBusy}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-flame/40 bg-flame/10 text-flame px-4 py-2.5 text-sm font-semibold hover:bg-flame/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {pdfBusy ? 'Building PDF…' : 'Download PDF'}
+          </button>
           <button
             type="button"
             onClick={() => window.print()}
@@ -176,10 +266,6 @@ export function OwnerQrPanel({
         )}
       </div>
 
-      <p className="text-xs text-mist italic">
-        PDF downloads coming soon. For now, print this page or download the PNG
-        and drop it into your existing welcome-sign template.
-      </p>
     </div>
   )
 }
