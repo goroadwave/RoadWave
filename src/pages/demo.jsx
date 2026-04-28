@@ -1144,21 +1144,30 @@ function CheckInScreen({
 // ----------------------------------------------------------------------------
 
 function NearbyScreen({ waved, onWave, onMessage, myStyle, campgroundName }) {
-  const [filterStyle, setFilterStyle] = useState(null)
-  // Multi-select interest filter. OR semantics — picking more interests
-  // *broadens* the match set, not narrows it.
+  // Multi-select style + interest filters. Both use OR semantics — adding
+  // more selections *broadens* the result set. Empty set = "All".
+  const [filterStyles, setFilterStyles] = useState(() => new Set())
   const [filterInterests, setFilterInterests] = useState(() => new Set())
 
   const list = useMemo(() => {
     return SAMPLE_CAMPERS.filter((c) => {
-      if (filterStyle && c.style !== filterStyle) return false
+      if (filterStyles.size > 0 && !filterStyles.has(c.style)) return false
       if (filterInterests.size > 0) {
         const matchesAny = c.interests.some((slug) => filterInterests.has(slug))
         if (!matchesAny) return false
       }
       return true
     })
-  }, [filterStyle, filterInterests])
+  }, [filterStyles, filterInterests])
+
+  function toggleStyle(style) {
+    setFilterStyles((prev) => {
+      const next = new Set(prev)
+      if (next.has(style)) next.delete(style)
+      else next.add(style)
+      return next
+    })
+  }
 
   function toggleInterest(slug) {
     setFilterInterests((prev) => {
@@ -1186,13 +1195,26 @@ function NearbyScreen({ waved, onWave, onMessage, myStyle, campgroundName }) {
           Travel style
         </p>
         <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setFilterStyles(new Set())}
+            aria-pressed={filterStyles.size === 0}
+            className={
+              filterStyles.size === 0
+                ? 'rounded-full bg-flame px-2.5 py-1 text-[11px] font-semibold text-night'
+                : 'rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-cream'
+            }
+          >
+            All
+          </button>
           {TRAVEL_STYLES.map((s) => {
-            const active = filterStyle === s
+            const active = filterStyles.has(s)
             return (
               <button
                 key={s}
                 type="button"
-                onClick={() => setFilterStyle(active ? null : s)}
+                onClick={() => toggleStyle(s)}
+                aria-pressed={active}
                 className={
                   active
                     ? 'rounded-full bg-flame px-2.5 py-1 text-[11px] font-semibold text-night'
@@ -1247,10 +1269,12 @@ function NearbyScreen({ waved, onWave, onMessage, myStyle, campgroundName }) {
         {list.length === 0 && (
           <li className="rounded-xl border border-dashed border-white/10 bg-card/40 p-4 text-center text-xs text-mist">
             No campers match those filters.
-            {filterStyle && (
+            {filterStyles.size > 0 && (
               <>
                 {' '}
-                <span className="text-cream">(filtering for: {filterStyle})</span>
+                <span className="text-cream">
+                  (filtering for: {Array.from(filterStyles).join(', ')})
+                </span>
               </>
             )}
           </li>
