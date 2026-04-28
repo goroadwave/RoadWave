@@ -149,20 +149,44 @@ export async function ownerSignupAction(
   }
   const campgroundId = campground.id
 
-  // 4) Link owner ↔ campground via campground_admins. If this fails, clean
-  // up the orphan campground so we don't leave half-provisioned data.
-  const { error: adminError } = await admin.from('campground_admins').insert({
-    campground_id: campgroundId,
-    user_id: userId,
-    role: 'owner',
-  })
+  // 4) Link owner ↔ campground via campground_admins. We try role='owner'
+  // first; if the value isn't in the campground_role enum yet (migration
+  // 0011 not yet applied), Postgres returns "invalid input value for enum
+  // campground_role: 'owner'". In that case we retry with role='host' so
+  // signup still succeeds — the rest of the app matches on user_id alone,
+  // not on the role value, so routing and access still work. Once 0011 is
+  // applied, future signups land at role='owner' as intended and existing
+  // 'host'-roled rows can be upgraded with a one-line UPDATE if desired.
+  let adminError = null as { message: string } | null
+  {
+    const { error } = await admin.from('campground_admins').insert({
+      campground_id: campgroundId,
+      user_id: userId,
+      role: 'owner',
+    })
+    adminError = error
+  }
+  if (adminError && /enum|invalid input value/i.test(adminError.message)) {
+    console.warn(
+      "[owner-signup] 'owner' campground_role missing — apply migration 0011_fix_owner_enum.sql. Falling back to role='host'.",
+      adminError.message,
+    )
+    const { error: hostError } = await admin
+      .from('campground_admins')
+      .insert({
+        campground_id: campgroundId,
+        user_id: userId,
+        role: 'host',
+      })
+    adminError = hostError
+  }
   if (adminError) {
     console.error(
       '[owner-signup] campground_admins insert failed:',
       adminError.message,
     )
-    // Best-effort cleanup. If this fails too we still surface the original
-    // error to the user.
+    // Best-effort cleanup of the orphan campground so we don't leave
+    // half-provisioned data behind.
     await admin.from('campgrounds').delete().eq('id', campgroundId)
     return {
       error: `Couldn't finish linking your account to the campground: ${adminError.message}`,
