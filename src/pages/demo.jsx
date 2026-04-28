@@ -215,27 +215,41 @@ const WAVE_BACK_DELAYS = {
 // Time after which a non-matcher's card flips to the "no response" state.
 const NO_RESPONSE_TIMEOUT = 5500
 
-const MEETUPS = [
+const HOSTED_MEETUPS = [
   {
-    id: 'm1',
+    id: 'h1',
     title: 'Sunset campfire & marshmallows',
     location: 'Fire ring 3',
     time: 'Tonight · 7:30 PM',
     description: "Bring a chair. We'll have hot cocoa. All campers welcome.",
   },
   {
-    id: 'm2',
+    id: 'h2',
     title: 'Morning yoga by the lake',
     location: 'Lakeside lawn',
     time: 'Tomorrow · 7:00 AM',
     description: 'Bring a mat. Beginner-friendly. 45 minutes.',
   },
+]
+
+const CAMPER_MEETUPS = [
   {
-    id: 'm3',
-    title: 'Trail walk to Eagle Lookout',
-    location: 'Trailhead parking',
-    time: 'Saturday · 9:00 AM',
-    description: '4-mile loop, moderate grade. Dogs welcome on leash.',
+    id: 'c1',
+    username: 'solo_ranger',
+    message:
+      'Anyone want to kayak at 8am? Launching from the south dock.',
+  },
+  {
+    id: 'c2',
+    username: 'rolling_pines',
+    message:
+      'Acoustic guitar at our site tonight, site area north loop. All welcome, bring snacks.',
+  },
+  {
+    id: 'c3',
+    username: 'weekend_fam',
+    message:
+      'Kids nature scavenger hunt, Saturday 10am, meeting at the playground. All ages welcome.',
   },
 ]
 
@@ -1293,33 +1307,88 @@ function Pill({ label, value }) {
 
 function MeetupsScreen({ campgroundName }) {
   return (
-    <div className="space-y-4 py-3">
+    <div className="space-y-5 py-3">
       <header>
-        <Eyebrow>{campgroundName} hosts</Eyebrow>
+        <Eyebrow>Meetups</Eyebrow>
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
-          Meetup spots
+          What&apos;s happening
         </h1>
         <p className="font-serif italic text-flame text-sm leading-snug">
-          Coffee, fires, music. Show up if you want.
+          From the campground and from neighbors. Show up if you want.
         </p>
       </header>
 
-      <ul className="space-y-2">
-        {MEETUPS.map((m) => (
-          <li
-            key={m.id}
-            className="rounded-2xl border border-white/5 bg-card p-3 shadow-lg shadow-black/20"
-          >
-            <h3 className="text-sm font-semibold text-cream leading-tight">{m.title}</h3>
-            <p className="text-[11px] text-mist mt-0.5">{m.time}</p>
-            <span className="mt-1.5 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-cream">
-              {m.location}
-            </span>
-            <p className="mt-2 text-xs text-cream/90 leading-snug">{m.description}</p>
-          </li>
-        ))}
-      </ul>
+      <section className="space-y-2">
+        <SectionLabel verified>Hosted by {campgroundName}</SectionLabel>
+        <ul className="space-y-2">
+          {HOSTED_MEETUPS.map((m) => (
+            <li
+              key={m.id}
+              className="rounded-2xl border border-flame/40 bg-flame/[0.04] p-3 shadow-lg shadow-black/20"
+            >
+              <div className="flex items-start gap-2">
+                <h3 className="flex-1 text-sm font-semibold text-cream leading-tight">
+                  {m.title}
+                </h3>
+                <VerifiedBadge title="Posted by the campground" />
+              </div>
+              <p className="text-[11px] text-mist mt-0.5">{m.time}</p>
+              <span className="mt-1.5 inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[10px] text-flame">
+                {m.location}
+              </span>
+              <p className="mt-2 text-xs text-cream/90 leading-snug">{m.description}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="space-y-2">
+        <SectionLabel>Posted by campers</SectionLabel>
+        <ul className="space-y-2">
+          {CAMPER_MEETUPS.map((m) => (
+            <li
+              key={m.id}
+              className="rounded-2xl border border-white/5 bg-card p-3 shadow-lg shadow-black/20"
+            >
+              <p className="text-xs font-semibold text-flame">@{m.username}</p>
+              <p className="mt-1 text-xs text-cream/90 leading-snug">{m.message}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <button
+        type="button"
+        className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] py-3 text-sm font-semibold text-mist hover:text-cream hover:border-flame/40 hover:bg-white/5 transition-colors"
+      >
+        <span aria-hidden className="text-base leading-none">＋</span>
+        Post Your Own Meetup
+      </button>
     </div>
+  )
+}
+
+function SectionLabel({ children, verified }) {
+  return (
+    <div className="flex items-center gap-1.5 px-1">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-mist">
+        {children}
+      </p>
+      {verified && <VerifiedBadge title="Verified campground" small />}
+    </div>
+  )
+}
+
+function VerifiedBadge({ title, small }) {
+  const size = small ? 'h-3 w-3 text-[8px]' : 'h-4 w-4 text-[10px]'
+  return (
+    <span
+      title={title}
+      aria-label={title}
+      className={`grid ${size} shrink-0 place-items-center rounded-full bg-flame text-night font-bold leading-none`}
+    >
+      ✓
+    </span>
   )
 }
 
