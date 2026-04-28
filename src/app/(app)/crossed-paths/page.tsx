@@ -123,12 +123,17 @@ export default async function CrossedPathsPage() {
           const when = formatDistanceToNow(new Date(p.matched_at), { addSuffix: true })
           return (
             <li key={p.id}>
-              <CrossedPathCard
-                profile={profile}
-                interests={slugs}
-                campgroundName={cgName}
-                when={when}
-              />
+              <Link
+                href={`/crossed-paths/${p.id}`}
+                className="block rounded-2xl hover:ring-2 hover:ring-flame/30 transition-shadow"
+              >
+                <CrossedPathCard
+                  profile={profile}
+                  interests={slugs}
+                  campgroundName={cgName}
+                  when={when}
+                />
+              </Link>
             </li>
           )
         })}
