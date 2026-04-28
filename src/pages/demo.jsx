@@ -1004,15 +1004,29 @@ function CheckInScreen({
 
 function NearbyScreen({ waved, onWave, myStyle }) {
   const [filterStyle, setFilterStyle] = useState(null)
-  const [filterInterest, setFilterInterest] = useState(null)
+  // Multi-select interest filter. OR semantics — picking more interests
+  // *broadens* the match set, not narrows it.
+  const [filterInterests, setFilterInterests] = useState(() => new Set())
 
   const list = useMemo(() => {
     return SAMPLE_CAMPERS.filter((c) => {
       if (filterStyle && c.style !== filterStyle) return false
-      if (filterInterest && !c.interests.includes(filterInterest)) return false
+      if (filterInterests.size > 0) {
+        const matchesAny = c.interests.some((slug) => filterInterests.has(slug))
+        if (!matchesAny) return false
+      }
       return true
     })
-  }, [filterStyle, filterInterest])
+  }, [filterStyle, filterInterests])
+
+  function toggleInterest(slug) {
+    setFilterInterests((prev) => {
+      const next = new Set(prev)
+      if (next.has(slug)) next.delete(slug)
+      else next.add(slug)
+      return next
+    })
+  }
 
   return (
     <div className="space-y-4 py-3">
@@ -1057,12 +1071,13 @@ function NearbyScreen({ waved, onWave, myStyle }) {
         </p>
         <div className="flex flex-wrap gap-1.5">
           {INTERESTS.map((i) => {
-            const active = filterInterest === i.slug
+            const active = filterInterests.has(i.slug)
             return (
               <button
                 key={i.slug}
                 type="button"
-                onClick={() => setFilterInterest(active ? null : i.slug)}
+                onClick={() => toggleInterest(i.slug)}
+                aria-pressed={active}
                 className={
                   active
                     ? 'inline-flex items-center gap-1 rounded-full bg-flame px-2.5 py-1 text-[11px] font-semibold text-night'
