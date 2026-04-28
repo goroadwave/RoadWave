@@ -78,8 +78,18 @@ export function FloatingTourButton() {
   }, [showPopup])
 
   // Hide on /tour (Riley already there) and /campgrounds (its own
-  // host-pitch Riley with a different popup lives on that page).
-  if (!pathname || pathname === '/tour' || pathname === '/campgrounds') {
+  // host-pitch Riley with a different popup lives on that page). Also
+  // hide on auth pages — Riley shouldn't pop up while someone is signing
+  // in or confirming an email.
+  if (
+    !pathname ||
+    pathname === '/tour' ||
+    pathname === '/campgrounds' ||
+    pathname === '/signup' ||
+    pathname === '/login' ||
+    pathname === '/verify' ||
+    pathname.startsWith('/auth')
+  ) {
     return null
   }
 

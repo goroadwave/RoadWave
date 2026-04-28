@@ -31,19 +31,19 @@ export default async function RootPage() {
 
       <main>
         {/* Hero */}
-        <section className="px-4 pt-10 pb-8 sm:pt-16 sm:pb-12">
-          <div className="mx-auto max-w-xl text-center space-y-5">
+        <section className="px-4 pt-4 pb-3 sm:pt-16 sm:pb-12">
+          <div className="mx-auto max-w-xl text-center space-y-3 sm:space-y-5">
             <Eyebrow>Made for the campground</Eyebrow>
-            <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
+            <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
               Pull into camp.
               <br />
               Find your people.
             </h1>
             <div className="space-y-1">
-              <p className="font-serif italic text-flame text-xl sm:text-2xl leading-snug">
+              <p className="font-serif italic text-flame text-base sm:text-2xl leading-snug">
                 Coffee at sunrise. Campfire at dusk. New friends at the next site over.
               </p>
-              <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
+              <p className="font-serif italic text-flame text-sm sm:text-lg leading-snug">
                 Wave when the vibe&apos;s right. Stay parked when it isn&apos;t.
               </p>
             </div>
@@ -51,7 +51,7 @@ export default async function RootPage() {
         </section>
 
         {/* Choice cards */}
-        <section className="px-4 pb-12">
+        <section className="px-4 pb-8 sm:pb-12">
           <div className="mx-auto max-w-4xl grid gap-4 sm:grid-cols-2">
             <article className="flex flex-col rounded-2xl border border-white/5 bg-card p-6 sm:p-7 shadow-lg shadow-black/20">
               <div className="text-5xl mb-3" aria-hidden>
@@ -130,7 +130,7 @@ export default async function RootPage() {
                 {
                   emoji: '👋',
                   title: 'Wave & meet',
-                  body: 'Mutual wave opens a chat. No wave-back? No one knows.',
+                  body: 'Mutual wave unlocks a private hello — no public messages, no group chat. No wave-back? No one knows.',
                 },
               ].map((s, i) => (
                 <li
@@ -208,6 +208,9 @@ export default async function RootPage() {
                 Stay here and you&apos;re already on the list.
               </p>
             </div>
+            <p className="mb-3 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-flame">
+              Example campgrounds
+            </p>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
                 { name: 'Riverbend RV Park', loc: 'Asheville, NC' },
@@ -232,6 +235,10 @@ export default async function RootPage() {
                 </div>
               ))}
             </div>
+            <p className="mt-3 text-center text-xs italic text-mist/70">
+              These are sample properties shown for illustration. Real partner
+              campgrounds coming soon.
+            </p>
             <p className="text-center text-sm text-mist mt-6">
               Run a campground?{' '}
               <Link

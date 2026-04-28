@@ -47,7 +47,7 @@ export default function CampgroundsPage() {
                 href="#request-demo"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
               >
-                Request a Demo for My Campground
+                Get a Branded Demo Page for My Campground
               </a>
             </div>
           </div>
@@ -144,7 +144,7 @@ export default function CampgroundsPage() {
                 {
                   emoji: '👋',
                   title: 'Wave & meet',
-                  body: 'Mutual wave opens a chat. Quiet means no one sees the miss.',
+                  body: 'Mutual wave unlocks a private hello — no public messages, no group chat. Quiet means no one sees the miss.',
                 },
               ].map((s, i) => (
                 <li
@@ -178,7 +178,7 @@ export default function CampgroundsPage() {
               No site numbers. No public posts. No open group chat.
             </h2>
             <p className="font-serif italic text-flame text-lg sm:text-xl leading-snug">
-              Total opt-in. Wave-back required before any chat opens.
+              Total opt-in. Wave-back required before any private hello opens.
             </p>
             <ul className="text-left grid gap-3 sm:grid-cols-2 max-w-2xl mx-auto pt-4">
               {[
@@ -277,13 +277,17 @@ export default function CampgroundsPage() {
             <div className="text-center mb-6 space-y-2">
               <Eyebrow>Request a demo</Eyebrow>
               <h2 className="font-display text-3xl font-extrabold tracking-tight text-cream">
-                See it at your campground.
+                See RoadWave with your campground name built in.
               </h2>
               <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
                 A short walkthrough, your campground name baked in.
               </p>
             </div>
             <CampgroundLeadForm />
+            <p className="mt-4 text-center text-sm text-mist leading-snug">
+              We will send you a personalized demo link within 24 hours. No
+              commitment required.
+            </p>
           </div>
         </section>
       </main>

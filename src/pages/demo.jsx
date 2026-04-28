@@ -280,16 +280,14 @@ const INTEREST_EMOJI = Object.fromEntries(INTERESTS.map((i) => [i.slug, i.emoji]
 // ----------------------------------------------------------------------------
 
 export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) {
-  const [view, setView] = useState('welcome') // welcome | guest
   const [bannerDismissed, setBannerDismissed] = useState(false)
   // Bumping this key forces GuestApp + every descendant (NearbyScreen, its
-  // filter Sets, etc.) to remount with default state, even if React would
-  // otherwise reuse instances. The Reset demo button increments it.
+  // filter Sets, etc.) to remount with default state. The Reset demo
+  // button — and the in-app Exit/Restart action — increments it.
   const [demoKey, setDemoKey] = useState(0)
 
   function resetDemo() {
     setDemoKey((k) => k + 1)
-    setView('welcome')
   }
 
   return (
@@ -315,16 +313,11 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
           </header>
 
           <PhoneFrame>
-            {view === 'welcome' && (
-              <WelcomeScreen onGuest={() => setView('guest')} />
-            )}
-            {view === 'guest' && (
-              <GuestApp
-                key={demoKey}
-                onExit={() => setView('welcome')}
-                campgroundName={campgroundName}
-              />
-            )}
+            <GuestApp
+              key={demoKey}
+              onExit={resetDemo}
+              campgroundName={campgroundName}
+            />
           </PhoneFrame>
 
           <button
@@ -404,36 +397,6 @@ function PhoneFrame({ children }) {
 // Welcome
 // ----------------------------------------------------------------------------
 
-function WelcomeScreen({ onGuest }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center px-6 py-10 text-center gap-5">
-      <Logo size="text-4xl" />
-      <p className="font-serif italic text-flame text-lg leading-snug">
-        Meet the right neighbors without making it weird.
-      </p>
-      <p className="text-sm text-mist">
-        Open when you want.
-        <br />
-        Invisible when you do not.
-      </p>
-
-      <div className="w-full pt-4">
-        <button
-          type="button"
-          onClick={onGuest}
-          className="w-full rounded-xl bg-flame text-night px-4 py-3 font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors inline-flex items-center justify-center gap-2"
-        >
-          Start the Demo <span aria-hidden>👋</span>
-        </button>
-      </div>
-
-      <p className="pt-3 text-[11px] text-mist/80 max-w-[260px]">
-        No account needed — explore everything first.
-      </p>
-    </div>
-  )
-}
-
 // ----------------------------------------------------------------------------
 // Guest app
 // ----------------------------------------------------------------------------
@@ -495,7 +458,7 @@ function GuestApp({ onExit, campgroundName }) {
           setChatWith({ id, name: camper.name })
           // Don't auto-open chat — give the user the explicit "do you want
           // to message them?" opt-in screen first. Both parties have to
-          // choose before a chat opens.
+          // choose before a private hello opens.
           setScreen('matchchoice')
         }, 2000)
       }, matcherDelay)
@@ -551,7 +514,11 @@ function GuestApp({ onExit, campgroundName }) {
         }
       >
         {screen === 'home' && (
-          <HomeScreen privacyMode={privacy} onScreen={setScreen} />
+          <HomeScreen
+            privacyMode={privacy}
+            onScreen={setScreen}
+            campgroundName={campgroundName}
+          />
         )}
         {screen === 'checkin' && (
           <CheckInScreen
@@ -966,7 +933,7 @@ function AppHeader({ onExit, right }) {
   )
 }
 
-function HomeScreen({ privacyMode, onScreen }) {
+function HomeScreen({ privacyMode, onScreen, campgroundName }) {
   return (
     <div className="space-y-5 py-3">
       <header>
@@ -983,6 +950,11 @@ function HomeScreen({ privacyMode, onScreen }) {
           Open when you want. Invisible when you do not.
         </p>
       </header>
+
+      <div className="inline-flex items-center gap-1.5 rounded-full border border-leaf/40 bg-leaf/10 px-2.5 py-1 text-[11px] font-semibold text-leaf">
+        <span aria-hidden>✓</span>
+        Checked in at {campgroundName}
+      </div>
 
       <div className="rounded-xl border border-white/5 bg-card px-3 py-2 flex items-center gap-3">
         <ModeBadge mode={privacyMode} />
