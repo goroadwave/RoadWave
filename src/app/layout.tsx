@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, DM_Sans, Instrument_Serif } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { FloatingTourButton } from '@/components/ui/floating-tour-button'
+import { SiteFooter } from '@/components/ui/site-footer'
 import './globals.css'
 
 const bricolage = Bricolage_Grotesque({
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="bg-night text-cream font-sans">
         {children}
+        <SiteFooter />
         <FloatingTourButton />
         <Analytics />
       </body>

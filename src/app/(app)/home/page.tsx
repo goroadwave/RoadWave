@@ -13,6 +13,7 @@ import {
   Users,
 } from 'lucide-react'
 import { Eyebrow } from '@/components/ui/eyebrow'
+import { WelcomeModal } from '@/components/onboarding/welcome-modal'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export default async function HomePage() {
@@ -23,14 +24,42 @@ export default async function HomePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('username, display_name, privacy_mode')
+    .select('username, display_name, privacy_mode, travel_style')
     .eq('id', user!.id)
     .single()
 
   if (!profile?.display_name) redirect('/profile/setup')
 
+  const { count: interestsCount } = await supabase
+    .from('profile_interests')
+    .select('*', { count: 'exact', head: true })
+    .eq('profile_id', user!.id)
+
+  const needsTravelStyle = !profile.travel_style
+  const needsInterests = (interestsCount ?? 0) === 0
+  const needsOnboarding = needsTravelStyle || needsInterests
+
+  let interestCatalog: { slug: string; label: string }[] = []
+  if (needsOnboarding) {
+    const { data } = await supabase
+      .from('interests')
+      .select('slug, label')
+      .order('label')
+    interestCatalog = data ?? []
+  }
+
+  const firstName = profile.display_name.split(/\s+/)[0] ?? ''
+
   return (
     <div className="space-y-7">
+      {needsOnboarding && (
+        <WelcomeModal
+          firstName={firstName}
+          needsTravelStyle={needsTravelStyle}
+          needsInterests={needsInterests}
+          interests={interestCatalog}
+        />
+      )}
       <header className="space-y-2">
         <Eyebrow>@{profile.username}</Eyebrow>
         <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream leading-[1.05]">
@@ -53,7 +82,7 @@ export default async function HomePage() {
           <p className="font-semibold text-cream capitalize">{profile.privacy_mode}</p>
         </div>
         <Link
-          href="/privacy"
+          href="/settings/privacy"
           className="text-sm font-semibold text-flame underline-offset-2 hover:underline"
         >
           Change
@@ -103,7 +132,7 @@ export default async function HomePage() {
             Icon={Compass}
             title="Privacy mode"
             description="Visible, Quiet, or Invisible."
-            href="/privacy"
+            href="/settings/privacy"
           />
         </div>
       </section>

@@ -13,7 +13,7 @@ const SPEECH_BY_PATH: Record<string, string> = {
     "These are the campers near you right now. Send a wave to anyone who looks interesting!",
   '/meetups':
     "Check out what's happening at the campground tonight. Join a meetup or create your own!",
-  '/privacy':
+  '/settings/privacy':
     'This is where you control who sees you. Go invisible anytime with one tap.',
   '/crossed-paths':
     'These are people you have camped near before. Your camping history, all in one place.',

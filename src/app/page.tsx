@@ -5,6 +5,54 @@ import { FirstVisitRedirect } from '@/components/ui/first-visit-redirect'
 import { Logo } from '@/components/ui/logo'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
+const STEPS: { emoji: string; title: string; body: string }[] = [
+  {
+    emoji: '📷',
+    title: 'Scan the QR',
+    body: 'Use the campground RoadWave QR code from the office, welcome packet, map, or activity board.',
+  },
+  {
+    emoji: '🕒',
+    title: 'Check in for 24 hours',
+    body: 'Join that campground temporarily. No permanent location broadcasting.',
+  },
+  {
+    emoji: '👁',
+    title: 'Pick your vibe',
+    body: 'Choose Visible, Quiet, or Invisible. You control what others can see.',
+  },
+  {
+    emoji: '👋',
+    title: 'Wave when it feels right',
+    body: 'A mutual wave opens a private hello. No wave-back? No one knows.',
+  },
+]
+
+const PRIVACY_MODES: { icon: string; label: string; body: string }[] = [
+  {
+    icon: '👁',
+    label: 'Visible',
+    body: 'You appear to other checked-in campers and are open to waves.',
+  },
+  {
+    icon: '🤫',
+    label: 'Quiet',
+    body: 'You stay hidden unless you choose to wave first.',
+  },
+  {
+    icon: '👻',
+    label: 'Invisible',
+    body: 'You can browse privately without appearing to anyone.',
+  },
+]
+
+const EXAMPLE_CAMPGROUNDS: { name: string; loc: string }[] = [
+  { name: 'Riverbend RV Park', loc: 'Asheville, NC' },
+  { name: 'Coastal Pines Campground', loc: 'Bandon, OR' },
+  { name: 'Oak Hollow RV Resort', loc: 'Texas Hill Country' },
+  { name: 'Pine Lake Campground', loc: 'Northern Wisconsin' },
+]
+
 export default async function RootPage() {
   const supabase = await createSupabaseServerClient()
   const {
@@ -31,29 +79,26 @@ export default async function RootPage() {
 
       <main>
         {/* Hero */}
-        <section className="px-4 pt-4 pb-3 sm:pt-16 sm:pb-12">
-          <div className="mx-auto max-w-xl text-center space-y-3 sm:space-y-5">
+        <section className="px-4 pt-4 pb-3 sm:pt-16 sm:pb-10">
+          <div className="mx-auto max-w-2xl text-center space-y-3 sm:space-y-5">
             <Eyebrow>Made for the campground</Eyebrow>
             <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
-              Pull into camp.
-              <br />
-              Find your people.
+              Meet friendly campers at your campground without making it weird.
             </h1>
-            <div className="space-y-1">
-              <p className="font-serif italic text-flame text-base sm:text-2xl leading-snug">
-                Coffee at sunrise. Campfire at dusk. New friends at the next site over.
-              </p>
-              <p className="font-serif italic text-flame text-sm sm:text-lg leading-snug">
-                Wave when the vibe&apos;s right. Stay parked when it isn&apos;t.
-              </p>
-            </div>
+            <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
+              RoadWave helps campers connect around shared interests through
+              private, temporary campground check-ins.
+            </p>
+            <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-flame font-semibold">
+              No exact site numbers · No public group chats · No pressure
+            </p>
           </div>
         </section>
 
-        {/* Choice cards */}
-        <section className="px-4 pb-8 sm:pb-12">
+        {/* Two path cards */}
+        <section className="px-4 pb-10 sm:pb-14">
           <div className="mx-auto max-w-4xl grid gap-4 sm:grid-cols-2">
-            <article className="flex flex-col rounded-2xl border border-white/5 bg-card p-6 sm:p-7 shadow-lg shadow-black/20">
+            <article className="flex flex-col rounded-2xl border border-white/5 bg-card p-5 sm:p-7 shadow-lg shadow-black/20">
               <div className="text-5xl mb-3" aria-hidden>
                 🚐
               </div>
@@ -61,18 +106,17 @@ export default async function RootPage() {
                 I&apos;m an RVer
               </h2>
               <p className="text-mist text-sm leading-relaxed flex-1">
-                Find nearby campers who are open to saying hi, joining
-                activities, or meeting around shared interests.
+                Find nearby campers open to a wave, activity, or quick hello.
               </p>
               <Link
                 href="/demo"
                 className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
               >
-                Try the Demo <span aria-hidden>👋</span>
+                Try the RVer Demo <span aria-hidden>👋</span>
               </Link>
             </article>
 
-            <article className="flex flex-col rounded-2xl border border-white/5 bg-card p-6 sm:p-7 shadow-lg shadow-black/20">
+            <article className="flex flex-col rounded-2xl border border-white/5 bg-card p-5 sm:p-7 shadow-lg shadow-black/20">
               <div className="text-5xl mb-3" aria-hidden>
                 🏕️
               </div>
@@ -80,8 +124,7 @@ export default async function RootPage() {
                 I run a campground
               </h2>
               <p className="text-mist text-sm leading-relaxed flex-1">
-                Offer guests a private QR-code amenity that helps them
-                connect without public group chats or site numbers.
+                Offer guests a private QR-code amenity that helps them connect safely.
               </p>
               <Link
                 href="/campgrounds"
@@ -90,14 +133,6 @@ export default async function RootPage() {
                 See Campground Demo →
               </Link>
             </article>
-          </div>
-          <div className="mt-6 text-center">
-            <Link
-              href="/tour"
-              className="inline-flex items-center gap-1 text-sm text-mist hover:text-cream underline-offset-4 hover:underline transition-colors"
-            >
-              See How It Works <span aria-hidden>→</span>
-            </Link>
           </div>
         </section>
 
@@ -111,28 +146,7 @@ export default async function RootPage() {
               </h2>
             </div>
             <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                {
-                  emoji: '📷',
-                  title: 'Scan the QR',
-                  body: 'Find it on the campground welcome sign. You are checked in for 24 hours.',
-                },
-                {
-                  emoji: '👁',
-                  title: 'Pick your vibe',
-                  body: 'Visible, Quiet, or Invisible. Toggle individual fields on or off.',
-                },
-                {
-                  emoji: '👀',
-                  title: 'See who is around',
-                  body: 'Other campers surface — filter by interests or travel style.',
-                },
-                {
-                  emoji: '👋',
-                  title: 'Wave & meet',
-                  body: 'Mutual wave unlocks a private hello — no public messages, no group chat. No wave-back? No one knows.',
-                },
-              ].map((s, i) => (
+              {STEPS.map((s, i) => (
                 <li
                   key={s.title}
                   className="rounded-2xl border border-white/5 bg-card p-5"
@@ -153,34 +167,15 @@ export default async function RootPage() {
           </div>
         </section>
 
-        {/* Privacy controls */}
+        {/* Privacy modes */}
         <section className="px-4 py-14 border-t border-white/5 bg-flame/[0.03]">
           <div className="mx-auto max-w-3xl text-center space-y-5">
-            <Eyebrow>Privacy controls</Eyebrow>
+            <Eyebrow>Privacy modes</Eyebrow>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              You&apos;re always in control.
+              You are always in control.
             </h2>
-            <p className="font-serif italic text-flame text-lg sm:text-xl leading-snug">
-              Three modes. Per-field toggles. Nothing leaves until you say so.
-            </p>
             <div className="grid gap-3 sm:grid-cols-3 pt-4 text-left">
-              {[
-                {
-                  icon: '👁',
-                  label: 'Visible',
-                  body: 'You appear in the nearby list. Open to waves.',
-                },
-                {
-                  icon: '🤫',
-                  label: 'Quiet',
-                  body: 'Hidden, but you can still wave first.',
-                },
-                {
-                  icon: '👻',
-                  label: 'Invisible',
-                  body: 'Browse without anyone knowing you are here.',
-                },
-              ].map((p) => (
+              {PRIVACY_MODES.map((p) => (
                 <div
                   key={p.label}
                   className="rounded-2xl border border-white/5 bg-card p-5"
@@ -193,31 +188,26 @@ export default async function RootPage() {
                 </div>
               ))}
             </div>
+            <p className="pt-2 font-serif italic text-flame text-base sm:text-lg leading-snug">
+              RoadWave never requires exact site numbers.
+            </p>
           </div>
         </section>
 
-        {/* RoadWave Friendly spots */}
+        {/* Example campgrounds */}
         <section className="px-4 py-14 border-t border-white/5">
           <div className="mx-auto max-w-4xl">
             <div className="text-center mb-8 space-y-2">
               <Eyebrow>RoadWave Friendly</Eyebrow>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                Spots that already offer the wave.
+                Example RoadWave-friendly campgrounds.
               </h2>
-              <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
-                Stay here and you&apos;re already on the list.
+              <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
+                See how participating campgrounds could appear once RoadWave is live.
               </p>
             </div>
-            <p className="mb-3 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-flame">
-              Example campgrounds
-            </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                { name: 'Riverbend RV Park', loc: 'Asheville, NC' },
-                { name: 'Coastal Pines Campground', loc: 'Bandon, OR' },
-                { name: 'Oak Hollow RV Resort', loc: 'Texas Hill Country' },
-                { name: 'Pine Lake Campground', loc: 'Northern Wisconsin' },
-              ].map((s) => (
+              {EXAMPLE_CAMPGROUNDS.map((s) => (
                 <div
                   key={s.name}
                   className="flex items-center gap-3 rounded-xl border border-white/5 bg-card p-4"
@@ -230,66 +220,50 @@ export default async function RootPage() {
                     <p className="text-xs text-mist">{s.loc}</p>
                   </div>
                   <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-flame">
-                    Friendly
+                    Example
                   </span>
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-center text-xs italic text-mist/70">
-              These are sample properties shown for illustration. Real partner
-              campgrounds coming soon.
-            </p>
-            <p className="text-center text-sm text-mist mt-6">
-              Run a campground?{' '}
+            <div className="mt-8 text-center">
               <Link
                 href="/campgrounds"
-                className="font-semibold text-flame underline-offset-2 hover:underline"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
               >
-                Get on the list →
+                Get Your Campground Listed →
               </Link>
-            </p>
+            </div>
           </div>
         </section>
 
-        {/* Get started CTA */}
+        {/* Final CTA */}
         <section className="px-4 py-16 border-t border-flame/30 bg-flame/[0.06]">
           <div className="mx-auto max-w-xl text-center space-y-5">
-            <Eyebrow>Get started</Eyebrow>
+            <Eyebrow>Try it</Eyebrow>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              Ready to find your people?
+              Ready to see how it works?
             </h2>
-            <p className="font-serif italic text-flame text-lg sm:text-xl leading-snug">
-              Try the demo, or jump straight in and create your account.
+            <p className="text-mist text-base sm:text-lg leading-relaxed">
+              Try the demo with mock campground data. No account needed —
+              explore everything first.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
               <Link
-                href="/signup"
+                href="/demo"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
               >
-                Get Started <span aria-hidden>👋</span>
+                Try the Demo <span aria-hidden>👋</span>
               </Link>
               <Link
-                href="/demo"
+                href="/campgrounds"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-cream px-6 py-3 font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors"
               >
-                Try the Demo →
+                Get Your Campground Listed →
               </Link>
             </div>
-            <p className="text-xs text-mist pt-2">
-              No account needed for the demo. It&apos;s a sandbox with mock data.
-            </p>
           </div>
         </section>
       </main>
-
-      <footer className="px-4 py-8 text-center text-xs text-mist/70 border-t border-white/5">
-        <p>RoadWave — Privacy-first campground connections for RVers.</p>
-        <p className="mt-1">
-          <Link href="/campgrounds" className="text-flame hover:underline">
-            For campground owners →
-          </Link>
-        </p>
-      </footer>
     </>
   )
 }

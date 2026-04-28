@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react'
 import { Eye, EyeOff, Ghost } from 'lucide-react'
-import { savePrivacyModeAction, type PrivacyState } from '@/app/(app)/privacy/actions'
+import { savePrivacyModeAction, type PrivacyState } from '@/app/(app)/settings/privacy/actions'
 import type { PrivacyMode } from '@/lib/types/db'
 
 const initialState: PrivacyState = { error: null, ok: false }
