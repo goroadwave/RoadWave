@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CamperCard } from './camper-card'
+import { saveNearbyFiltersAction } from '@/app/(app)/nearby/actions'
 import { INTERESTS } from '@/lib/constants/interests'
 import { TRAVEL_STYLES } from '@/lib/constants/travel-styles'
 import type { NearbyCamper } from '@/lib/types/db'
@@ -12,11 +13,41 @@ type Props = {
   campers: NearbyCamper[]
   campgroundId: string
   waveStateByProfileId: Record<string, WaveState>
+  initialStyles?: string[]
+  initialInterests?: string[]
 }
 
-export function NearbyList({ campers, campgroundId, waveStateByProfileId }: Props) {
-  const [selectedInterests, setSelectedInterests] = useState<Set<string>>(new Set())
-  const [selectedStyles, setSelectedStyles] = useState<Set<string>>(new Set())
+export function NearbyList({
+  campers,
+  campgroundId,
+  waveStateByProfileId,
+  initialStyles = [],
+  initialInterests = [],
+}: Props) {
+  const [selectedInterests, setSelectedInterests] = useState<Set<string>>(
+    () => new Set(initialInterests),
+  )
+  const [selectedStyles, setSelectedStyles] = useState<Set<string>>(
+    () => new Set(initialStyles),
+  )
+
+  // Persist changes to the user's profile, debounced so a rapid burst of
+  // toggles batches into one write. Skip the very first effect run so we
+  // don't immediately re-save the initial values we just hydrated from.
+  const skipFirstSave = useRef(true)
+  useEffect(() => {
+    if (skipFirstSave.current) {
+      skipFirstSave.current = false
+      return
+    }
+    const timer = window.setTimeout(() => {
+      void saveNearbyFiltersAction(
+        Array.from(selectedStyles),
+        Array.from(selectedInterests),
+      )
+    }, 400)
+    return () => window.clearTimeout(timer)
+  }, [selectedStyles, selectedInterests])
 
   const filtered = useMemo(() => {
     return campers.filter((c) => {

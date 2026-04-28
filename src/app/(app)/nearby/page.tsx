@@ -11,6 +11,16 @@ export default async function NearbyPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Filter prefs are stored on the profile so they survive even when the
+  // user isn't currently checked in anywhere.
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('nearby_filter_styles, nearby_filter_interests')
+    .eq('id', user!.id)
+    .single()
+  const initialStyles = profile?.nearby_filter_styles ?? []
+  const initialInterests = profile?.nearby_filter_interests ?? []
+
   const { data: latestCheckIn } = await supabase
     .from('check_ins')
     .select('id, campground_id, expires_at')
@@ -36,6 +46,12 @@ export default async function NearbyPage() {
           Check in
           <span aria-hidden>👋</span>
         </Link>
+        {(initialStyles.length > 0 || initialInterests.length > 0) && (
+          <p className="text-xs text-mist">
+            Your saved filter preferences are ready — they&apos;ll apply the
+            moment you check in.
+          </p>
+        )}
       </div>
     )
   }
@@ -81,6 +97,8 @@ export default async function NearbyPage() {
           campers={(campers ?? []) as NearbyCamper[]}
           campgroundId={latestCheckIn.campground_id}
           waveStateByProfileId={waveStateByProfileId}
+          initialStyles={initialStyles}
+          initialInterests={initialInterests}
         />
       )}
     </div>
