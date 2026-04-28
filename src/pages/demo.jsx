@@ -155,52 +155,64 @@ const SAMPLE_CAMPERS = [
   },
 ]
 
+// Per-camper opening lines. The ChatScreen looks up the camper id and
+// falls through to DEFAULT_OPENING for any id not in the map. Keeps each
+// camper's voice consistent with their profile (style, tenure, vibe).
+const OPENING_LINES = {
+  c1: 'Hey there! So glad you waved — we were just about to make coffee. 😊',
+  c2: 'Nice to meet you! Always love connecting with fellow campers 👋',
+  c3: 'Well hey there neighbor! Twelve years on the road and we still love meeting new folks 😄',
+  c4: 'Hey! Great to meet a fellow solo traveler out here 🙂',
+}
+
+const DEFAULT_OPENING =
+  'Hey there! Nice to meet you — what a great campground to run into each other! 🏕️'
+
+function getOpeningLine(camperId) {
+  return OPENING_LINES[camperId] ?? DEFAULT_OPENING
+}
+
 // Conversation script — a small state machine. Each step is keyed by an id
 // and has the camper's message (`them`) plus the quick replies the user sees
 // after that message. Each reply points to the next step. A step with
 // replies: null is a leaf — conversation ends warmly there.
+//
+// The user's quick replies rotate by depth: Set 1 (intro) at start, Set 2
+// (mid-conversation) at step `mid`, Set 3 (planning) at step `plan`. Every
+// option in a set leads to the same next step — the camper's reply is the
+// same regardless of which option you picked, but the conversation feels
+// authored because the next set fits the new context.
 const CHAT_SCRIPT = {
+  // start.them is overridden per-camper at runtime via getOpeningLine().
+  // The text here is just a fallback in case the lookup is bypassed.
   start: {
-    them: 'Hey neighbor! 👋 Saw your wave — nice rig!',
+    them: DEFAULT_OPENING,
     replies: [
-      { you: 'Thanks! How long have you been full-timing?', next: 'a' },
-      { you: 'Same campground last year?', next: 'b' },
-      { you: 'Coffee sounds amazing ☕', next: 'c' },
+      { you: 'Nice to meet you too! How long are you here?', next: 'mid' },
+      { you: 'Love the vibe here — first time at this campground?', next: 'mid' },
+      { you: 'Coffee sounds perfect — what time works?', next: 'mid' },
     ],
   },
-  a: {
-    them: 'Three years now. Honestly the best decision we ever made. You?',
+  mid: {
+    them: 'A few more days, then we head north. We come back here whenever we can — best little corner of the campground. How about you?',
     replies: [
-      { you: "Just six months — still figuring it out 🚐", next: 'a1' },
-      { you: 'About a year, loving it', next: 'a2' },
-      { you: 'Just a weekender for now', next: 'a3' },
+      { you: 'Same! Where are you headed after this?', next: 'plan' },
+      { you: 'How long have you been on the road?', next: 'plan' },
+      { you: 'Any trail recommendations around here?', next: 'plan' },
     ],
   },
-  a1: { them: 'Welcome to the road! It gets better every year. ❤️', replies: null },
-  a2: { them: 'Awesome — that first year is magic. The road hooks you.', replies: null },
-  a3: { them: "Hey, weekends count! Full-time finds you when it's ready.", replies: null },
-  b: {
-    them: 'Sure was — we come back every fall. Best fire ring around.',
+  plan: {
+    them: "There's a great loop trail by the lake — easy 4 miles, dog-friendly. We are around a couple more nights if you want to plan something!",
     replies: [
-      { you: 'Which site are you on?', next: 'b1' },
-      { you: 'Fall is the best season', next: 'b2' },
-      { you: 'I was here in summer once', next: 'b3' },
+      { you: "That's awesome! What kind of rig are you in?", next: 'wrap' },
+      { you: 'We should grab a campfire spot tonight!', next: 'wrap' },
+      { you: "Do you have a dog? We'd love to say hi 🐾", next: 'wrap' },
     ],
   },
-  b1: { them: "Site 12 — the one with the big oak out front. Stop by!", replies: null },
-  b2: { them: "Couldn't agree more. Crisp mornings, no bugs, all good.", replies: null },
-  b3: { them: "Whole different vibe in fall — you'd love it. 🍂", replies: null },
-  c: {
-    them: "There's a great pour-over spot right by the lake. 7am tomorrow?",
-    replies: [
-      { you: "I'm in! 7am ☕", next: 'c1' },
-      { you: 'Make it 8 and I am there', next: 'c2' },
-      { you: "I'm a tea person but I'll come anyway 🍵", next: 'c3' },
-    ],
+  wrap: {
+    them: 'Sounds great — see you out there! Stop by anytime. 👋',
+    replies: null,
   },
-  c1: { them: 'See you tomorrow! Bring the wave 👋', replies: null },
-  c2: { them: "8 it is. I'll save you a seat.", replies: null },
-  c3: { them: "Ha! They have tea too. See you at 7am.", replies: null },
 }
 
 // Wave-back script for the demo. Three of the five sample campers wave back
@@ -693,13 +705,16 @@ function ChatScreen({ camper, onBack, onLeave, onBlock }) {
   const scrollRef = useRef(null)
 
   // On mount: typing indicator first, then deliver the opener after 1s.
+  // Opening text is per-camper (see OPENING_LINES); replies come from the
+  // shared CHAT_SCRIPT.start step.
   useEffect(() => {
     let cancelled = false
     setTyping(true)
     const timer = window.setTimeout(() => {
       if (cancelled) return
       const step = CHAT_SCRIPT.start
-      setMessages([{ id: `t-start-${Date.now()}`, from: 'them', text: step.them }])
+      const openingText = getOpeningLine(camper.id)
+      setMessages([{ id: `t-start-${Date.now()}`, from: 'them', text: openingText }])
       setTyping(false)
       setPhase(step.replies ? 'waiting' : 'done')
     }, 1000)
@@ -707,7 +722,7 @@ function ChatScreen({ camper, onBack, onLeave, onBlock }) {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [])
+  }, [camper.id])
 
   // Smooth auto-scroll on new content.
   useEffect(() => {
