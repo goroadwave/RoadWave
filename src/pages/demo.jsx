@@ -276,6 +276,8 @@ function GuestApp({ onExit }) {
   const [chosenInterests, setChosenInterests] = useState(['coffee', 'campfire', 'dogs'])
   const [privacy, setPrivacy] = useState('visible')
   const [waved, setWaved] = useState({}) // id -> 'waved' | 'matched'
+  const [match, setMatch] = useState(null) // { id, name } during celebration
+  const [chatWith, setChatWith] = useState(null) // { id, name } when chat is open
 
   function toggleInterest(slug) {
     setChosenInterests((prev) =>
@@ -284,42 +286,60 @@ function GuestApp({ onExit }) {
   }
 
   function handleWave(id) {
-    // Sarah & Jim auto-match for the demo. Others go to "waved".
-    setWaved((prev) => ({ ...prev, [id]: id === 'c1' ? 'matched' : 'waved' }))
+    if (id === 'c1') {
+      // Sarah & Jim — auto-match. Show the celebration overlay, then open
+      // the chat screen after a 2s pause.
+      const camper = SAMPLE_CAMPERS.find((c) => c.id === id)
+      setWaved((prev) => ({ ...prev, [id]: 'matched' }))
+      setMatch({ id, name: camper.name })
+      window.setTimeout(() => {
+        setMatch(null)
+        setChatWith({ id, name: camper.name })
+        setScreen('chat')
+      }, 2000)
+      return
+    }
+    setWaved((prev) => ({ ...prev, [id]: 'waved' }))
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
       <AppHeader
         onExit={onExit}
-        right={
-          <ModeBadge mode={privacy} />
-        }
+        right={<ModeBadge mode={privacy} />}
       />
-      <nav className="grid grid-cols-3 gap-1 px-3 pb-2 text-[11px]">
-        {[
-          ['home', 'Home'],
-          ['checkin', 'Check in'],
-          ['nearby', 'Nearby'],
-          ['meetups', 'Meetups'],
-          ['privacy', 'Privacy'],
-          ['paths', 'Crossed'],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setScreen(id)}
-            className={
-              screen === id
-                ? 'rounded-md bg-flame/15 text-flame px-2 py-1.5 font-semibold'
-                : 'rounded-md text-mist px-2 py-1.5 hover:text-cream'
-            }
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-      <div className="flex-1 overflow-y-auto px-4 pb-6">
+      {screen !== 'chat' && (
+        <nav className="grid grid-cols-3 gap-1 px-3 pb-2 text-[11px]">
+          {[
+            ['home', 'Home'],
+            ['checkin', 'Check in'],
+            ['nearby', 'Nearby'],
+            ['meetups', 'Meetups'],
+            ['privacy', 'Privacy'],
+            ['paths', 'Crossed'],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setScreen(id)}
+              className={
+                screen === id
+                  ? 'rounded-md bg-flame/15 text-flame px-2 py-1.5 font-semibold'
+                  : 'rounded-md text-mist px-2 py-1.5 hover:text-cream'
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+      )}
+      <div
+        className={
+          screen === 'chat'
+            ? 'flex-1 overflow-hidden'
+            : 'flex-1 overflow-y-auto px-4 pb-6'
+        }
+      >
         {screen === 'home' && (
           <HomeScreen privacyMode={privacy} onScreen={setScreen} />
         )}
@@ -342,8 +362,180 @@ function GuestApp({ onExit }) {
           <PrivacyScreen mode={privacy} onChange={setPrivacy} />
         )}
         {screen === 'paths' && <CrossedPathsScreen waved={waved} />}
+        {screen === 'chat' && chatWith && (
+          <ChatScreen
+            camper={chatWith}
+            onBack={() => {
+              setChatWith(null)
+              setScreen('nearby')
+            }}
+          />
+        )}
+      </div>
+      {match && <MatchCelebration name={match.name} />}
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Chat screen + bubble
+// ----------------------------------------------------------------------------
+
+function ChatScreen({ camper, onBack }) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-3 border-b border-white/5 bg-card px-3 py-2.5">
+        <button
+          type="button"
+          onClick={onBack}
+          className="grid h-7 w-7 place-items-center rounded-full text-mist hover:bg-white/5 hover:text-cream text-base leading-none"
+          aria-label="Back to nearby"
+        >
+          ←
+        </button>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-cream leading-tight truncate">
+            {camper.name}
+          </p>
+          <p className="flex items-center gap-1 text-[10px] text-leaf">
+            <span className="h-1.5 w-1.5 rounded-full bg-leaf" />
+            Online
+          </p>
+        </div>
+        <span className="rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[9px] font-semibold text-flame">
+          MATCHED
+        </span>
+      </div>
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+        <p className="text-center text-[10px] text-mist/70 my-2">Just now</p>
+        <ChatBubble side="them">Hey neighbor! 👋</ChatBubble>
+        <ChatBubble side="them">Saw your wave — nice rig!</ChatBubble>
+        <ChatBubble side="them">Coffee at the firepit at 9?</ChatBubble>
+      </div>
+      <div className="flex items-center gap-2 border-t border-white/5 bg-card px-3 py-2">
+        <input
+          className="flex-1 rounded-full bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-cream placeholder:text-mist focus:outline-none focus:ring-1 focus:ring-flame"
+          placeholder="Type a message…"
+          readOnly
+        />
+        <button
+          type="button"
+          className="grid h-7 w-7 place-items-center rounded-full bg-flame text-night text-xs font-bold"
+          aria-label="Send"
+        >
+          →
+        </button>
       </div>
     </div>
+  )
+}
+
+function ChatBubble({ side, children }) {
+  const them = side === 'them'
+  return (
+    <div className={`flex ${them ? 'justify-start' : 'justify-end'}`}>
+      <div
+        className={
+          them
+            ? 'max-w-[80%] rounded-2xl rounded-bl-sm bg-white/10 px-3 py-2 text-xs text-cream'
+            : 'max-w-[80%] rounded-2xl rounded-br-sm bg-flame text-night px-3 py-2 text-xs font-medium'
+        }
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Match celebration overlay — the "magic moment". Hands fly in from both
+// sides, sparkle bursts in the center, text pops in. Auto-dismisses after
+// the parent's 2s timeout fires.
+// ----------------------------------------------------------------------------
+
+function MatchCelebration({ name }) {
+  return (
+    <>
+      <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 bg-night/95 match-bg" aria-hidden />
+        <div className="relative text-center px-4">
+          <div className="flex items-center justify-center gap-5 mb-4">
+            <span className="match-hand-left text-5xl" aria-hidden>👋</span>
+            <span className="match-sparkle text-4xl" aria-hidden>✨</span>
+            <span className="match-hand-right text-5xl" aria-hidden>👋</span>
+          </div>
+          <h2 className="match-title font-display text-3xl font-extrabold tracking-tight text-white">
+            You matched!
+          </h2>
+          <p className="match-name font-display text-lg font-extrabold text-flame mt-1">
+            {name}
+          </p>
+          <p className="match-sub mt-3 font-serif italic text-cream/80 text-sm">
+            Chat is now open
+          </p>
+        </div>
+      </div>
+      <style>{`
+        @keyframes matchBg { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes matchHandLeft {
+          0%   { transform: translateX(-180%) rotate(-30deg); opacity: 0; }
+          70%  { transform: translateX(8%)    rotate(0deg);   opacity: 1; }
+          100% { transform: translateX(0)     rotate(0deg);   opacity: 1; }
+        }
+        @keyframes matchHandRight {
+          0%   { transform: translateX(180%) rotate(30deg);  opacity: 0; }
+          70%  { transform: translateX(-8%)  rotate(0deg);   opacity: 1; }
+          100% { transform: translateX(0)    rotate(0deg);   opacity: 1; }
+        }
+        @keyframes matchHandWiggle {
+          0%, 100% { transform: rotate(0deg); }
+          25%      { transform: rotate(-15deg); }
+          75%      { transform: rotate(15deg); }
+        }
+        @keyframes matchSparkle {
+          0%   { transform: scale(0)   rotate(0deg);   opacity: 0; }
+          60%  { transform: scale(1.5) rotate(200deg); opacity: 1; }
+          100% { transform: scale(1)   rotate(360deg); opacity: 1; }
+        }
+        @keyframes matchTextPop {
+          from { transform: translateY(16px) scale(0.85); opacity: 0; }
+          to   { transform: translateY(0)    scale(1);    opacity: 1; }
+        }
+        .match-bg { animation: matchBg 0.3s ease-out both; }
+        .match-hand-left {
+          display: inline-block;
+          animation:
+            matchHandLeft 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+            matchHandWiggle 1.1s 0.7s ease-in-out infinite;
+          transform-origin: 70% 70%;
+        }
+        .match-hand-right {
+          display: inline-block;
+          animation:
+            matchHandRight 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+            matchHandWiggle 1.1s 0.7s ease-in-out infinite reverse;
+          transform-origin: 30% 70%;
+        }
+        .match-sparkle {
+          display: inline-block;
+          animation: matchSparkle 0.8s 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+        }
+        .match-title { animation: matchTextPop 0.5s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+        .match-name  { animation: matchTextPop 0.5s 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+        .match-sub   { animation: matchTextPop 0.5s 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+        @media (prefers-reduced-motion: reduce) {
+          .match-bg,
+          .match-hand-left,
+          .match-hand-right,
+          .match-sparkle,
+          .match-title,
+          .match-name,
+          .match-sub {
+            animation: none !important;
+          }
+        }
+      `}</style>
+    </>
   )
 }
 
