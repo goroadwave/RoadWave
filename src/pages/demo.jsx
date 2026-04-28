@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 
@@ -263,7 +265,7 @@ const INTEREST_EMOJI = Object.fromEntries(INTERESTS.map((i) => [i.slug, i.emoji]
 // Top-level demo component
 // ----------------------------------------------------------------------------
 
-export default function DemoPage() {
+export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) {
   const [view, setView] = useState('welcome') // welcome | guest
 
   return (
@@ -292,7 +294,12 @@ export default function DemoPage() {
             {view === 'welcome' && (
               <WelcomeScreen onGuest={() => setView('guest')} />
             )}
-            {view === 'guest' && <GuestApp onExit={() => setView('welcome')} />}
+            {view === 'guest' && (
+              <GuestApp
+                onExit={() => setView('welcome')}
+                campgroundName={campgroundName}
+              />
+            )}
           </PhoneFrame>
 
           <button
@@ -385,7 +392,7 @@ function WelcomeScreen({ onGuest }) {
 // Guest app
 // ----------------------------------------------------------------------------
 
-function GuestApp({ onExit }) {
+function GuestApp({ onExit, campgroundName }) {
   const [screen, setScreen] = useState('home')
   const [travelStyle, setTravelStyle] = useState('Full-timer')
   const [chosenInterests, setChosenInterests] = useState(['coffee', 'campfire', 'dogs'])
@@ -483,16 +490,24 @@ function GuestApp({ onExit }) {
             privacyMode={privacy}
             onPrivacy={setPrivacy}
             onCheckedIn={() => setScreen('nearby')}
+            campgroundName={campgroundName}
           />
         )}
         {screen === 'nearby' && (
-          <NearbyScreen waved={waved} onWave={handleWave} myStyle={travelStyle} />
+          <NearbyScreen
+            waved={waved}
+            onWave={handleWave}
+            myStyle={travelStyle}
+            campgroundName={campgroundName}
+          />
         )}
-        {screen === 'meetups' && <MeetupsScreen />}
+        {screen === 'meetups' && <MeetupsScreen campgroundName={campgroundName} />}
         {screen === 'privacy' && (
           <PrivacyScreen mode={privacy} onChange={setPrivacy} />
         )}
-        {screen === 'paths' && <CrossedPathsScreen waved={waved} />}
+        {screen === 'paths' && (
+          <CrossedPathsScreen waved={waved} campgroundName={campgroundName} />
+        )}
         {screen === 'matchchoice' && chatWith && (
           <MatchChoiceScreen
             camper={chatWith}
@@ -963,6 +978,7 @@ function CheckInScreen({
   privacyMode,
   onPrivacy,
   onCheckedIn,
+  campgroundName,
 }) {
   return (
     <div className="space-y-6 py-3">
@@ -979,7 +995,7 @@ function CheckInScreen({
       <div className="rounded-2xl border border-flame/30 bg-flame/10 p-4">
         <p className="text-[11px] uppercase tracking-wide text-flame">Check in to</p>
         <h2 className="font-display text-xl font-extrabold tracking-tight text-cream">
-          Riverbend RV Park
+          {campgroundName}
         </h2>
         <p className="text-xs text-mist">Asheville, NC</p>
       </div>
@@ -1067,7 +1083,7 @@ function CheckInScreen({
 // Nearby
 // ----------------------------------------------------------------------------
 
-function NearbyScreen({ waved, onWave, myStyle }) {
+function NearbyScreen({ waved, onWave, myStyle, campgroundName }) {
   const [filterStyle, setFilterStyle] = useState(null)
   // Multi-select interest filter. OR semantics — picking more interests
   // *broadens* the match set, not narrows it.
@@ -1096,7 +1112,7 @@ function NearbyScreen({ waved, onWave, myStyle }) {
   return (
     <div className="space-y-4 py-3">
       <header>
-        <Eyebrow>Currently at Riverbend RV Park</Eyebrow>
+        <Eyebrow>Currently at {campgroundName}</Eyebrow>
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
           Nearby campers
         </h1>
@@ -1253,11 +1269,11 @@ function Pill({ label, value }) {
 // Meetups
 // ----------------------------------------------------------------------------
 
-function MeetupsScreen() {
+function MeetupsScreen({ campgroundName }) {
   return (
     <div className="space-y-4 py-3">
       <header>
-        <Eyebrow>Riverbend RV Park hosts</Eyebrow>
+        <Eyebrow>{campgroundName} hosts</Eyebrow>
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
           Meetup spots
         </h1>
@@ -1337,13 +1353,13 @@ function PrivacyScreen({ mode, onChange }) {
 // Crossed paths
 // ----------------------------------------------------------------------------
 
-function CrossedPathsScreen({ waved }) {
+function CrossedPathsScreen({ waved, campgroundName }) {
   // Pull in any matches the user just made in the demo session
   const sessionMatches = SAMPLE_CAMPERS.filter((c) => waved[c.id] === 'matched').map(
     (c) => ({
       name: c.name,
       username: c.username,
-      campground: 'Riverbend RV Park',
+      campground: campgroundName,
       when: 'Just now',
       style: c.style,
       interests: c.interests.slice(0, 3),

@@ -1,32 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
-// Per-page Riley narration. Anything not in this map falls through to the
-// default. Pathnames are matched exactly; no wildcards.
-const SPEECH_BY_PATH: Record<string, string> = {
-  '/home':
-    "This is your home base. Check in, set your vibe, and see what's happening at your campground.",
-  '/nearby':
-    "These are the campers near you right now. Send a wave to anyone who looks interesting!",
-  '/meetups':
-    "Check out what's happening at the campground tonight. Join a meetup or create your own!",
-  '/privacy':
-    'This is where you control who sees you. Go invisible anytime with one tap.',
-  '/crossed-paths':
-    'These are people you have camped near before. Your camping history, all in one place.',
-}
+const SPEECH =
+  "Welcome! I am Riley, your RoadWave campground host. I help your guests feel welcome, find their people, and have the kind of camping experience that brings them back year after year. Want to see how I would work at your campground?"
 
-const DEFAULT_SPEECH =
-  "Need help? I am Riley, your RoadWave campground host. Tap Next on the tour to learn more!"
-
-// Floating Riley. Tapping opens a popup with "Take the Tour" / "Got it!"
-// AND fires a per-page narration via /api/speak. Tap-outside, Escape, or
-// tapping Riley again closes the popup and stops the clip.
-export function FloatingTourButton() {
-  const pathname = usePathname()
+// Campground-page-specific Riley button. Same visual language as the global
+// FloatingTourButton but with the host pitch + a "Request a Demo" popup
+// option that scrolls to the in-page CTA form.
+export function CampgroundRileyButton() {
   const [imgError, setImgError] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [showPopup, setShowPopup] = useState(false)
@@ -40,14 +23,6 @@ export function FloatingTourButton() {
     }
     setIsPlaying(false)
   }
-
-  // Stop audio + close popup whenever the route changes.
-  useEffect(() => {
-    return () => {
-      stopAudio()
-      setShowPopup(false)
-    }
-  }, [pathname])
 
   // Click-outside + Escape close the popup.
   useEffect(() => {
@@ -77,30 +52,19 @@ export function FloatingTourButton() {
     }
   }, [showPopup])
 
-  // Hide on /tour (Riley already there) and /campgrounds (its own
-  // host-pitch Riley with a different popup lives on that page).
-  if (!pathname || pathname === '/tour' || pathname === '/campgrounds') {
-    return null
-  }
-
-  const speechText = SPEECH_BY_PATH[pathname] ?? DEFAULT_SPEECH
-
-  async function handleRileyTap() {
-    // Toggle: if open, close + stop.
+  async function handleTap() {
     if (showPopup) {
       setShowPopup(false)
       stopAudio()
       return
     }
-
-    // Open + speak.
     setShowPopup(true)
     setIsPlaying(true)
     try {
       const res = await fetch('/api/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: speechText }),
+        body: JSON.stringify({ text: SPEECH }),
       })
       if (!res.ok) {
         setIsPlaying(false)
@@ -123,9 +87,11 @@ export function FloatingTourButton() {
     }
   }
 
-  function dismissGotIt() {
+  function scrollToForm() {
     setShowPopup(false)
     stopAudio()
+    const el = document.getElementById('request-demo')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   return (
@@ -137,9 +103,8 @@ export function FloatingTourButton() {
         <div
           role="dialog"
           aria-label="Riley help menu"
-          className="riley-popup relative w-56 rounded-2xl border border-flame/50 bg-night/95 backdrop-blur p-3 shadow-2xl shadow-black/60"
+          className="riley-popup relative w-60 rounded-2xl border border-flame/50 bg-night/95 backdrop-blur p-3 shadow-2xl shadow-black/60"
         >
-          {/* Tail pointing down to the button */}
           <span
             aria-hidden
             className="absolute -bottom-1.5 right-6 h-3 w-3 rotate-45 bg-night border-r border-b border-flame/50"
@@ -153,10 +118,10 @@ export function FloatingTourButton() {
             </Link>
             <button
               type="button"
-              onClick={dismissGotIt}
+              onClick={scrollToForm}
               className="block w-full rounded-lg border border-white/15 bg-white/5 text-cream text-center px-3 py-2 text-sm font-medium hover:bg-white/10 hover:border-flame/40 transition-colors"
             >
-              Got it!
+              Request a Demo
             </button>
           </div>
         </div>
@@ -164,9 +129,9 @@ export function FloatingTourButton() {
 
       <button
         type="button"
-        onClick={handleRileyTap}
+        onClick={handleTap}
         aria-label={
-          showPopup ? 'Close Riley menu' : 'Ask Riley about this page'
+          showPopup ? 'Close Riley menu' : 'Ask Riley about RoadWave'
         }
         aria-expanded={showPopup}
         className="riley-fab grid place-items-center rounded-full bg-card border border-flame/40 shadow-[0_0_22px_rgba(245,158,11,0.35)] hover:shadow-[0_0_36px_rgba(245,158,11,0.6)] hover:scale-105 active:scale-100 transition-all"
