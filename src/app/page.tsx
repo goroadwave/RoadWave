@@ -91,6 +91,14 @@ export default async function RootPage() {
               </Link>
             </article>
           </div>
+          <div className="mt-6 text-center">
+            <Link
+              href="/tour"
+              className="inline-flex items-center gap-1 text-sm text-mist hover:text-cream underline-offset-4 hover:underline transition-colors"
+            >
+              See How It Works <span aria-hidden>→</span>
+            </Link>
+          </div>
         </section>
 
         {/* How it works */}
