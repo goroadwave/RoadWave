@@ -9,6 +9,7 @@ import {
   HandHeart,
   Users,
 } from 'lucide-react'
+import { BulletinBanner } from '@/components/bulletins/bulletin-banner'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { WelcomeModal } from '@/components/onboarding/welcome-modal'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -58,14 +59,34 @@ export default async function HomePage() {
     .limit(1)
     .maybeSingle()
 
-  let checkInCampground: { name: string } | null = null
+  let checkInCampground:
+    | { id: string; name: string; logo_url: string | null }
+    | null = null
   if (checkIn) {
     const { data } = await supabase
       .from('campgrounds')
-      .select('name')
+      .select('id, name, logo_url')
       .eq('id', checkIn.campground_id)
       .single()
     checkInCampground = data ?? null
+  }
+
+  // Active bulletin from the campground the guest is checked into.
+  let activeBulletin: {
+    id: string
+    message: string
+    category: string
+  } | null = null
+  if (checkInCampground) {
+    const { data } = await supabase
+      .from('bulletins')
+      .select('id, message, category')
+      .eq('campground_id', checkInCampground.id)
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    activeBulletin = data ?? null
   }
 
   const firstName = profile.display_name.split(/\s+/)[0] ?? ''
@@ -80,6 +101,16 @@ export default async function HomePage() {
           interests={interestCatalog}
         />
       )}
+
+      {activeBulletin && checkInCampground && (
+        <BulletinBanner
+          campgroundName={checkInCampground.name}
+          logoUrl={checkInCampground.logo_url}
+          category={activeBulletin.category}
+          message={activeBulletin.message}
+        />
+      )}
+
       <header className="space-y-2">
         <Eyebrow>@{profile.username}</Eyebrow>
         <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream leading-[1.05]">

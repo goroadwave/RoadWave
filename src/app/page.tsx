@@ -61,6 +61,15 @@ export default async function RootPage() {
 
   if (user) {
     if (!user.email_confirmed_at) redirect('/verify')
+    // Owners and super-admins go straight to their dashboard.
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    if (profile?.role === 'owner' || profile?.role === 'super_admin') {
+      redirect('/owner/dashboard')
+    }
     redirect('/home')
   }
 
