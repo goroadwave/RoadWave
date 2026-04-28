@@ -61,10 +61,18 @@ export function OwnerPreview({
   const [tab, setTab] = useState<TabId>('home')
 
   return (
-    <div className="min-h-screen flex flex-col bg-night">
+    <div
+      className="min-h-screen flex flex-col bg-night text-cream font-sans"
+      style={{ backgroundColor: '#0a0f1c', color: '#f5ecd9' }}
+    >
       {/* Sticky preview banner. Distinct purple/violet so it can't be
-          mistaken for the orange brand color. */}
-      <div className="sticky top-0 z-30 bg-purple-600 text-white px-4 py-2.5 flex items-center justify-between gap-3 shadow-md">
+          mistaken for the orange brand color. Explicit inline styles
+          alongside the Tailwind classes guarantee the brand chrome
+          renders even if a class doesn't resolve in some build path. */}
+      <div
+        className="sticky top-0 z-30 bg-purple-600 text-white px-4 py-2.5 flex items-center justify-between gap-3 shadow-md"
+        style={{ backgroundColor: '#7c3aed', color: '#ffffff' }}
+      >
         <p className="text-xs sm:text-sm font-semibold tracking-wide">
           <span className="text-[10px] uppercase tracking-[0.2em] opacity-80 mr-2">
             Preview mode
@@ -74,6 +82,7 @@ export function OwnerPreview({
         <Link
           href="/owner/dashboard"
           className="rounded-md bg-white/15 hover:bg-white/25 px-3 py-1 text-xs font-semibold whitespace-nowrap transition-colors"
+          style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: '#ffffff' }}
         >
           Exit Preview ✕
         </Link>
