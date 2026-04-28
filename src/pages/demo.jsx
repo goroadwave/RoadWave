@@ -382,8 +382,8 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
         <div className="mx-auto max-w-5xl px-4 py-10 pb-28 flex flex-col items-center gap-8">
           <header className="text-center space-y-3">
             <Logo size="text-4xl sm:text-5xl" />
-            <p className="font-serif italic text-flame text-lg sm:text-xl">
-              Meet the right neighbors without making it weird.
+            <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-flame font-semibold">
+              Private campground check-ins for RVers
             </p>
             <p className="text-xs uppercase tracking-[0.2em] text-mist">
               Demo · all data is mock
@@ -443,11 +443,10 @@ function Logo({ size = 'text-3xl' }) {
       aria-label="RoadWave"
     >
       <span className="text-cream">Road</span>
-      <span className="text-flame">Wa</span>
-      <span className="wave-emoji select-none" aria-hidden>
+      <span className="text-flame">Wave</span>
+      <span className="wave-emoji select-none ml-2" aria-hidden>
         👋
       </span>
-      <span className="text-flame">e</span>
     </span>
   )
 }
@@ -1561,25 +1560,19 @@ function AppHeader({ onExit, right }) {
 function HomeScreen({ privacyMode, onScreen, campgroundName }) {
   return (
     <div className="space-y-5 py-3">
-      <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-flame">
-          @rolling_pines
+      <header className="space-y-2">
+        <p className="inline-flex items-center gap-1.5 rounded-full border border-leaf/40 bg-leaf/10 px-2.5 py-1 text-[11px] font-semibold text-leaf">
+          <span aria-hidden>✓</span>
+          Checked in
         </p>
-        <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream">
-          Hey, Sarah.
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
+          Welcome to {campgroundName}
         </h1>
-        <p className="font-serif italic text-flame text-base leading-snug">
-          Meet the right neighbors without making it weird.
-        </p>
         <p className="font-serif italic text-flame text-sm leading-snug">
-          Open when you want. Invisible when you do not.
+          You&apos;re checked in for 24 hours. See who&apos;s open to a friendly
+          wave today.
         </p>
       </header>
-
-      <div className="inline-flex items-center gap-1.5 rounded-full border border-leaf/40 bg-leaf/10 px-2.5 py-1 text-[11px] font-semibold text-leaf">
-        <span aria-hidden>✓</span>
-        Checked in at {campgroundName}
-      </div>
 
       <div className="rounded-xl border border-white/5 bg-card px-3 py-2 flex items-center gap-3">
         <ModeBadge mode={privacyMode} />
@@ -1666,7 +1659,7 @@ function CheckInScreen({
           Where are you parked?
         </h1>
         <p className="font-serif italic text-flame text-base leading-snug">
-          24 hours, then you&apos;re invisible again.
+          Campground check-ins expire after 24 hours.
         </p>
       </header>
 

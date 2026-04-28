@@ -187,7 +187,7 @@ export default function CampgroundsPage() {
                 "A wave is private until both sides wave back.",
                 "Three privacy modes — including a true Invisible.",
                 "Guest data leaves your campground when their stay does.",
-                "Zero ads. Zero scraping. Zero algorithm.",
+                'No ads. No scraping. No selling guest data.',
               ].map((p) => (
                 <li
                   key={p}
