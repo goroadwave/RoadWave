@@ -3,13 +3,10 @@ import { redirect } from 'next/navigation'
 import {
   ArrowRight,
   CalendarHeart,
-  Compass,
   Eye,
   EyeOff,
   Ghost,
   HandHeart,
-  ScanQrCode,
-  UserCog,
   Users,
 } from 'lucide-react'
 import { Eyebrow } from '@/components/ui/eyebrow'
@@ -48,6 +45,29 @@ export default async function HomePage() {
     interestCatalog = data ?? []
   }
 
+  // Active check-in (24h sliding window). Used to surface a green
+  // "Checked in at X" chip directly under the privacy card, matching
+  // the demo Home screen.
+  const { data: checkIn } = await supabase
+    .from('check_ins')
+    .select('campground_id, expires_at')
+    .eq('profile_id', user!.id)
+    .eq('status', 'active')
+    .gt('expires_at', new Date().toISOString())
+    .order('checked_in_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  let checkInCampground: { name: string } | null = null
+  if (checkIn) {
+    const { data } = await supabase
+      .from('campgrounds')
+      .select('name')
+      .eq('id', checkIn.campground_id)
+      .single()
+    checkInCampground = data ?? null
+  }
+
   const firstName = profile.display_name.split(/\s+/)[0] ?? ''
 
   return (
@@ -75,6 +95,13 @@ export default async function HomePage() {
         </div>
       </header>
 
+      {checkInCampground && (
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-leaf/40 bg-leaf/10 px-3 py-1 text-xs font-semibold text-leaf">
+          <span aria-hidden>✓</span>
+          Checked in at {checkInCampground.name}
+        </div>
+      )}
+
       <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-card px-4 py-3">
         <ModeIcon mode={profile.privacy_mode} />
         <div className="flex-1 min-w-0">
@@ -93,12 +120,6 @@ export default async function HomePage() {
         <Eyebrow>Where the action is</Eyebrow>
         <div className="grid gap-3 sm:grid-cols-2">
           <Tile
-            Icon={ScanQrCode}
-            title="Check in"
-            description="Scan the campground QR to join the local list."
-            href="/checkin"
-          />
-          <Tile
             Icon={Users}
             title="Nearby campers"
             description="See who else is here right now."
@@ -115,24 +136,6 @@ export default async function HomePage() {
             title="Crossed paths"
             description="Mutual waves you've made."
             href="/crossed-paths"
-          />
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <Eyebrow>Yours to tune</Eyebrow>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Tile
-            Icon={UserCog}
-            title="Profile"
-            description="Edit your sharing toggles and bio."
-            href="/profile/setup"
-          />
-          <Tile
-            Icon={Compass}
-            title="Privacy mode"
-            description="Visible, Quiet, or Invisible."
-            href="/settings/privacy"
           />
         </div>
       </section>

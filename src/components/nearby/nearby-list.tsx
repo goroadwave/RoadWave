@@ -59,35 +59,38 @@ export function NearbyList({ campers, campgroundId, waveStateByProfileId }: Prop
 
   const anyFilter = selectedInterests.size > 0 || selectedStyles.size > 0
 
+  function resetFilters() {
+    setSelectedInterests(new Set())
+    setSelectedStyles(new Set())
+  }
+
   return (
-    <div className="space-y-5">
-      <div className="space-y-2">
-        <Eyebrow>Filter by interest</Eyebrow>
-        <div className="flex flex-wrap gap-2">
-          {INTERESTS.map((i) => {
-            const active = selectedInterests.has(i.slug)
-            return (
-              <button
-                key={i.slug}
-                type="button"
-                onClick={() => toggleInterest(i.slug)}
-                className={
-                  active
-                    ? 'inline-flex items-center gap-1.5 rounded-full bg-flame px-3 py-1.5 text-sm font-semibold text-night shadow-md shadow-flame/20'
-                    : 'inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-cream hover:border-flame/40'
-                }
-              >
-                <span aria-hidden>{i.emoji}</span>
-                {i.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
+    <div className="relative space-y-5">
+      {anyFilter && (
+        <button
+          type="button"
+          onClick={resetFilters}
+          className="absolute -top-12 right-0 text-[11px] font-semibold text-flame underline-offset-2 hover:underline"
+        >
+          Reset filters
+        </button>
+      )}
 
       <div className="space-y-2">
-        <Eyebrow>Filter by travel style</Eyebrow>
+        <Eyebrow>Travel style</Eyebrow>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setSelectedStyles(new Set())}
+            aria-pressed={selectedStyles.size === 0}
+            className={
+              selectedStyles.size === 0
+                ? 'rounded-full bg-flame px-3 py-1.5 text-sm font-semibold text-night shadow-md shadow-flame/20'
+                : 'rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-cream hover:border-flame/40'
+            }
+          >
+            All
+          </button>
           {TRAVEL_STYLES.map((t) => {
             const active = selectedStyles.has(t.slug)
             return (
@@ -95,6 +98,7 @@ export function NearbyList({ campers, campgroundId, waveStateByProfileId }: Prop
                 key={t.slug}
                 type="button"
                 onClick={() => toggleStyle(t.slug)}
+                aria-pressed={active}
                 className={
                   active
                     ? 'rounded-full bg-flame px-3 py-1.5 text-sm font-semibold text-night shadow-md shadow-flame/20'
@@ -108,18 +112,30 @@ export function NearbyList({ campers, campgroundId, waveStateByProfileId }: Prop
         </div>
       </div>
 
-      {anyFilter && (
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedInterests(new Set())
-            setSelectedStyles(new Set())
-          }}
-          className="text-sm text-mist underline-offset-2 hover:underline"
-        >
-          Clear all filters
-        </button>
-      )}
+      <div className="space-y-2">
+        <Eyebrow>Interest</Eyebrow>
+        <div className="flex flex-wrap gap-2">
+          {INTERESTS.map((i) => {
+            const active = selectedInterests.has(i.slug)
+            return (
+              <button
+                key={i.slug}
+                type="button"
+                onClick={() => toggleInterest(i.slug)}
+                aria-pressed={active}
+                className={
+                  active
+                    ? 'inline-flex items-center gap-1.5 rounded-full bg-flame px-3 py-1.5 text-sm font-semibold text-night shadow-md shadow-flame/20'
+                    : 'inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-cream hover:border-flame/40'
+                }
+              >
+                <span aria-hidden>{i.emoji}</span>
+                {i.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {filtered.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-6 text-center text-sm text-mist">
