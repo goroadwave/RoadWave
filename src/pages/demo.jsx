@@ -415,7 +415,10 @@ function GuestApp({ onExit }) {
         window.setTimeout(() => {
           setMatch(null)
           setChatWith({ id, name: camper.name })
-          setScreen('chat')
+          // Don't auto-open chat — give the user the explicit "do you want
+          // to message them?" opt-in screen first. Both parties have to
+          // choose before a chat opens.
+          setScreen('matchchoice')
         }, 2000)
       }, matcherDelay)
       return
@@ -434,7 +437,7 @@ function GuestApp({ onExit }) {
         onExit={onExit}
         right={<ModeBadge mode={privacy} />}
       />
-      {screen !== 'chat' && (
+      {screen !== 'chat' && screen !== 'matchchoice' && (
         <nav className="grid grid-cols-3 gap-1 px-3 pb-2 text-[11px]">
           {[
             ['home', 'Home'],
@@ -463,7 +466,9 @@ function GuestApp({ onExit }) {
         className={
           screen === 'chat'
             ? 'flex-1 overflow-hidden'
-            : 'flex-1 overflow-y-auto px-4 pb-6'
+            : screen === 'matchchoice'
+              ? 'flex-1 overflow-y-auto'
+              : 'flex-1 overflow-y-auto px-4 pb-6'
         }
       >
         {screen === 'home' && (
@@ -488,6 +493,16 @@ function GuestApp({ onExit }) {
           <PrivacyScreen mode={privacy} onChange={setPrivacy} />
         )}
         {screen === 'paths' && <CrossedPathsScreen waved={waved} />}
+        {screen === 'matchchoice' && chatWith && (
+          <MatchChoiceScreen
+            camper={chatWith}
+            onMessage={() => setScreen('chat')}
+            onJustWave={() => {
+              setChatWith(null)
+              setScreen('nearby')
+            }}
+          />
+        )}
         {screen === 'chat' && chatWith && (
           <ChatScreen
             camper={chatWith}
@@ -499,6 +514,56 @@ function GuestApp({ onExit }) {
         )}
       </div>
       {match && <MatchCelebration name={match.name} />}
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// MatchChoiceScreen — the opt-in gate between celebration and chat. Both
+// campers waved at each other; this screen reinforces the no-cringe promise:
+// a wave is enough on its own. Chat only opens when the user actively picks
+// "Send a message" (and the other side, by mutual-wave, has implicitly opted
+// in too).
+// ----------------------------------------------------------------------------
+
+function MatchChoiceScreen({ camper, onMessage, onJustWave }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center px-6 py-8 text-center gap-5">
+      <div className="text-4xl" aria-hidden>
+        👋
+      </div>
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-flame">
+          Crossed paths with
+        </p>
+        <p className="font-display text-2xl font-extrabold tracking-tight text-cream mt-1">
+          {camper.name}
+        </p>
+      </div>
+      <div className="space-y-2 max-w-[260px]">
+        <p className="text-cream text-base leading-snug">
+          You both waved! What would you like to do?
+        </p>
+        <p className="font-serif italic text-flame/90 text-sm leading-snug">
+          No pressure — a wave is enough. Chat only opens if you both want it.
+        </p>
+      </div>
+      <div className="w-full max-w-[260px] space-y-2 pt-1">
+        <button
+          type="button"
+          onClick={onMessage}
+          className="w-full rounded-xl bg-flame text-night px-4 py-3 text-sm font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 inline-flex items-center justify-center gap-2"
+        >
+          Send a message <span aria-hidden>💬</span>
+        </button>
+        <button
+          type="button"
+          onClick={onJustWave}
+          className="w-full rounded-xl border border-white/10 bg-white/5 text-mist px-4 py-3 text-sm font-medium hover:bg-white/10 hover:text-cream"
+        >
+          Just a wave for now
+        </button>
+      </div>
     </div>
   )
 }
