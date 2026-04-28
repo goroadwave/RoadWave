@@ -20,7 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Link href="/home" className="inline-block">
             <Logo className="text-2xl" />
           </Link>
-          <form action="/auth/sign-out" method="post">
+          <form action="/auth/sign-out?next=/login" method="post">
             <button
               type="submit"
               className="text-sm text-mist hover:text-cream underline-offset-2 hover:underline"
