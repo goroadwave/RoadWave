@@ -282,6 +282,15 @@ const INTEREST_EMOJI = Object.fromEntries(INTERESTS.map((i) => [i.slug, i.emoji]
 export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) {
   const [view, setView] = useState('welcome') // welcome | guest
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  // Bumping this key forces GuestApp + every descendant (NearbyScreen, its
+  // filter Sets, etc.) to remount with default state, even if React would
+  // otherwise reuse instances. The Reset demo button increments it.
+  const [demoKey, setDemoKey] = useState(0)
+
+  function resetDemo() {
+    setDemoKey((k) => k + 1)
+    setView('welcome')
+  }
 
   return (
     <>
@@ -311,6 +320,7 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
             )}
             {view === 'guest' && (
               <GuestApp
+                key={demoKey}
                 onExit={() => setView('welcome')}
                 campgroundName={campgroundName}
               />
@@ -319,7 +329,7 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
 
           <button
             type="button"
-            onClick={() => setView('welcome')}
+            onClick={resetDemo}
             className="text-sm text-mist underline-offset-2 hover:text-cream hover:underline"
           >
             Reset demo
@@ -1178,9 +1188,16 @@ function NearbyScreen({ waved, onWave, onMessage, myStyle, campgroundName }) {
     })
   }
 
+  function resetFilters() {
+    setFilterStyles(new Set())
+    setFilterInterests(new Set())
+  }
+
+  const filtersActive = filterStyles.size > 0 || filterInterests.size > 0
+
   return (
     <div className="space-y-4 py-3">
-      <header>
+      <header className="relative">
         <Eyebrow>Currently at {campgroundName}</Eyebrow>
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
           Nearby campers
@@ -1188,6 +1205,15 @@ function NearbyScreen({ waved, onWave, onMessage, myStyle, campgroundName }) {
         <p className="font-serif italic text-flame text-sm leading-snug">
           Wave when the vibe feels right.
         </p>
+        {filtersActive && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="absolute top-0 right-0 text-[11px] font-semibold text-flame underline-offset-2 hover:underline"
+          >
+            Reset filters
+          </button>
+        )}
       </header>
 
       <div className="space-y-1.5">
