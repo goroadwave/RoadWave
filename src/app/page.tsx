@@ -81,7 +81,7 @@ export default async function RootPage() {
         {/* Hero */}
         <section className="px-4 pt-4 pb-3 sm:pt-16 sm:pb-10">
           <div className="mx-auto max-w-2xl text-center space-y-3 sm:space-y-5">
-            <Eyebrow>Made for the campground</Eyebrow>
+            <Eyebrow>Private campground check-ins for RVers</Eyebrow>
             <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
               Meet friendly campers at your campground without making it weird.
             </h1>
@@ -90,7 +90,7 @@ export default async function RootPage() {
               private, temporary campground check-ins.
             </p>
             <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-flame font-semibold">
-              No exact site numbers · No public group chats · No pressure
+              No exact site numbers. No public group chats. No pressure.
             </p>
           </div>
         </section>
