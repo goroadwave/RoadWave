@@ -169,11 +169,31 @@ export function NearbyList({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-6 text-center text-sm text-mist">
-          {campers.length === 0
-            ? "Nobody else is checked in here right now. Come back later — or wave next time."
-            : 'No campers match those filters.'}
-        </p>
+        campers.length === 0 ? (
+          // Nobody is checked in here. If the user has saved filter prefs,
+          // confirm we've recorded them; otherwise show the plain empty
+          // message. selectedStyles/selectedInterests reflects what the
+          // debounced action just persisted to the DB (or is about to).
+          selectedStyles.size > 0 || selectedInterests.size > 0 ? (
+            <div className="rounded-2xl border border-leaf/40 bg-leaf/10 p-6 text-center text-sm text-cream">
+              <p className="font-semibold text-leaf">
+                <span aria-hidden>✓</span> Your preferences are saved.
+              </p>
+              <p className="mt-1 text-mist">
+                We&apos;ll match you when someone checks in nearby.
+              </p>
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-6 text-center text-sm text-mist">
+              Nobody else is checked in here right now. Come back later — or
+              wave next time.
+            </p>
+          )
+        ) : (
+          <p className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-6 text-center text-sm text-mist">
+            No campers match those filters.
+          </p>
+        )
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {filtered.map((c) => (
