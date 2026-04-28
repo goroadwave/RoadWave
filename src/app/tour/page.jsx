@@ -230,6 +230,8 @@ export default function RileyWalkthrough() {
   const [animKey, setAnimKey] = useState(0);
   const [talking, setTalking] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const audioRef = useRef(null);
   // Cache: stepIdx -> object URL for the prefetched MP3 blob.
   const audioCache = useRef(new Map());
@@ -287,10 +289,13 @@ export default function RileyWalkthrough() {
 
   useEffect(() => {
     setAnimKey(k => k + 1);
+    // Don't try to play before the tap-to-start splash is dismissed —
+    // browsers block autoplay without a user gesture.
+    if (!started) return;
     // Tightened from 400 → 120 ms; the perceptible lag was mostly this.
     const t = setTimeout(() => speak(step.speech, stepIdx), 120);
     return () => { clearTimeout(t); audioRef.current?.pause(); window.speechSynthesis?.cancel(); setTalking(false); };
-  }, [stepIdx, muted]);
+  }, [stepIdx, muted, started]);
 
   // Revoke any cached blob URLs when the page unmounts so we don't leak memory.
   useEffect(() => {
@@ -306,6 +311,96 @@ export default function RileyWalkthrough() {
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(180deg,#071a0e 0%,#0a1a0c 100%)", display: "flex", flexDirection: "column", alignItems: "center", maxWidth: "400px", margin: "0 auto", fontFamily: "Georgia,serif" }}>
+
+      {/* Tap-to-start splash. Covers the whole tour until the user taps,
+          which satisfies the browser autoplay gate so Riley's voice fires
+          on slide 1 the instant she's introduced. */}
+      {!started && (
+        <div
+          onClick={() => setStarted(true)}
+          role="button"
+          tabIndex={0}
+          aria-label="Tap to meet Riley"
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setStarted(true); }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            background: "radial-gradient(ellipse at center, rgba(245,158,11,0.18) 0%, rgba(7,26,14,0.96) 60%, rgba(7,26,14,0.99) 100%)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "32px",
+            cursor: "pointer",
+            animation: "splashFadeIn 0.4s ease-out",
+          }}
+        >
+          {/* RoadWave logo */}
+          <div style={{
+            color: "white",
+            fontSize: "28px",
+            fontWeight: "800",
+            letterSpacing: "-0.02em",
+            marginBottom: "32px",
+            fontFamily: "Georgia,serif",
+            display: "inline-flex",
+            alignItems: "baseline",
+          }}>
+            <span>Road</span>
+            <span style={{ color: "#f59e0b" }}>Wa</span>
+            <span style={{ display: "inline-block", fontSize: "30px", margin: "0 -1px", lineHeight: 1 }}>👋</span>
+            <span style={{ color: "#f59e0b" }}>e</span>
+          </div>
+
+          {/* Riley with amber glow */}
+          <div style={{
+            width: "200px",
+            height: "200px",
+            borderRadius: "50%",
+            overflow: "hidden",
+            border: "3px solid #f59e0b",
+            boxShadow: "0 0 60px rgba(245,158,11,0.55), 0 0 120px rgba(245,158,11,0.3)",
+            animation: "splashGlow 2.4s ease-in-out infinite",
+            marginBottom: "28px",
+          }}>
+            {imgError ? (
+              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(245,158,11,0.15)", fontSize: "72px" }}>🏕️</div>
+            ) : (
+              <img
+                src="/riley.png"
+                alt="Riley, your campground host"
+                onError={() => setImgError(true)}
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 18%", display: "block" }}
+              />
+            )}
+          </div>
+
+          {/* Pulsing tap CTA */}
+          <div style={{ textAlign: "center", animation: "splashTapPulse 2.2s ease-in-out infinite" }}>
+            <p style={{
+              fontFamily: "Georgia,serif",
+              fontStyle: "italic",
+              color: "#f59e0b",
+              fontSize: "22px",
+              margin: "0 0 8px",
+              fontWeight: 600,
+            }}>
+              Tap anywhere to meet Riley
+            </p>
+            <p style={{
+              color: "rgba(255,255,255,0.55)",
+              fontSize: "12px",
+              fontFamily: "Georgia,serif",
+              margin: 0,
+            }}>
+              She has a few things to show you
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* String lights */}
       <div style={{ width: "100%", height: "34px", display: "flex", justifyContent: "space-around", alignItems: "flex-start", padding: "0 6px" }}>
@@ -392,6 +487,18 @@ export default function RileyWalkthrough() {
         @keyframes bar { from{height:4px}to{height:14px} }
         @keyframes float { 0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)} }
         @keyframes hlPulse { 0%,100%{box-shadow:0 0 0 4px rgba(245,158,11,0.2)}50%{box-shadow:0 0 0 8px rgba(245,158,11,0.35)} }
+        @keyframes splashFadeIn { from{opacity:0}to{opacity:1} }
+        @keyframes splashGlow {
+          0%,100% { box-shadow: 0 0 60px rgba(245,158,11,0.55), 0 0 120px rgba(245,158,11,0.3); transform: scale(1); }
+          50%     { box-shadow: 0 0 80px rgba(245,158,11,0.7),  0 0 160px rgba(245,158,11,0.45); transform: scale(1.025); }
+        }
+        @keyframes splashTapPulse {
+          0%,100% { opacity: 0.85; transform: scale(1); }
+          50%     { opacity: 1;    transform: scale(1.04); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [style*="splashGlow"], [style*="splashTapPulse"] { animation: none !important; }
+        }
       `}</style>
     </div>
   );
