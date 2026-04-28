@@ -138,9 +138,11 @@ function Spinner() {
   )
 }
 
-// Decode a QR from an image File using jsQR. Loads the image, paints it
-// to an offscreen canvas, hands the pixel data to jsQR, returns the
-// decoded text or null. Throws if the image itself is unreadable.
+// Decode a QR from an image File using jsQR. Paints the image at full
+// natural resolution into a canvas, hands the pixel data to jsQR, and
+// retries with different inversion strategies because color-cast quirks
+// from phone cameras make some QRs decode under one strategy but not
+// another. Returns the decoded text or null.
 async function decodeQrFromFile(file: File): Promise<string | null> {
   console.log('[QR] decodeQrFromFile: reading file as data URL')
   const dataUrl = await readFileAsDataUrl(file)
@@ -148,15 +150,21 @@ async function decodeQrFromFile(file: File): Promise<string | null> {
 
   console.log('[QR] loading <img>')
   const img = await loadImage(dataUrl)
-  console.log('[QR] image loaded:', { width: img.width, height: img.height })
+  // Use the *natural* pixel dimensions, not the layout dimensions.
+  // .width/.height can return zero or layout-affected values on some
+  // browsers; .naturalWidth/.naturalHeight always reflect the file.
+  const naturalW = img.naturalWidth || img.width
+  const naturalH = img.naturalHeight || img.height
+  console.log('[QR] image natural dimensions:', { w: naturalW, h: naturalH })
 
-  // Scale very large images down a bit — jsQR runs in O(pixels) and
-  // phone photos are huge. ~1280px on the long edge keeps fidelity.
-  const MAX = 1280
-  const scale = Math.min(1, MAX / Math.max(img.width, img.height))
-  const w = Math.max(1, Math.round(img.width * scale))
-  const h = Math.max(1, Math.round(img.height * scale))
-  console.log('[QR] canvas size after scale:', { w, h, scale })
+  // Mobile browsers cap canvas size around 4096x4096 (especially iOS
+  // Safari). Clamp the long edge to 4000 to stay safe; otherwise honor
+  // the full resolution — downsampling kills small QRs in big photos.
+  const MAX_EDGE = 4000
+  const scale = Math.min(1, MAX_EDGE / Math.max(naturalW, naturalH))
+  const w = Math.max(1, Math.round(naturalW * scale))
+  const h = Math.max(1, Math.round(naturalH * scale))
+  console.log('[QR] canvas size after clamp:', { w, h, scale })
 
   const canvas = document.createElement('canvas')
   canvas.width = w
@@ -178,10 +186,16 @@ async function decodeQrFromFile(file: File): Promise<string | null> {
     throw new Error('QR decoder failed to load.')
   }
 
-  console.log('[QR] running jsQR…')
-  const code = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' })
-  console.log('[QR] jsQR returned:', code ? `"${code.data}"` : 'null')
-  return code?.data ?? null
+  // Try multiple inversion strategies. jsQR mutates the input buffer
+  // during decode, so each attempt needs a fresh copy of the pixel data.
+  const strategies = ['attemptBoth', 'dontInvert', 'onlyInvert', 'invertFirst'] as const
+  for (const inversionAttempts of strategies) {
+    const dataCopy = new Uint8ClampedArray(imageData.data)
+    const code = jsQR(dataCopy, w, h, { inversionAttempts })
+    console.log(`[QR] jsQR(${inversionAttempts}) returned:`, code ? `"${code.data}"` : 'null')
+    if (code?.data) return code.data
+  }
+  return null
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
