@@ -59,7 +59,13 @@ body {
   display: inline-block;
   animation: wave 2.8s ease-in-out infinite;
   transform-origin: 70% 70%;
-  margin: 0 -1px;
+  /* Scale emoji to ~85% of surrounding text. Most emoji fonts render
+   * larger than letterforms at the same font-size, especially past 2xl.
+   * The negative horizontal margins pull the wave flush inside the
+   * "Wa…e" wordmark so it reads as a glyph, not a separate sticker. */
+  font-size: 0.85em;
+  margin: 0 -0.08em;
+  vertical-align: -0.02em;
 }
 
 @media (prefers-reduced-motion: reduce) {
