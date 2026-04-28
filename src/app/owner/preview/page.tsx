@@ -89,6 +89,8 @@ export default async function OwnerPreviewPage() {
         logoUrl: campground.logo_url,
         amenities: campground.amenities ?? [],
         timezone: campground.timezone,
+        address: campground.address,
+        website: campground.website,
       }}
       bulletin={
         bulletin

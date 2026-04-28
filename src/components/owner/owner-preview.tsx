@@ -43,6 +43,8 @@ type Props = {
     logoUrl: string | null
     amenities: string[]
     timezone: string
+    address: string | null
+    website: string | null
   }
   bulletin: { message: string; category: string } | null
   hostedMeetups: Meetup[]
@@ -95,14 +97,9 @@ export function OwnerPreview({
                 🏕️
               </div>
             )}
-            <div>
-              <p className="font-display font-extrabold text-cream text-lg leading-tight">
-                {campground.name}
-              </p>
-              <p className="text-[10px] text-mist">
-                {campground.timezone}
-              </p>
-            </div>
+            <p className="font-display font-extrabold text-cream text-lg leading-tight">
+              {campground.name}
+            </p>
           </div>
         </header>
 
@@ -152,6 +149,14 @@ export function OwnerPreview({
           {tab === 'privacy' && <PrivacyTab />}
           {tab === 'paths' && <CrossedTab />}
         </div>
+
+        {/* Single page-level preview note. Sits at the bottom so it doesn't
+            interrupt the simulated guest content above. */}
+        <PreviewNote>
+          You&apos;re viewing your campground exactly as a checked-in guest
+          would. Real bulletins and meetups are pulled live; the empty tabs
+          show what guests see before activity exists.
+        </PreviewNote>
       </main>
     </div>
   )
@@ -171,6 +176,7 @@ function HomeTab({
   const amenityLabels = campground.amenities
     .map((a) => AMENITY_LABEL[a] ?? a)
     .filter(Boolean)
+  const websiteHref = normalizeUrl(campground.website)
   return (
     <div className="space-y-5">
       {bulletin && (
@@ -198,19 +204,32 @@ function HomeTab({
         </div>
       )}
 
-      <header className="space-y-2">
-        <p className="inline-flex items-center gap-1.5 rounded-full border border-leaf/40 bg-leaf/10 px-2.5 py-1 text-[11px] font-semibold text-leaf">
+      {/* Big logo at the top of Home — what a guest sees first after scan. */}
+      <div className="flex flex-col items-center text-center">
+        {campground.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- owner-uploaded
+          <img
+            src={campground.logoUrl}
+            alt={`${campground.name} logo`}
+            className="h-20 w-20 rounded-2xl border border-white/10 bg-card object-cover shadow-lg shadow-black/30"
+          />
+        ) : (
+          <div className="h-20 w-20 rounded-2xl border border-dashed border-white/15 bg-card grid place-items-center text-4xl shadow-lg shadow-black/30">
+            🏕️
+          </div>
+        )}
+        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-leaf/40 bg-leaf/10 px-2.5 py-1 text-[11px] font-semibold text-leaf">
           <span aria-hidden>✓</span>
           Checked in
         </p>
-        <h1 className="font-display text-2xl font-extrabold text-cream leading-tight">
+        <h1 className="mt-2 font-display text-2xl font-extrabold text-cream leading-tight">
           Welcome to {campground.name}
         </h1>
-        <p className="font-serif italic text-flame text-sm leading-snug">
+        <p className="mt-1.5 font-serif italic text-flame text-sm leading-snug max-w-md">
           You&apos;re checked in for 24 hours. See who&apos;s open to a friendly
           wave today.
         </p>
-      </header>
+      </div>
 
       {amenityLabels.length > 0 && (
         <section className="space-y-2">
@@ -229,8 +248,55 @@ function HomeTab({
           </ul>
         </section>
       )}
+
+      {(campground.address || websiteHref) && (
+        <section className="space-y-1.5 rounded-2xl border border-white/5 bg-card p-4">
+          {campground.address && (
+            <p className="flex items-start gap-2 text-sm text-cream">
+              <span aria-hidden className="text-mist">📍</span>
+              <span>{campground.address}</span>
+            </p>
+          )}
+          {websiteHref && (
+            <p className="flex items-start gap-2 text-sm">
+              <span aria-hidden className="text-mist">🔗</span>
+              <a
+                href={websiteHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-flame underline-offset-2 hover:underline break-all"
+              >
+                {prettyUrl(websiteHref)}
+              </a>
+            </p>
+          )}
+        </section>
+      )}
     </div>
   )
+}
+
+function normalizeUrl(raw: string | null): string | null {
+  if (!raw) return null
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  try {
+    // If it doesn't already include a scheme, default to https://.
+    const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+    const u = new URL(withScheme)
+    return u.toString()
+  } catch {
+    return null
+  }
+}
+
+function prettyUrl(raw: string): string {
+  try {
+    const u = new URL(raw)
+    return u.host + (u.pathname === '/' ? '' : u.pathname)
+  } catch {
+    return raw
+  }
 }
 
 function CheckInTab({ campgroundName }: { campgroundName: string }) {
@@ -250,10 +316,6 @@ function CheckInTab({ campgroundName }: { campgroundName: string }) {
           </p>
         </div>
       </div>
-      <PreviewNote>
-        Guests scan your QR code at the entrance to land in this state. There&apos;s
-        nothing else for them to do here once they&apos;re in.
-      </PreviewNote>
     </div>
   )
 }
@@ -273,11 +335,6 @@ function NearbyTab() {
         No other campers are checked in right now. As guests scan in, they&apos;ll
         appear here for each other to wave at.
       </div>
-      <PreviewNote>
-        Each guest sees the others by travel style and shared interests — never
-        by site number. Guests can filter by interests or hide themselves
-        entirely with the Privacy mode tab.
-      </PreviewNote>
     </div>
   )
 }
