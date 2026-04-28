@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 
 const PRODUCT_LINKS: { label: string; href: string }[] = [
@@ -18,6 +21,12 @@ const LEGAL_LINKS: { label: string; href: string }[] = [
 ]
 
 export function SiteFooter() {
+  // Footer is guest- and marketing-facing only. Owner dashboard pages
+  // (everything under /owner) get no footer — they have their own chrome
+  // and the marketing links don't belong there.
+  const pathname = usePathname()
+  if (pathname?.startsWith('/owner')) return null
+
   return (
     <footer className="mt-20 border-t border-white/10 bg-night text-cream">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
