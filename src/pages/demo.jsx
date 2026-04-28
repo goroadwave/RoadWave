@@ -327,11 +327,7 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
           </header>
 
           <PhoneFrame>
-            <GuestApp
-              key={demoKey}
-              onExit={resetDemo}
-              campgroundName={campgroundName}
-            />
+            <GuestApp key={demoKey} campgroundName={campgroundName} />
           </PhoneFrame>
 
           <button
@@ -400,7 +396,7 @@ function PhoneFrame({ children }) {
 // Guest app
 // ----------------------------------------------------------------------------
 
-function GuestApp({ onExit, campgroundName }) {
+function GuestApp({ campgroundName }) {
   const [screen, setScreen] = useState('home')
   // Multi-select travel styles. Empty Set = "All" (no preference declared).
   const [travelStyles, setTravelStyles] = useState(() => new Set())
@@ -511,7 +507,6 @@ function GuestApp({ onExit, campgroundName }) {
   return (
     <div className="relative flex h-full flex-col">
       <AppHeader
-        onExit={onExit}
         right={
           <span data-tour="privacy-badge" className="inline-flex">
             <ModeBadge mode={privacy} />
@@ -1225,19 +1220,18 @@ function MatchCelebration({ name }) {
   )
 }
 
-function AppHeader({ onExit, right }) {
+function AppHeader({ right }) {
   return (
     <header className="flex items-center justify-between px-4 pt-2 pb-3 border-b border-white/5">
       <Logo className="text-lg" />
       <div className="flex items-center gap-3">
         {right}
-        <button
-          type="button"
-          onClick={onExit}
-          className="text-xs text-mist hover:text-cream"
+        <a
+          href="/"
+          className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
         >
           Exit
-        </button>
+        </a>
       </div>
     </header>
   )
