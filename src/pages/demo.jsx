@@ -405,6 +405,7 @@ function GuestApp({ campgroundName }) {
   const [waved, setWaved] = useState({}) // id -> 'waved' | 'matched'
   const [match, setMatch] = useState(null) // { id, name } during celebration
   const [chatWith, setChatWith] = useState(null) // { id, name } when chat is open
+  const [crossedChatWith, setCrossedChatWith] = useState(null) // { username, name, ... } when a Crossed paths card is open
   const [blocked, setBlocked] = useState(() => new Set()) // ids the user has blocked
   const [toast, setToast] = useState(null) // { msg } banner shown on Nearby/Waves
   function toggleTravelStyle(style) {
@@ -427,6 +428,11 @@ function GuestApp({ campgroundName }) {
     if (!camper) return
     setChatWith({ id, name: camper.name })
     setScreen('chat')
+  }
+
+  function openCrossedPath(path) {
+    setCrossedChatWith(path)
+    setScreen('crossedchat')
   }
 
   function removeWave(id) {
@@ -514,7 +520,7 @@ function GuestApp({ campgroundName }) {
         }
       />
 
-      {screen !== 'chat' && screen !== 'matchchoice' && (
+      {screen !== 'chat' && screen !== 'matchchoice' && screen !== 'crossedchat' && (
         <nav className="grid grid-cols-4 gap-1 px-3 pb-2 text-[11px]">
           {[
             ['home', 'Home'],
@@ -543,7 +549,7 @@ function GuestApp({ campgroundName }) {
       )}
       <div
         className={
-          screen === 'chat'
+          screen === 'chat' || screen === 'crossedchat'
             ? 'flex-1 overflow-hidden'
             : screen === 'matchchoice'
               ? 'flex-1 overflow-y-auto'
@@ -594,7 +600,20 @@ function GuestApp({ campgroundName }) {
           <PrivacyScreen mode={privacy} onChange={setPrivacy} />
         )}
         {screen === 'paths' && (
-          <CrossedPathsScreen waved={waved} campgroundName={campgroundName} />
+          <CrossedPathsScreen
+            waved={waved}
+            campgroundName={campgroundName}
+            onOpen={openCrossedPath}
+          />
+        )}
+        {screen === 'crossedchat' && crossedChatWith && (
+          <CrossedPathChatScreen
+            path={crossedChatWith}
+            onBack={() => {
+              setCrossedChatWith(null)
+              setScreen('paths')
+            }}
+          />
         )}
         {screen === 'matchchoice' && chatWith && (
           <MatchChoiceScreen
@@ -1948,7 +1967,7 @@ function PrivacyScreen({ mode, onChange }) {
 // Crossed paths
 // ----------------------------------------------------------------------------
 
-function CrossedPathsScreen({ waved, campgroundName }) {
+function CrossedPathsScreen({ waved, campgroundName, onOpen }) {
   // Pull in any matches the user just made in the demo session
   const sessionMatches = SAMPLE_CAMPERS.filter((c) => waved[c.id] === 'matched').map(
     (c) => ({
@@ -1970,7 +1989,7 @@ function CrossedPathsScreen({ waved, campgroundName }) {
           Crossed paths
         </h1>
         <p className="font-serif italic text-flame text-sm leading-snug">
-          People who waved back.
+          Tap to open the conversation.
         </p>
       </header>
 
@@ -1981,40 +2000,203 @@ function CrossedPathsScreen({ waved, campgroundName }) {
       ) : (
         <ul className="space-y-2">
           {all.map((p, i) => (
-            <li
-              key={i}
-              className="rounded-2xl border border-flame/30 bg-card p-3 shadow-lg shadow-black/20"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-cream">{p.name}</h3>
-                  <p className="text-[11px] text-mist">@{p.username}</p>
-                  <span className="mt-1 inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[10px] font-semibold text-flame">
-                    {p.style}
+            <li key={i}>
+              <button
+                type="button"
+                onClick={() => onOpen?.(p)}
+                className="block w-full text-left rounded-2xl border border-flame/30 bg-card p-3 shadow-lg shadow-black/20 hover:border-flame/60 hover:bg-flame/[0.04] active:opacity-90 transition-colors"
+                style={{ WebkitTapHighlightColor: 'rgba(245, 158, 11, 0.15)' }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-semibold text-cream">{p.name}</h3>
+                    <p className="text-[11px] text-mist">@{p.username}</p>
+                    <span className="mt-1 inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[10px] font-semibold text-flame">
+                      {p.style}
+                    </span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[10px] font-semibold text-flame">
+                    <span aria-hidden>👋</span> Match
                   </span>
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[10px] font-semibold text-flame">
-                  <span aria-hidden>👋</span> Match
-                </span>
-              </div>
-              <p className="mt-1 text-[11px] text-mist">
-                At {p.campground} · {p.when}
-              </p>
-              <ul className="mt-2 flex flex-wrap gap-1">
-                {p.interests.map((slug) => (
-                  <li
-                    key={slug}
-                    className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-cream"
-                  >
-                    <span aria-hidden>{INTEREST_EMOJI[slug]}</span>
-                    {INTEREST_LABEL[slug]}
-                  </li>
-                ))}
-              </ul>
+                <p className="mt-1 text-[11px] text-mist">
+                  At {p.campground} · {p.when}
+                </p>
+                <ul className="mt-2 flex flex-wrap gap-1">
+                  {p.interests.map((slug) => (
+                    <li
+                      key={slug}
+                      className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-cream"
+                    >
+                      <span aria-hidden>{INTEREST_EMOJI[slug]}</span>
+                      {INTEREST_LABEL[slug]}
+                    </li>
+                  ))}
+                </ul>
+              </button>
             </li>
           ))}
         </ul>
       )}
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Crossed-path chat — self-contained mock conversation. No DB lookup.
+// Renders a few hardcoded messages keyed by camper username, plus any
+// messages the user types during this demo session (kept in local state).
+// ----------------------------------------------------------------------------
+
+const MOCK_THREADS = {
+  rolling_pines: [
+    { from: 'them', body: "Hey! Loved running into you at Riverbend.", offsetMin: -2880 },
+    { from: 'you', body: "Same — that fire ring was perfect.", offsetMin: -2870 },
+    { from: 'them', body: "Where are you off to next?", offsetMin: -1440 },
+    { from: 'you', body: "Heading north to Asheville for a couple weeks. You?", offsetMin: -1430 },
+    { from: 'them', body: "We're staying through the weekend, then over to the coast. Coffee tomorrow morning if you're around?", offsetMin: -120 },
+  ],
+  wandering_alex: [
+    { from: 'them', body: "Hey! Coastal Pines was a good one.", offsetMin: -10080 },
+    { from: 'you', body: "It was! That sunset was unreal.", offsetMin: -10070 },
+    { from: 'them', body: "Let me know if you ever swing back through Boulder.", offsetMin: -10000 },
+  ],
+}
+
+const DEFAULT_MOCK_THREAD = [
+  { from: 'them', body: "Hey, great to meet you!", offsetMin: -180 },
+  { from: 'you', body: "Likewise — hope the road treats you well.", offsetMin: -170 },
+]
+
+function fmtTime(ts) {
+  const d = new Date(ts)
+  let hours = d.getHours()
+  const minutes = d.getMinutes().toString().padStart(2, '0')
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12 || 12
+  return `${hours}:${minutes} ${ampm}`
+}
+
+function CrossedPathChatScreen({ path, onBack }) {
+  // Resolve the seed messages once on mount. Timestamps are computed
+  // relative to "now" so the conversation always feels recent regardless
+  // of when the demo is loaded.
+  const [messages, setMessages] = useState(() => {
+    const seed = MOCK_THREADS[path.username] ?? DEFAULT_MOCK_THREAD
+    const now = Date.now()
+    return seed.map((m, i) => ({
+      id: `seed-${i}`,
+      from: m.from,
+      body: m.body,
+      ts: now + m.offsetMin * 60 * 1000,
+    }))
+  })
+  const [draft, setDraft] = useState('')
+  const scrollRef = useRef(null)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }, [messages])
+
+  function send(e) {
+    e.preventDefault()
+    const trimmed = draft.trim()
+    if (!trimmed) return
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${Date.now()}`, from: 'you', body: trimmed, ts: Date.now() },
+    ])
+    setDraft('')
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-white/5 bg-card px-3 py-2.5">
+        <button
+          type="button"
+          onClick={onBack}
+          className="grid h-7 w-7 place-items-center rounded-full text-mist hover:bg-white/5 hover:text-cream text-base leading-none"
+          aria-label="Back to crossed paths"
+        >
+          ←
+        </button>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-cream leading-tight truncate">
+            {path.name}
+          </p>
+          <p className="text-[10px] text-mist truncate">
+            @{path.username} · {path.style}
+          </p>
+        </div>
+        <span className="rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[9px] font-semibold text-flame">
+          CROSSED
+        </span>
+      </div>
+
+      {/* Crossed-paths context */}
+      <p className="border-b border-white/5 bg-card/60 px-3 py-1.5 text-[10px] text-mist text-center">
+        You crossed paths at <span className="text-cream">{path.campground}</span>{' '}
+        · {path.when}
+      </p>
+
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-1.5">
+        {messages.map((m, i) => {
+          const mine = m.from === 'you'
+          const prev = i > 0 ? messages[i - 1] : null
+          const tightToPrev = prev && prev.from === m.from
+          return (
+            <div
+              key={m.id}
+              className={`flex ${mine ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className="max-w-[80%] flex flex-col gap-0.5">
+                <div
+                  className={
+                    mine
+                      ? 'rounded-2xl rounded-br-sm bg-flame text-night px-3 py-2 text-xs font-medium shadow-md shadow-flame/20'
+                      : 'rounded-2xl rounded-bl-sm bg-white/10 text-cream px-3 py-2 text-xs'
+                  }
+                >
+                  {m.body}
+                </div>
+                {!tightToPrev && (
+                  <p
+                    className={`text-[9px] text-mist px-1 ${mine ? 'text-right' : 'text-left'}`}
+                  >
+                    {fmtTime(m.ts)}
+                  </p>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Composer */}
+      <form
+        onSubmit={send}
+        className="border-t border-white/5 bg-card px-3 py-2 flex items-end gap-2"
+      >
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          maxLength={2000}
+          placeholder="Type a message…"
+          className="flex-1 rounded-full bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-cream placeholder:text-mist focus:outline-none focus:ring-1 focus:ring-flame"
+        />
+        <button
+          type="submit"
+          disabled={draft.trim().length === 0}
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-flame text-night text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+          aria-label="Send"
+        >
+          →
+        </button>
+      </form>
     </div>
   )
 }
