@@ -7,91 +7,112 @@ type Props = {
   onError?: (message: string) => void
 }
 
-// 'idle'        — initial; shows the "Allow Camera Access" button
-// 'starting'    — getUserMedia in flight, native permission prompt visible
-// 'scanning'    — stream is live, BarcodeDetector loop running
-// 'denied'      — user said no to permission
-// 'unsupported' — browser missing getUserMedia or BarcodeDetector
-// 'error'       — anything else (no rear camera, hardware failure, etc.)
-type State = 'idle' | 'starting' | 'scanning' | 'denied' | 'unsupported' | 'error'
+// 'idle'     — initial; shows the "Allow Camera Access" button
+// 'starting' — library is requesting camera; native permission prompt visible
+// 'scanning' — stream is live, library's decoder loop is running
+// 'denied'   — user denied permission
+// 'error'    — anything else (no rear camera, hardware failure, etc.)
+type State = 'idle' | 'starting' | 'scanning' | 'denied' | 'error'
 
-// Live camera + native QR detection. Calls navigator.mediaDevices.getUserMedia
-// directly on the user's tap (synchronous from the gesture's perspective —
-// what iOS Safari 17+ requires to show its permission prompt). Decoding uses
-// the native BarcodeDetector API. If either is missing — most commonly iOS
-// Chrome/Firefox where Apple disallows getUserMedia in third-party browsers —
-// we fall back to a clear message pointing the user at the paste-a-link form.
+// The library renders its <video> element into a target div by id. The id is
+// stable across mounts because there is only one scanner on the page.
+const READER_ID = 'roadwave-qr-reader'
+
+// Live camera QR scanner using html5-qrcode. Works on iOS Safari (where
+// BarcodeDetector isn't available) by handling getUserMedia + decoding
+// internally. We use the lower-level Html5Qrcode class so we control the
+// surrounding UI; Html5QrcodeScanner would inject its own buttons and file
+// fallback.
 export function QrScanner({ onResult, onError }: Props) {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  // BarcodeDetector isn't in lib.dom.d.ts yet. Loose typing is fine — we only
-  // use .detect(video) which returns Promise<{ rawValue: string }[]>.
+  // Ref to the live Html5Qrcode instance. Loosely typed — the library has
+  // .d.ts but typing the dynamic import path adds noise for one method we
+  // actually call (.start, .stop, .clear).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const detectorRef = useRef<any>(null)
-  const rafRef = useRef<number | null>(null)
+  const scannerRef = useRef<any>(null)
+
+  // Keep the latest onResult/onError in refs so the library's success
+  // callback (captured at start()) always calls the current handler, even
+  // if the parent re-renders between mount and decode.
+  const onResultRef = useRef(onResult)
+  const onErrorRef = useRef(onError)
+  useEffect(() => {
+    onResultRef.current = onResult
+  }, [onResult])
+  useEffect(() => {
+    onErrorRef.current = onError
+  }, [onError])
+
   const [state, setState] = useState<State>('idle')
   const [errMsg, setErrMsg] = useState<string | null>(null)
 
-  // Detect feature support on mount. Drives the initial UI: if we already
-  // know the browser can't do it, we show the paste-link fallback instead
-  // of an "Allow Camera Access" button that would just fail.
-  const [supported, setSupported] = useState<boolean | null>(null)
-  useEffect(() => {
-    const hasGetUserMedia =
-      typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hasDetector = typeof (window as any).BarcodeDetector === 'function'
-    console.log('[QR] feature check:', { hasGetUserMedia, hasDetector })
-    setSupported(hasGetUserMedia && hasDetector)
-  }, [])
-
-  function stopCamera() {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = null
-    }
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
-    if (videoRef.current) videoRef.current.srcObject = null
+  function stopScanner() {
+    const inst = scannerRef.current
+    if (!inst) return
+    scannerRef.current = null
+    // .stop() throws if not running. We don't care — we want both stop
+    // and clear to fire and any errors silently swallowed.
+    Promise.resolve()
+      .then(() => inst.stop?.())
+      .catch(() => {
+        /* swallow */
+      })
+      .finally(() => {
+        try {
+          inst.clear?.()
+        } catch {
+          /* swallow */
+        }
+      })
   }
 
-  useEffect(() => () => stopCamera(), [])
+  // Cleanup on unmount.
+  useEffect(() => () => stopScanner(), [])
 
-  async function startCamera() {
+  async function startScanner() {
     setErrMsg(null)
     setState('starting')
-    console.log('[QR] requesting camera (facingMode: environment)')
+    console.log('[QR] importing html5-qrcode')
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-      })
-      streamRef.current = stream
+      const mod = await import('html5-qrcode')
+      const { Html5Qrcode } = mod
+      console.log('[QR] instantiating Html5Qrcode for', READER_ID)
+      const inst = new Html5Qrcode(READER_ID, /* verbose */ false)
+      scannerRef.current = inst
 
-      const video = videoRef.current
-      if (!video) {
-        // Component unmounted between request and grant. Tear down.
-        stream.getTracks().forEach((t) => t.stop())
-        return
-      }
-      video.srcObject = stream
-      // iOS Safari needs both. JSX props set these too; setAttribute is
-      // belt-and-suspenders against serialization quirks.
-      video.setAttribute('playsinline', 'true')
-      video.setAttribute('muted', 'true')
-      await video.play().catch(() => {
-        /* iOS sometimes throws on play(); the stream still renders */
-      })
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const Detector = (window as any).BarcodeDetector
-      detectorRef.current = new Detector({ formats: ['qr_code'] })
+      console.log('[QR] starting camera (facingMode: environment)')
+      await inst.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 240, height: 240 } },
+        (decoded: string) => {
+          console.log('[QR] html5-qrcode hit:', decoded)
+          stopScanner()
+          onResultRef.current(decoded)
+        },
+        () => {
+          // The library calls this on every frame that fails to decode.
+          // We deliberately ignore — it's noisy and not actionable.
+        },
+      )
       setState('scanning')
-      console.log('[QR] camera live, scanning loop started')
-      tick()
+      console.log('[QR] camera live, scanning loop running')
     } catch (err) {
       const e = err as DOMException | Error
       const name = (e as DOMException)?.name
-      console.error('[QR] startCamera failed:', name, err)
+      console.error('[QR] startScanner failed:', name, err)
+
+      // Tear down whatever may have been left half-initialized.
+      try {
+        await scannerRef.current?.stop?.()
+      } catch {
+        /* swallow */
+      }
+      try {
+        scannerRef.current?.clear?.()
+      } catch {
+        /* swallow */
+      }
+      scannerRef.current = null
+
       if (
         name === 'NotAllowedError' ||
         name === 'PermissionDeniedError' ||
@@ -105,134 +126,99 @@ export function QrScanner({ onResult, onError }: Props) {
         const msg = e instanceof Error ? e.message : 'Could not start camera.'
         setErrMsg(msg)
         setState('error')
-        onError?.(msg)
+        onErrorRef.current?.(msg)
       }
     }
   }
 
-  async function tick() {
-    const video = videoRef.current
-    const detector = detectorRef.current
-    if (!video || !detector) return
-    try {
-      const codes = await detector.detect(video)
-      if (codes && codes.length > 0) {
-        const text: string = codes[0].rawValue
-        if (text) {
-          console.log('[QR] BarcodeDetector hit:', text)
-          stopCamera()
-          onResult(text)
-          return
-        }
-      }
-    } catch {
-      // BarcodeDetector occasionally throws on partial frames — keep going.
-    }
-    rafRef.current = requestAnimationFrame(tick)
+  function handleStop() {
+    stopScanner()
+    setState('idle')
   }
 
-  // Wait until feature detection has run before rendering. A single frame
-  // of "Allow Camera Access" on a browser that can't actually start one
-  // would be a worse experience than a blank flash.
-  if (supported === null) return null
+  const showVideo = state === 'starting' || state === 'scanning'
 
-  if (!supported) {
-    return (
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-cream">
-        Live QR scanning isn&apos;t supported in this browser. Use the
-        paste-a-link option below to check in.
-      </div>
-    )
-  }
-
-  if (state === 'idle') {
-    return (
-      <div className="space-y-3 text-center">
-        <button
-          type="button"
-          onClick={startCamera}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-4 py-3 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
-        >
-          <span aria-hidden>📷</span>
-          Allow Camera Access
-        </button>
-        <p className="text-xs text-mist">
-          Tap to turn on your rear camera. Point at the QR on the campground
-          sign — it scans automatically.
-        </p>
-      </div>
-    )
-  }
-
-  if (state === 'denied') {
-    return (
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-cream space-y-2">
-        <p>
-          Camera access was denied. You can still check in by pasting your
-          campground link below.
-        </p>
-        <button
-          type="button"
-          onClick={startCamera}
-          className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
-        >
-          Try again
-        </button>
-      </div>
-    )
-  }
-
-  if (state === 'error') {
-    return (
-      <div className="space-y-2">
-        <p className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
-          {errMsg ?? 'Could not start camera.'}
-        </p>
-        <button
-          type="button"
-          onClick={startCamera}
-          className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
-        >
-          Try again
-        </button>
-      </div>
-    )
-  }
-
-  // starting | scanning
   return (
     <div className="space-y-2">
-      <div className="relative mx-auto w-full max-w-sm aspect-square rounded-lg overflow-hidden border border-white/10 bg-black">
-        <video
-          ref={videoRef}
-          playsInline
-          muted
-          autoPlay
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        {/* Light reticle hint for where to point. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-6 rounded-lg border-2 border-flame/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]"
-        />
+      {/* The library renders its <video> inside this div. We always keep it
+          in the tree (just collapsed via Tailwind hidden) so the element
+          exists at the moment .start(READER_ID, ...) runs. */}
+      <div
+        className={
+          showVideo
+            ? 'mx-auto w-full max-w-sm overflow-hidden rounded-lg border border-white/10 bg-black'
+            : 'hidden'
+        }
+      >
+        <div id={READER_ID} className="w-full" />
       </div>
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <p className="text-mist">
-          {state === 'starting'
-            ? 'Starting camera…'
-            : 'Point at the QR code on the campground sign.'}
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            stopCamera()
-            setState('idle')
-          }}
-          className="text-mist hover:text-cream underline-offset-2 hover:underline"
-        >
-          Stop
-        </button>
-      </div>
+
+      {state === 'idle' && (
+        <div className="space-y-3 text-center">
+          <button
+            type="button"
+            onClick={startScanner}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-4 py-3 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
+          >
+            <span aria-hidden>📷</span>
+            Allow Camera Access
+          </button>
+          <p className="text-xs text-mist">
+            Tap to turn on your rear camera. Point at the QR on the campground
+            sign — it scans automatically.
+          </p>
+        </div>
+      )}
+
+      {state === 'starting' && (
+        <p className="text-center text-xs text-mist">Starting camera…</p>
+      )}
+
+      {state === 'scanning' && (
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <p className="text-mist">
+            Point at the QR code on the campground sign.
+          </p>
+          <button
+            type="button"
+            onClick={handleStop}
+            className="text-mist hover:text-cream underline-offset-2 hover:underline"
+          >
+            Stop
+          </button>
+        </div>
+      )}
+
+      {state === 'denied' && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-cream space-y-2">
+          <p>
+            Camera access was denied. You can still check in by pasting your
+            campground link below.
+          </p>
+          <button
+            type="button"
+            onClick={startScanner}
+            className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      {state === 'error' && (
+        <div className="space-y-2">
+          <p className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+            {errMsg ?? 'Could not start camera.'}
+          </p>
+          <button
+            type="button"
+            onClick={startScanner}
+            className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
     </div>
   )
 }
