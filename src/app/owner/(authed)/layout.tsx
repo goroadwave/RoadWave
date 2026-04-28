@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { OwnerNav } from '@/components/owner/owner-nav'
-import { Logo } from '@/components/ui/logo'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export default async function AuthedOwnerLayout({
@@ -28,8 +27,30 @@ export default async function AuthedOwnerLayout({
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-white/5 bg-night/80 backdrop-blur sticky top-0 z-20">
         <div className="mx-auto max-w-3xl flex items-center justify-between px-4 py-3 h-14">
-          <Link href="/owner/dashboard" className="inline-block">
-            <Logo className="text-2xl" />
+          {/* Inlined logo with explicit hex colors. The shared Logo component
+              was rendering with the wrong color on this page in production
+              (likely a Tailwind utility-class cascade quirk specific to the
+              owner layout). Hardcoding via `style` bypasses class ordering
+              entirely and guarantees the brand colors. */}
+          <Link
+            href="/owner/dashboard"
+            className="inline-block font-display font-extrabold tracking-[-0.02em] leading-none text-2xl whitespace-nowrap"
+            aria-label="RoadWave"
+          >
+            <span style={{ color: '#f5ecd9' }}>Road</span>
+            <span
+              className="whitespace-nowrap"
+              style={{ color: '#f59e0b' }}
+            >
+              Wave
+              <span
+                className="wave-emoji select-none"
+                aria-hidden
+                style={{ color: '#f59e0b' }}
+              >
+                👋
+              </span>
+            </span>
           </Link>
           <form action="/auth/sign-out?next=/owner/login" method="post">
             <button

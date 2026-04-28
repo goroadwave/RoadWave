@@ -149,37 +149,19 @@ export async function ownerSignupAction(
   }
   const campgroundId = campground.id
 
-  // 4) Link owner ↔ campground via campground_admins. We try role='owner'
-  // first; if the value isn't in the campground_role enum yet (migration
-  // 0011 not yet applied), Postgres returns "invalid input value for enum
-  // campground_role: 'owner'". In that case we retry with role='host' so
-  // signup still succeeds — the rest of the app matches on user_id alone,
-  // not on the role value, so routing and access still work. Once 0011 is
-  // applied, future signups land at role='owner' as intended and existing
-  // 'host'-roled rows can be upgraded with a one-line UPDATE if desired.
-  let adminError = null as { message: string } | null
-  {
-    const { error } = await admin.from('campground_admins').insert({
+  // 4) Link owner ↔ campground via campground_admins. We always insert with
+  // role='host' first because that value has been in the campground_role
+  // enum since 0001 — guaranteed valid regardless of whether migration
+  // 0011 (which adds 'owner') has been applied. The rest of the app
+  // matches on user_id alone (loadOwnerCampground), so routing works the
+  // same with either role value.
+  const { error: adminError } = await admin
+    .from('campground_admins')
+    .insert({
       campground_id: campgroundId,
       user_id: userId,
-      role: 'owner',
+      role: 'host',
     })
-    adminError = error
-  }
-  if (adminError && /enum|invalid input value/i.test(adminError.message)) {
-    console.warn(
-      "[owner-signup] 'owner' campground_role missing — apply migration 0011_fix_owner_enum.sql. Falling back to role='host'.",
-      adminError.message,
-    )
-    const { error: hostError } = await admin
-      .from('campground_admins')
-      .insert({
-        campground_id: campgroundId,
-        user_id: userId,
-        role: 'host',
-      })
-    adminError = hostError
-  }
   if (adminError) {
     console.error(
       '[owner-signup] campground_admins insert failed:',
@@ -193,7 +175,39 @@ export async function ownerSignupAction(
     }
   }
 
-  // 5) Issue a QR token row so /owner/qr immediately works. Best effort —
+  // 5) Best-effort upgrade to role='owner' for cleanliness. Will succeed
+  // once migration 0011 is applied; will silently no-op until then.
+  const { error: upgradeError } = await admin
+    .from('campground_admins')
+    .update({ role: 'owner' })
+    .eq('campground_id', campgroundId)
+    .eq('user_id', userId)
+  if (upgradeError) {
+    console.warn(
+      "[owner-signup] couldn't upgrade campground_admins.role to 'owner' (apply 0011_fix_owner_enum.sql):",
+      upgradeError.message,
+    )
+  }
+
+  // 6) Verify the link is visible via a SELECT before redirecting. If the
+  // dashboard's same query returns null, we want to surface that here
+  // rather than dropping the user on a "No campground linked" page.
+  const { data: verify } = await admin
+    .from('campground_admins')
+    .select('campground_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (!verify) {
+    console.error(
+      '[owner-signup] verification select returned no row after insert — RLS or replication issue?',
+    )
+    return {
+      error:
+        "Account created but campground link did not persist. Try signing in.",
+    }
+  }
+
+  // 7) Issue a QR token row so /owner/qr immediately works. Best effort —
   // /owner/qr surfaces a friendly fallback if the row is missing.
   const { error: tokenError } = await admin
     .from('campground_qr_tokens')
