@@ -62,7 +62,7 @@ const AppScreen = ({ screen, highlight }) => {
     <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px", height: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ color: "white", fontSize: "16px", fontWeight: "800", display:"flex", alignItems:"center" }}>
-          <span>Road</span><span style={{ color: "#f59e0b" }}>Wa</span><span style={{ display:"inline-block", fontSize:"18px", lineHeight:1, margin:"0 -2px" }}>👋</span><span style={{ color: "#f59e0b" }}>e</span>
+          <span>Road</span><span style={{ color: "#f59e0b" }}>Wave</span><span className="wave-emoji" style={{ display: "inline-block", color: "#f59e0b", fontSize: "0.9em", marginLeft: "0.12em", lineHeight: 1 }}>👋</span>
         </div>
         <div style={{ background: "#22c55e", borderRadius: "20px", padding: "3px 10px", fontSize: "9px", color: "white", fontWeight: "600" }}>VISIBLE</div>
       </div>
@@ -310,9 +310,19 @@ export default function RileyWalkthrough() {
             alignItems: "baseline",
           }}>
             <span>Road</span>
-            <span style={{ color: "#f59e0b" }}>Wa</span>
-            <span style={{ display: "inline-block", fontSize: "30px", margin: "0 -1px", lineHeight: 1 }}>👋</span>
-            <span style={{ color: "#f59e0b" }}>e</span>
+            <span style={{ color: "#f59e0b" }}>Wave</span>
+            <span
+              className="wave-emoji"
+              style={{
+                display: "inline-block",
+                color: "#f59e0b",
+                fontSize: "0.9em",
+                marginLeft: "0.12em",
+                lineHeight: 1,
+              }}
+            >
+              👋
+            </span>
           </div>
 
           {/* Riley with amber glow */}
@@ -371,7 +381,7 @@ export default function RileyWalkthrough() {
       <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 16px" }}>
         <a href="/" style={{ color: "rgba(255,255,255,0.5)", fontSize: "12px", textDecoration: "none" }}>← Exit</a>
         <div style={{ color: "white", fontSize: "13px", fontWeight: "700", display:"flex", alignItems:"center" }}>
-          <span>Road</span><span style={{ color: "#f59e0b" }}>Wa</span><span style={{ display:"inline-block", fontSize:"15px", lineHeight:1, margin:"0 -1px" }}>👋</span><span style={{ color: "#f59e0b" }}>e</span>
+          <span>Road</span><span style={{ color: "#f59e0b" }}>Wave</span><span className="wave-emoji" style={{ display: "inline-block", color: "#f59e0b", fontSize: "0.9em", marginLeft: "0.12em", lineHeight: 1 }}>👋</span>
         </div>
         <button onClick={() => setMuted(m => !m)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", opacity: 0.7 }}>{muted ? "🔇" : "🔊"}</button>
       </div>
