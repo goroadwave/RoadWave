@@ -443,6 +443,21 @@ function GuestApp({ onExit, campgroundName }) {
     )
   }
 
+  function handleMessage(id) {
+    const camper = SAMPLE_CAMPERS.find((c) => c.id === id)
+    if (!camper) return
+    setChatWith({ id, name: camper.name })
+    setScreen('chat')
+  }
+
+  function removeWave(id) {
+    setWaved((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+  }
+
   function handleWave(id) {
     // First, show "Waved · waiting" so the user feels their tap registered.
     setWaved((prev) => ({ ...prev, [id]: 'waved' }))
@@ -481,12 +496,13 @@ function GuestApp({ onExit, campgroundName }) {
         right={<ModeBadge mode={privacy} />}
       />
       {screen !== 'chat' && screen !== 'matchchoice' && (
-        <nav className="grid grid-cols-3 gap-1 px-3 pb-2 text-[11px]">
+        <nav className="grid grid-cols-4 gap-1 px-3 pb-2 text-[11px]">
           {[
             ['home', 'Home'],
             ['checkin', 'Check in'],
             ['nearby', 'Nearby'],
             ['meetups', 'Meetups'],
+            ['waves', 'Waves'],
             ['privacy', 'Privacy'],
             ['paths', 'Crossed'],
           ].map(([id, label]) => (
@@ -533,11 +549,19 @@ function GuestApp({ onExit, campgroundName }) {
           <NearbyScreen
             waved={waved}
             onWave={handleWave}
+            onMessage={handleMessage}
             myStyle={travelStyle}
             campgroundName={campgroundName}
           />
         )}
         {screen === 'meetups' && <MeetupsScreen campgroundName={campgroundName} />}
+        {screen === 'waves' && (
+          <WavesScreen
+            waved={waved}
+            onMessage={handleMessage}
+            onRemove={removeWave}
+          />
+        )}
         {screen === 'privacy' && (
           <PrivacyScreen mode={privacy} onChange={setPrivacy} />
         )}
@@ -1119,7 +1143,7 @@ function CheckInScreen({
 // Nearby
 // ----------------------------------------------------------------------------
 
-function NearbyScreen({ waved, onWave, myStyle, campgroundName }) {
+function NearbyScreen({ waved, onWave, onMessage, myStyle, campgroundName }) {
   const [filterStyle, setFilterStyle] = useState(null)
   // Multi-select interest filter. OR semantics — picking more interests
   // *broadens* the match set, not narrows it.
@@ -1212,7 +1236,12 @@ function NearbyScreen({ waved, onWave, myStyle, campgroundName }) {
       <ul className="space-y-2.5">
         {list.map((c) => (
           <li key={c.id}>
-            <CamperCard camper={c} state={waved[c.id]} onWave={() => onWave(c.id)} />
+            <CamperCard
+              camper={c}
+              state={waved[c.id]}
+              onWave={() => onWave(c.id)}
+              onMessage={() => onMessage(c.id)}
+            />
           </li>
         ))}
         {list.length === 0 && (
@@ -1231,7 +1260,7 @@ function NearbyScreen({ waved, onWave, myStyle, campgroundName }) {
   )
 }
 
-function CamperCard({ camper, state, onWave }) {
+function CamperCard({ camper, state, onWave, onMessage }) {
   return (
     <article className="rounded-2xl border border-white/5 bg-card p-3 shadow-lg shadow-black/20 space-y-2">
       <header>
@@ -1267,8 +1296,17 @@ function CamperCard({ camper, state, onWave }) {
 
       <div className="pt-1.5 border-t border-white/5">
         {state === 'matched' ? (
-          <div className="rounded-lg border border-flame/40 bg-flame/15 px-3 py-1.5 text-center text-xs font-semibold text-flame">
-            New Connection! <span aria-hidden>🎉</span>
+          <div className="space-y-1.5">
+            <div className="rounded-lg border border-flame/40 bg-flame/15 px-3 py-1.5 text-center text-xs font-semibold text-flame">
+              New Connection! <span aria-hidden>🎉</span>
+            </div>
+            <button
+              type="button"
+              onClick={onMessage}
+              className="w-full rounded-lg border border-flame/40 bg-transparent px-3 py-1.5 text-xs font-semibold text-flame hover:bg-flame/10 transition-colors"
+            >
+              Send a message
+            </button>
           </div>
         ) : state === 'noresponse' ? (
           <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-center text-[11px] italic text-mist/70">
@@ -1297,6 +1335,99 @@ function Pill({ label, value }) {
     <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px]">
       <span className="text-mist mr-1">{label}</span>
       <span className="text-cream">{value}</span>
+    </span>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Waves — every camper you've waved at, matched or not. Lets the user reopen
+// a chat after picking "Just a wave for now", or undo a wave they regret.
+// ----------------------------------------------------------------------------
+
+function WavesScreen({ waved, onMessage, onRemove }) {
+  const entries = SAMPLE_CAMPERS.filter((c) => waved[c.id]).map((c) => ({
+    camper: c,
+    state: waved[c.id],
+  }))
+
+  return (
+    <div className="space-y-4 py-3">
+      <header>
+        <Eyebrow>Your waves</Eyebrow>
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
+          Waves
+        </h1>
+        <p className="font-serif italic text-flame text-sm leading-snug">
+          Everyone you&apos;ve waved at. Reach out when you&apos;re ready.
+        </p>
+      </header>
+
+      {entries.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-6 text-center text-sm text-mist">
+          No waves yet. Head to <span className="text-cream">Nearby</span> and
+          say hi to your neighbors.
+        </div>
+      ) : (
+        <ul className="space-y-2.5">
+          {entries.map(({ camper, state }) => (
+            <li
+              key={camper.id}
+              className="rounded-2xl border border-white/5 bg-card p-3 shadow-lg shadow-black/20 space-y-2"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-cream leading-tight">
+                    {camper.name}
+                  </h3>
+                  <p className="text-[11px] text-mist">@{camper.username}</p>
+                  <span className="mt-1 inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[10px] font-semibold text-flame">
+                    {camper.style}
+                  </span>
+                </div>
+                <WaveStateBadge state={state} />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => onMessage(camper.id)}
+                  className="flex-1 rounded-lg border border-flame/40 bg-transparent px-3 py-1.5 text-xs font-semibold text-flame hover:bg-flame/10 transition-colors"
+                >
+                  Send a message
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRemove(camper.id)}
+                  className="flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-mist hover:text-cream hover:border-white/20 transition-colors"
+                >
+                  Remove wave
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function WaveStateBadge({ state }) {
+  if (state === 'matched') {
+    return (
+      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-flame/15 border border-flame/30 px-2 py-0.5 text-[10px] font-semibold text-flame">
+        Matched <span aria-hidden>🎉</span>
+      </span>
+    )
+  }
+  if (state === 'noresponse') {
+    return (
+      <span className="shrink-0 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] italic text-mist">
+        No response yet
+      </span>
+    )
+  }
+  return (
+    <span className="shrink-0 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-mist">
+      Waiting
     </span>
   )
 }
