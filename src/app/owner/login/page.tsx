@@ -20,10 +20,17 @@ export default async function OwnerLoginPage() {
         className="mb-8 inline-block font-display font-extrabold tracking-[-0.02em] leading-none text-4xl whitespace-nowrap"
         aria-label="RoadWave"
       >
-        <span style={{ color: '#f5ecd9' }}>Road</span>
-        <span className="whitespace-nowrap" style={{ color: '#f59e0b' }}>
+        <span data-owner-logo="road" style={{ color: '#f5ecd9' }}>
+          Road
+        </span>
+        <span
+          data-owner-logo="wave"
+          className="whitespace-nowrap"
+          style={{ color: '#f59e0b' }}
+        >
           Wave
           <span
+            data-owner-logo="wave"
             className="wave-emoji select-none"
             aria-hidden
             style={{ color: '#f59e0b' }}

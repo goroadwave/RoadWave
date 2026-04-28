@@ -55,6 +55,16 @@ body {
   50% { transform: rotate(10deg); }
 }
 
+/* Bulletproof owner-header logo colors. Using a data-attribute selector
+ * with !important so no upstream rule can repaint the wordmark. Belt and
+ * suspenders alongside the inline `style` props on the same elements. */
+[data-owner-logo='road'] {
+  color: #f5ecd9 !important;
+}
+[data-owner-logo='wave'] {
+  color: #f59e0b !important;
+}
+
 .wave-emoji {
   display: inline-block;
   animation: wave 2.8s ease-in-out infinite;
