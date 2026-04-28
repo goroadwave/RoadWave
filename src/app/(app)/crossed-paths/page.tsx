@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
+import { TappableCard } from '@/components/crossed-paths/tappable-card'
 import { PageHeading } from '@/components/ui/page-heading'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { INTEREST_EMOJI, INTEREST_LABEL } from '@/lib/constants/interests'
@@ -121,11 +122,13 @@ export default async function CrossedPathsPage() {
             ? cgNameById.get(p.campground_id) ?? 'Unknown campground'
             : 'Unknown campground'
           const when = formatDistanceToNow(new Date(p.matched_at), { addSuffix: true })
+          const otherName = profile.display_name ?? profile.username
           return (
             <li key={p.id}>
-              <Link
+              <TappableCard
                 href={`/crossed-paths/${p.id}`}
-                className="block rounded-2xl hover:ring-2 hover:ring-flame/30 transition-shadow"
+                ariaLabel={`Open conversation with ${otherName}`}
+                className="rounded-2xl hover:ring-2 hover:ring-flame/30 transition-shadow active:opacity-90"
               >
                 <CrossedPathCard
                   profile={profile}
@@ -133,7 +136,7 @@ export default async function CrossedPathsPage() {
                   campgroundName={cgName}
                   when={when}
                 />
-              </Link>
+              </TappableCard>
             </li>
           )
         })}
