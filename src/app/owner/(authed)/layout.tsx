@@ -31,7 +31,7 @@ export default async function AuthedOwnerLayout({
           <Link href="/owner/dashboard" className="inline-block">
             <Logo className="text-2xl" />
           </Link>
-          <form action="/auth/sign-out" method="post">
+          <form action="/auth/sign-out?next=/owner/login" method="post">
             <button
               type="submit"
               className="text-sm text-mist hover:text-cream underline-offset-2 hover:underline"
