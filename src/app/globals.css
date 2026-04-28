@@ -67,3 +67,40 @@ body {
     animation: none;
   }
 }
+
+/* Floating Riley button — expanding amber ring pulse using a pseudo-element
+ * so the animation doesn't fight Tailwind's hover/active classes on the
+ * button itself. */
+.riley-fab {
+  position: fixed; /* override needed because we add ::after */
+}
+.riley-fab::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 9999px;
+  border: 2px solid rgba(245, 158, 11, 0.55);
+  animation: rileyPulse 2.6s ease-out infinite;
+  pointer-events: none;
+}
+.riley-fab[data-playing='true']::after {
+  animation-duration: 1.2s;
+  border-color: rgba(34, 197, 94, 0.7);
+}
+@keyframes rileyPulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .riley-fab::after {
+    animation: none;
+    opacity: 0;
+  }
+}
