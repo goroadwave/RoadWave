@@ -410,6 +410,8 @@ function GuestApp({ onExit, campgroundName }) {
   const [waved, setWaved] = useState({}) // id -> 'waved' | 'matched'
   const [match, setMatch] = useState(null) // { id, name } during celebration
   const [chatWith, setChatWith] = useState(null) // { id, name } when chat is open
+  const [blocked, setBlocked] = useState(() => new Set()) // ids the user has blocked
+  const [toast, setToast] = useState(null) // { msg } banner shown on Nearby/Waves
 
   function toggleTravelStyle(style) {
     setTravelStyles((prev) => {
@@ -439,6 +441,42 @@ function GuestApp({ onExit, campgroundName }) {
       delete next[id]
       return next
     })
+  }
+
+  function showToast(msg) {
+    setToast({ msg, ts: Date.now() })
+    window.setTimeout(() => {
+      setToast((curr) => (curr && curr.msg === msg ? null : curr))
+    }, 3500)
+  }
+
+  // Block: hide the camper from Nearby + Waves, drop any wave history, return
+  // to Nearby with a toast. The other camper is never notified — there is no
+  // network call in this demo, but the language across the UI reflects what
+  // the real app does: blocking is silent and one-way.
+  function blockCamper(id) {
+    setBlocked((prev) => {
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+    setWaved((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+    setChatWith(null)
+    setScreen('nearby')
+    showToast('Camper removed from your view')
+  }
+
+  // Leave: just close the chat back to Nearby. Match/wave history is
+  // preserved so the user can come back later from the Waves tab. Reason
+  // dropdown is collected for product feedback only — never sent to the
+  // other camper.
+  function leaveConversation() {
+    setChatWith(null)
+    setScreen('nearby')
   }
 
   function handleWave(id) {
@@ -539,6 +577,9 @@ function GuestApp({ onExit, campgroundName }) {
             onWave={handleWave}
             onMessage={handleMessage}
             campgroundName={campgroundName}
+            blocked={blocked}
+            toast={toast}
+            onDismissToast={() => setToast(null)}
           />
         )}
         {screen === 'meetups' && <MeetupsScreen campgroundName={campgroundName} />}
@@ -547,6 +588,7 @@ function GuestApp({ onExit, campgroundName }) {
             waved={waved}
             onMessage={handleMessage}
             onRemove={removeWave}
+            blocked={blocked}
           />
         )}
         {screen === 'privacy' && (
@@ -572,6 +614,8 @@ function GuestApp({ onExit, campgroundName }) {
               setChatWith(null)
               setScreen('nearby')
             }}
+            onLeave={leaveConversation}
+            onBlock={blockCamper}
           />
         )}
       </div>
@@ -634,7 +678,7 @@ function MatchChoiceScreen({ camper, onMessage, onJustWave }) {
 // Chat screen + bubble
 // ----------------------------------------------------------------------------
 
-function ChatScreen({ camper, onBack }) {
+function ChatScreen({ camper, onBack, onLeave, onBlock }) {
   const [messages, setMessages] = useState([])
   const [currentStep, setCurrentStep] = useState('start')
   const [typing, setTyping] = useState(false)
@@ -643,6 +687,9 @@ function ChatScreen({ camper, onBack }) {
   // 'replying' — user just tapped, camper is typing
   // 'done'     — leaf reached, no more quick replies
   const [phase, setPhase] = useState('opening')
+  const [menuOpen, setMenuOpen] = useState(false)
+  // null | 'block' | 'leave'
+  const [confirm, setConfirm] = useState(null)
   const scrollRef = useRef(null)
 
   // On mount: typing indicator first, then deliver the opener after 1s.
@@ -699,7 +746,7 @@ function ChatScreen({ camper, onBack }) {
     phase === 'waiting' ? CHAT_SCRIPT[currentStep]?.replies ?? null : null
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
       <div className="flex items-center gap-3 border-b border-white/5 bg-card px-3 py-2.5">
         <button
           type="button"
@@ -721,6 +768,54 @@ function ChatScreen({ camper, onBack }) {
         <span className="rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[9px] font-semibold text-flame">
           MATCHED
         </span>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="Conversation options"
+            aria-expanded={menuOpen}
+            className="grid h-7 w-7 place-items-center rounded-full text-mist hover:bg-white/5 hover:text-cream text-base leading-none"
+          >
+            ⋮
+          </button>
+          {menuOpen && (
+            <>
+              <button
+                type="button"
+                aria-label="Close menu"
+                onClick={() => setMenuOpen(false)}
+                className="fixed inset-0 z-10 cursor-default"
+              />
+              <div
+                role="menu"
+                className="absolute right-0 top-8 z-20 w-44 rounded-xl border border-white/10 bg-card shadow-2xl shadow-black/60 overflow-hidden"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    setConfirm('leave')
+                  }}
+                  className="block w-full text-left px-3 py-2 text-xs text-cream hover:bg-white/5"
+                >
+                  Leave conversation
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    setConfirm('block')
+                  }}
+                  className="block w-full text-left px-3 py-2 text-xs text-red-300 hover:bg-red-500/10 border-t border-white/5"
+                >
+                  Block this camper
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
@@ -790,6 +885,21 @@ function ChatScreen({ camper, onBack }) {
           .chat-msg { animation: none; }
         }
       `}</style>
+
+      {confirm === 'block' && (
+        <BlockConfirmScreen
+          camperName={camper.name}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => onBlock(camper.id)}
+        />
+      )}
+      {confirm === 'leave' && (
+        <LeaveConfirmScreen
+          camperName={camper.name}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => onLeave()}
+        />
+      )}
     </div>
   )
 }
@@ -818,6 +928,199 @@ function ChatBubble({ side, children }) {
         }
       >
         {children}
+      </div>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Block + Leave confirmations. Both overlay the chat screen and collect a
+// reason for product feedback only — never sent to the other camper. The
+// language reflects the real promise: blocking and leaving are silent and
+// one-way. The other person is never notified.
+// ----------------------------------------------------------------------------
+
+const BLOCK_REASONS = [
+  'They made me feel uncomfortable',
+  'Inappropriate messages',
+  'Felt like a fake profile',
+  'Not interested in connecting',
+  'I changed my mind',
+  'Prefer not to say',
+]
+
+const LEAVE_REASONS = [
+  'Just not a match',
+  'Conversation ran its course',
+  'Made plans to meet up',
+  'Changed my mind',
+  'Prefer not to say',
+]
+
+function BlockConfirmScreen({ camperName, onCancel, onConfirm }) {
+  const [reason, setReason] = useState('')
+  const [note, setNote] = useState('')
+
+  return (
+    <div className="absolute inset-0 z-30 flex flex-col bg-night">
+      <header className="border-b border-white/5 bg-card px-3 py-2.5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Cancel"
+          className="grid h-7 w-7 place-items-center rounded-full text-mist hover:bg-white/5 hover:text-cream text-base leading-none"
+        >
+          ←
+        </button>
+        <p className="flex-1 text-sm font-semibold text-cream">Block {camperName}</p>
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="space-y-1">
+          <h2 className="font-display text-lg font-extrabold text-cream leading-tight">
+            Why are you blocking this person?
+          </h2>
+          <p className="text-[11px] text-mist leading-snug">
+            Your answer helps us improve RoadWave. It is never shared with{' '}
+            {camperName}.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-[11px] uppercase tracking-[0.18em] text-flame font-semibold">
+            Reason
+          </label>
+          <select
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="w-full rounded-lg border border-white/10 bg-white/5 text-cream px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flame focus:border-flame"
+          >
+            <option value="" disabled>
+              Pick a reason
+            </option>
+            {BLOCK_REASONS.map((r) => (
+              <option key={r} value={r} className="bg-night text-cream">
+                {r}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-[11px] uppercase tracking-[0.18em] text-flame font-semibold">
+            Anything else you want to share? (optional)
+          </label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            placeholder="Add detail if you want — only RoadWave sees this."
+            className="w-full rounded-lg border border-white/10 bg-white/5 text-cream placeholder:text-mist/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flame focus:border-flame"
+          />
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[11px] text-mist leading-snug flex items-start gap-2">
+          <span aria-hidden className="text-flame mt-0.5">🔒</span>
+          <span>
+            Blocking is private. {camperName} is not notified — they will never
+            know you blocked them or why.
+          </span>
+        </div>
+      </div>
+
+      <div className="border-t border-white/5 bg-card px-3 py-3 space-y-2">
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="w-full rounded-lg bg-red-500 hover:bg-red-400 text-white px-4 py-2.5 text-sm font-semibold shadow-lg shadow-red-500/20 transition-colors"
+        >
+          Confirm Block
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="w-full rounded-lg border border-white/10 bg-white/5 text-cream px-4 py-2.5 text-sm font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors"
+        >
+          Never mind
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function LeaveConfirmScreen({ camperName, onCancel, onConfirm }) {
+  const [reason, setReason] = useState('')
+
+  return (
+    <div className="absolute inset-0 z-30 flex flex-col bg-night">
+      <header className="border-b border-white/5 bg-card px-3 py-2.5 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Cancel"
+          className="grid h-7 w-7 place-items-center rounded-full text-mist hover:bg-white/5 hover:text-cream text-base leading-none"
+        >
+          ←
+        </button>
+        <p className="flex-1 text-sm font-semibold text-cream">
+          Leave conversation
+        </p>
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="space-y-1">
+          <h2 className="font-display text-lg font-extrabold text-cream leading-tight">
+            Mind sharing why?
+          </h2>
+          <p className="text-[11px] text-mist leading-snug">
+            Optional — helps us learn. {camperName} is never notified.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-[11px] uppercase tracking-[0.18em] text-flame font-semibold">
+            Reason
+          </label>
+          <select
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="w-full rounded-lg border border-white/10 bg-white/5 text-cream px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-flame focus:border-flame"
+          >
+            <option value="" disabled>
+              Pick a reason
+            </option>
+            {LEAVE_REASONS.map((r) => (
+              <option key={r} value={r} className="bg-night text-cream">
+                {r}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[11px] text-mist leading-snug flex items-start gap-2">
+          <span aria-hidden className="text-flame mt-0.5">🔒</span>
+          <span>
+            Leaving is private. No notification, no read receipt, no drama.
+            You can come back from your Waves tab whenever you want.
+          </span>
+        </div>
+      </div>
+
+      <div className="border-t border-white/5 bg-card px-3 py-3 space-y-2">
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="w-full rounded-lg bg-flame hover:bg-amber-400 text-night px-4 py-2.5 text-sm font-semibold shadow-lg shadow-flame/15 transition-colors"
+        >
+          Leave conversation
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="w-full rounded-lg border border-white/10 bg-white/5 text-cream px-4 py-2.5 text-sm font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors"
+        >
+          Never mind
+        </button>
       </div>
     </div>
   )
@@ -1152,7 +1455,15 @@ function CheckInScreen({
 // Nearby
 // ----------------------------------------------------------------------------
 
-function NearbyScreen({ waved, onWave, onMessage, campgroundName }) {
+function NearbyScreen({
+  waved,
+  onWave,
+  onMessage,
+  campgroundName,
+  blocked,
+  toast,
+  onDismissToast,
+}) {
   // Multi-select style + interest filters. Both use OR semantics — adding
   // more selections *broadens* the result set. Empty set = "All".
   const [filterStyles, setFilterStyles] = useState(() => new Set())
@@ -1160,6 +1471,7 @@ function NearbyScreen({ waved, onWave, onMessage, campgroundName }) {
 
   const list = useMemo(() => {
     return SAMPLE_CAMPERS.filter((c) => {
+      if (blocked && blocked.has(c.id)) return false
       if (filterStyles.size > 0 && !filterStyles.has(c.style)) return false
       if (filterInterests.size > 0) {
         const matchesAny = c.interests.some((slug) => filterInterests.has(slug))
@@ -1167,7 +1479,7 @@ function NearbyScreen({ waved, onWave, onMessage, campgroundName }) {
       }
       return true
     })
-  }, [filterStyles, filterInterests])
+  }, [filterStyles, filterInterests, blocked])
 
   function toggleStyle(style) {
     setFilterStyles((prev) => {
@@ -1214,6 +1526,21 @@ function NearbyScreen({ waved, onWave, onMessage, campgroundName }) {
           </button>
         )}
       </header>
+
+      {toast && (
+        <div className="rounded-xl border border-leaf/40 bg-leaf/10 px-3 py-2 flex items-center gap-2">
+          <span aria-hidden className="text-base leading-none">✓</span>
+          <p className="flex-1 text-xs text-cream leading-snug">{toast.msg}</p>
+          <button
+            type="button"
+            onClick={onDismissToast}
+            aria-label="Dismiss"
+            className="text-mist hover:text-cream text-xs leading-none"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <p className="text-[10px] uppercase tracking-[0.2em] text-flame font-semibold">
@@ -1393,8 +1720,10 @@ function Pill({ label, value }) {
 // a chat after picking "Just a wave for now", or undo a wave they regret.
 // ----------------------------------------------------------------------------
 
-function WavesScreen({ waved, onMessage, onRemove }) {
-  const entries = SAMPLE_CAMPERS.filter((c) => waved[c.id]).map((c) => ({
+function WavesScreen({ waved, onMessage, onRemove, blocked }) {
+  const entries = SAMPLE_CAMPERS.filter(
+    (c) => waved[c.id] && !(blocked && blocked.has(c.id)),
+  ).map((c) => ({
     camper: c,
     state: waved[c.id],
   }))
