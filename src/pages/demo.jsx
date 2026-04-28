@@ -423,12 +423,12 @@ function WelcomeScreen({ onGuest }) {
           onClick={onGuest}
           className="w-full rounded-xl bg-flame text-night px-4 py-3 font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors inline-flex items-center justify-center gap-2"
         >
-          Try as Guest <span aria-hidden>👋</span>
+          Start the Demo <span aria-hidden>👋</span>
         </button>
       </div>
 
       <p className="pt-3 text-[11px] text-mist/80 max-w-[260px]">
-        A sandbox with realistic but fake data.
+        No account needed — explore everything first.
       </p>
     </div>
   )
