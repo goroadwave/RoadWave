@@ -98,6 +98,18 @@ const SAMPLE_CAMPERS = [
   },
 ]
 
+// Wave-back script for the demo. Three of the five sample campers wave back
+// (with varying delays so it feels like real people responding); the other
+// two never wave back. Camper IDs map to the delay (in ms) before they
+// reciprocate. IDs not in this map are non-matchers.
+const WAVE_BACK_DELAYS = {
+  c1: 1500, // Sarah & Jim — fastest, eager to chat
+  c2: 2500, // Alex — a beat slower
+  c5: 4000, // The Riveras — busy with kids, but they get there
+}
+// Time after which a non-matcher's card flips to the "no response" state.
+const NO_RESPONSE_TIMEOUT = 5500
+
 const MEETUPS = [
   {
     id: 'm1',
@@ -286,20 +298,31 @@ function GuestApp({ onExit }) {
   }
 
   function handleWave(id) {
-    if (id === 'c1') {
-      // Sarah & Jim — auto-match. Show the celebration overlay, then open
-      // the chat screen after a 2s pause.
-      const camper = SAMPLE_CAMPERS.find((c) => c.id === id)
-      setWaved((prev) => ({ ...prev, [id]: 'matched' }))
-      setMatch({ id, name: camper.name })
+    // First, show "Waved · waiting" so the user feels their tap registered.
+    setWaved((prev) => ({ ...prev, [id]: 'waved' }))
+
+    const matcherDelay = WAVE_BACK_DELAYS[id]
+    if (matcherDelay) {
+      // They're going to wave back after a realistic delay.
       window.setTimeout(() => {
-        setMatch(null)
-        setChatWith({ id, name: camper.name })
-        setScreen('chat')
-      }, 2000)
+        const camper = SAMPLE_CAMPERS.find((c) => c.id === id)
+        if (!camper) return
+        setWaved((prev) => ({ ...prev, [id]: 'matched' }))
+        setMatch({ id, name: camper.name })
+        window.setTimeout(() => {
+          setMatch(null)
+          setChatWith({ id, name: camper.name })
+          setScreen('chat')
+        }, 2000)
+      }, matcherDelay)
       return
     }
-    setWaved((prev) => ({ ...prev, [id]: 'waved' }))
+
+    // Non-matcher: after a longer "they had time to see it" window, flip to
+    // the no-cringe no-response state.
+    window.setTimeout(() => {
+      setWaved((prev) => ({ ...prev, [id]: 'noresponse' }))
+    }, NO_RESPONSE_TIMEOUT)
   }
 
   return (
@@ -881,7 +904,11 @@ function CamperCard({ camper, state, onWave }) {
       <div className="pt-1.5 border-t border-white/5">
         {state === 'matched' ? (
           <div className="rounded-lg border border-flame/40 bg-flame/15 px-3 py-1.5 text-center text-xs font-semibold text-flame">
-            <span aria-hidden>👋</span> Crossed paths
+            New Connection! <span aria-hidden>🎉</span>
+          </div>
+        ) : state === 'noresponse' ? (
+          <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-center text-[11px] italic text-mist/70">
+            They didn&apos;t wave back — and nobody knows. <span aria-hidden>😌</span>
           </div>
         ) : state === 'waved' ? (
           <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-center text-xs text-mist">
