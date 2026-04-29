@@ -113,6 +113,16 @@ export default function CampgroundSafetyPage() {
                 own operations, staff, property, guests, and legal obligations.
               </p>
             </div>
+            <p>
+              For the full conduct expectations, see the{' '}
+              <Link
+                href="/partner-terms"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                Campground Partner Terms
+              </Link>
+              .
+            </p>
           </Section>
 
           <Section title="Who to contact">

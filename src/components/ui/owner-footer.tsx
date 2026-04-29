@@ -18,6 +18,14 @@ export function OwnerFooter() {
             </Link>
           </li>
           <li>
+            <Link
+              href="/partner-terms"
+              className="hover:text-flame transition-colors"
+            >
+              Partner Terms
+            </Link>
+          </li>
+          <li>
             <Link href="/privacy" className="hover:text-flame transition-colors">
               Privacy
             </Link>

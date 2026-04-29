@@ -113,6 +113,17 @@ export default function TermsPage() {
               When your stay ends, your check-in expires automatically. The
               campground&apos;s view of you closes with it.
             </p>
+            <p>
+              Campgrounds offering RoadWave are also bound by our{' '}
+              <Link
+                href="/partner-terms"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                Campground Partner Terms
+              </Link>
+              , which restrict guest surveillance, mandatory use, and
+              misrepresentation, among other things.
+            </p>
           </Section>
 
           <Section title="Service changes and availability">
