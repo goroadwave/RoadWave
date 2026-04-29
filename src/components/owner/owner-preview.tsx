@@ -62,28 +62,51 @@ export function OwnerPreview({
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-night text-cream font-sans"
-      style={{ backgroundColor: '#0a0f1c', color: '#f5ecd9' }}
+      className="op-root min-h-screen flex flex-col"
+      style={{
+        backgroundColor: '#0a0f1c',
+        color: '#f5ecd9',
+        fontFamily:
+          'var(--font-dm-sans), -apple-system, system-ui, sans-serif',
+      }}
     >
-      {/* Sticky preview banner. Distinct purple/violet so it can't be
-          mistaken for the orange brand color. Explicit inline styles
-          alongside the Tailwind classes guarantee the brand chrome
-          renders even if a class doesn't resolve in some build path. */}
-      <div
-        className="sticky top-0 z-30 bg-purple-600 text-white px-4 py-2.5 flex items-center justify-between gap-3 shadow-md"
-        style={{ backgroundColor: '#7c3aed', color: '#ffffff' }}
-      >
+      {/* Scoped fallback CSS — runs whether or not Tailwind utilities
+          resolve. Keeps the page on-brand if anything in the build
+          pipeline strips or fails to generate utility classes. */}
+      <style>{`
+        .op-root { -webkit-font-smoothing: antialiased; }
+        .op-root ul, .op-root ol { list-style: none; padding: 0; margin: 0; }
+        .op-root a { color: inherit; text-decoration: none; }
+        .op-root button { font: inherit; }
+        .op-banner { background: #7c3aed; color: #fff; }
+        .op-banner-btn { background: rgba(255,255,255,0.18); color: #fff; border-radius: 6px; padding: 4px 12px; font-size: 12px; font-weight: 600; }
+        .op-banner-btn:hover { background: rgba(255,255,255,0.28); }
+        .op-card { background: #131a2e; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; }
+        .op-card-flame { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.4); border-radius: 16px; }
+        .op-card-leaf { background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.40); border-radius: 16px; }
+        .op-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #f59e0b; }
+        .op-mist { color: #94a3b8; }
+        .op-flame { color: #f59e0b; }
+        .op-cream { color: #f5ecd9; }
+        .op-leaf { color: #22c55e; }
+        .op-tab { display: block; width: 100%; text-align: center; padding: 6px 8px; border-radius: 6px; font-size: 11px; color: #94a3b8; background: transparent; border: none; cursor: pointer; transition: background 0.15s, color 0.15s; }
+        .op-tab:hover { color: #f5ecd9; background: rgba(255,255,255,0.05); }
+        .op-tab[aria-current='page'] { background: rgba(245,158,11,0.15); color: #f59e0b; font-weight: 600; }
+        .op-chip { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 9999px; font-size: 11px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #f5ecd9; }
+        .op-chip-flame { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 600; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: #f59e0b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .op-chip-leaf { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.40); color: #22c55e; }
+        .op-note { background: rgba(124,58,237,0.10); border: 1px solid rgba(124,58,237,0.30); color: rgba(196,181,253,0.9); border-radius: 12px; padding: 12px; font-size: 12px; font-style: italic; line-height: 1.5; }
+        .op-empty { background: rgba(19,26,46,0.4); border: 1px dashed rgba(255,255,255,0.10); border-radius: 16px; padding: 24px; text-align: center; font-size: 14px; color: #94a3b8; }
+      `}</style>
+
+      <div className="op-banner sticky top-0 z-30 px-4 py-2.5 flex items-center justify-between gap-3 shadow-md">
         <p className="text-xs sm:text-sm font-semibold tracking-wide">
           <span className="text-[10px] uppercase tracking-[0.2em] opacity-80 mr-2">
             Preview mode
           </span>
           This is what your guests see
         </p>
-        <Link
-          href="/owner/dashboard"
-          className="rounded-md bg-white/15 hover:bg-white/25 px-3 py-1 text-xs font-semibold whitespace-nowrap transition-colors"
-          style={{ backgroundColor: 'rgba(255,255,255,0.18)', color: '#ffffff' }}
-        >
+        <Link href="/owner/dashboard" className="op-banner-btn">
           Exit Preview ✕
         </Link>
       </div>
