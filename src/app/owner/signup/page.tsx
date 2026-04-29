@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { AuthDivider, GoogleAuthButton } from '@/components/auth/google-auth-button'
 import { OwnerSignupForm } from '@/components/owner/owner-signup-form'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -50,7 +51,11 @@ export default async function OwnerSignupPage() {
             We&apos;ll create your account and your campground&apos;s page.
           </p>
         </div>
-        <OwnerSignupForm />
+        <div className="space-y-4">
+          <GoogleAuthButton next="/owner" label="Sign up with Google" />
+          <AuthDivider />
+          <OwnerSignupForm />
+        </div>
       </main>
     </div>
   )

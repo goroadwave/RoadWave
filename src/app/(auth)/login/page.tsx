@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { LoginForm } from '@/components/auth/login-form'
+import { AuthDivider, GoogleAuthButton } from '@/components/auth/google-auth-button'
 import { PageHeading } from '@/components/ui/page-heading'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -42,6 +43,8 @@ export default async function LoginPage({
         </div>
       )}
 
+      <GoogleAuthButton next="/" />
+      <AuthDivider />
       <LoginForm />
     </div>
   )

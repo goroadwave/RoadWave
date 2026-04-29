@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { AuthDivider, GoogleAuthButton } from '@/components/auth/google-auth-button'
 import { OwnerLoginForm } from '@/components/owner/owner-login-form'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -48,7 +49,11 @@ export default async function OwnerLoginPage() {
             Welcome back
           </h1>
         </div>
-        <OwnerLoginForm />
+        <div className="space-y-4">
+          <GoogleAuthButton next="/owner" />
+          <AuthDivider />
+          <OwnerLoginForm />
+        </div>
       </main>
     </div>
   )

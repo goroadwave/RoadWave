@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { AuthDivider, GoogleAuthButton } from '@/components/auth/google-auth-button'
 import { SignupForm } from '@/components/auth/signup-form'
 import { PageHeading } from '@/components/ui/page-heading'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -18,6 +19,8 @@ export default async function SignupPage() {
         subtitle="Connections without the surveillance."
         compact
       />
+      <GoogleAuthButton next="/" label="Sign up with Google" />
+      <AuthDivider />
       <SignupForm />
     </div>
   )
