@@ -78,14 +78,17 @@ export async function saveProfileAction(
   // Upsert with onConflict on the id PK. Most accounts have a profiles row
   // already (handle_new_user trigger fires on auth.users insert), so this
   // takes the UPDATE branch. The INSERT branch covers older accounts where
-  // the trigger didn't fire or the row was lost — without it those users
-  // hit "new row violates row-level security policy" because UPDATE
-  // affected zero rows and the page-side fallback then attempted INSERT.
+  // the trigger didn't fire or the row was lost.
+  //
+  // Critical: per Supabase docs, the primary key MUST be present in the
+  // upsert payload for RLS to evaluate correctly. id is placed AFTER the
+  // spread so nothing in profileData (now or in the future) can shadow it.
   // RLS allows both paths (profiles_update_own + profiles_insert_own from
-  // migration 0015), and id = auth.uid() satisfies the WITH CHECK clauses.
+  // migration 0015) — id = auth.uid() satisfies both WITH CHECK clauses.
+  const upsertPayload = { ...profileData, id: user.id }
   const { error: upsertError } = await supabase
     .from('profiles')
-    .upsert({ id: user.id, ...profileData }, { onConflict: 'id' })
+    .upsert(upsertPayload, { onConflict: 'id' })
   if (upsertError) return { error: upsertError.message, ok: false }
 
   // Replace interests: delete all current, insert new selection.
