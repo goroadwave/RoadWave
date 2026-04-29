@@ -1,6 +1,5 @@
 'use server'
 
-import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { profileSchema } from '@/lib/validators/profile'
@@ -75,29 +74,32 @@ export async function saveProfileAction(
 
   const { interest_slugs, ...profileData } = parsed.data
 
-  // SSR client is already wired correctly: createSupabaseServerClient
-  // uses createServerClient from @supabase/ssr with cookies() from
-  // next/headers, so the OAuth session cookie is read on every action
-  // call. user.id above came from auth.getUser(), which forces a JWT
-  // validation round-trip with Supabase Auth — never use getSession()
-  // for the user id in a server action because getSession() returns
-  // unverified storage state and won't revalidate the token. The
-  // database's RLS evaluates auth.uid() from the JWT attached to
-  // subsequent SQL requests on the same client.
-  //
+  // Read the existing profile's username so an INSERT branch of the
+  // upsert can satisfy the NOT NULL constraint on profiles.username.
+  // The handle_new_user trigger normally creates a row at signup with
+  // a generated username, but for accounts where the trigger didn't
+  // fire (older OAuth signups, manual rows) we fall back to a
+  // deterministic id-derived username that satisfies the username
+  // CHECK regex (^[a-zA-Z0-9_]{3,24}$).
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', user.id)
+    .maybeSingle()
+  const username = existing?.username ?? `rv_${user.id.replace(/-/g, '').slice(0, 18)}`
+
   // Upsert with onConflict on the id PK. id is placed AFTER the spread
   // so nothing in profileData (now or in the future) can shadow it.
-  // Both INSERT and UPDATE paths satisfy RLS via id = auth.uid() (see
-  // profiles_insert_own + profiles_update_own from migration 0015).
-  const upsertPayload = { ...profileData, id: user.id }
+  // Both INSERT and UPDATE paths satisfy RLS via id = auth.uid()
+  // (profiles_insert_own + profiles_update_own from migration 0015).
+  // username goes in the payload so the INSERT branch can fulfil the
+  // NOT NULL column; on the UPDATE branch it's a harmless no-op since
+  // we just write back the same value.
+  const upsertPayload = { ...profileData, id: user.id, username }
   const { error: upsertError } = await supabase
     .from('profiles')
     .upsert(upsertPayload, { onConflict: 'id' })
   if (upsertError) {
-    // Log enough detail to debug RLS issues remotely without leaking
-    // PII. If RLS is rejecting, payloadUserId not matching what the
-    // server thinks auth.uid() is points at a token-refresh or
-    // cookie-handoff bug between middleware and the action.
     console.error('[profile-save] upsert failed:', {
       message: upsertError.message,
       code: upsertError.code,
@@ -127,6 +129,11 @@ export async function saveProfileAction(
     }
   }
 
+  // Stay on /profile/setup so the user sees the saved data + a success
+  // banner. Revalidate so a subsequent visit to /home or /nearby reads
+  // the fresh row.
+  revalidatePath('/profile/setup')
   revalidatePath('/home')
-  redirect('/home')
+  revalidatePath('/nearby')
+  return { error: null, ok: true }
 }

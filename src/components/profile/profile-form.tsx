@@ -47,6 +47,11 @@ export function ProfileForm({ userId, profile, interests, myInterestSlugs }: Pro
   }
   const [hasPets, setHasPets] = useState(profile?.has_pets ?? false)
   const [travelStyle, setTravelStyle] = useState<string>(profile?.travel_style ?? '')
+  // Controlled so we can validate "non-empty" client-side and disable
+  // the Save button without round-tripping the form.
+  const [displayName, setDisplayName] = useState<string>(profile?.display_name ?? '')
+  const displayNameTrimmed = displayName.trim()
+  const displayNameValid = displayNameTrimmed.length > 0
 
   const initial = (
     profile?.display_name?.[0] ??
@@ -77,12 +82,19 @@ export function ProfileForm({ userId, profile, interests, myInterestSlugs }: Pro
           <Label>Display name</Label>
           <input
             name="display_name"
-            defaultValue={profile?.display_name ?? ''}
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
             required
             maxLength={40}
+            aria-invalid={!displayNameValid}
             className={inputCls}
             placeholder="What other campers will see"
           />
+          {!displayNameValid && (
+            <p className="mt-1 text-xs text-red-300">
+              Pick a display name — what other campers will see.
+            </p>
+          )}
         </FieldRow>
       </Section>
 
@@ -244,11 +256,20 @@ export function ProfileForm({ userId, profile, interests, myInterestSlugs }: Pro
           {state.error}
         </p>
       )}
+      {state.ok && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="rounded-md border border-leaf/40 bg-leaf/10 p-3 text-sm text-leaf"
+        >
+          Saved. Your profile is up to date.
+        </p>
+      )}
 
       <button
         type="submit"
-        disabled={pending}
-        className="w-full sm:w-auto rounded-lg bg-flame text-night px-5 py-2.5 font-semibold shadow-lg shadow-flame/10 hover:bg-amber-400 disabled:opacity-50 transition-colors"
+        disabled={pending || !displayNameValid}
+        className="w-full sm:w-auto rounded-lg bg-flame text-night px-5 py-2.5 font-semibold shadow-lg shadow-flame/10 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {pending ? 'Saving…' : 'Save profile'}
       </button>
