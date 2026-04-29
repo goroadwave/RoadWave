@@ -20,6 +20,8 @@ const LEGAL_LINKS: { label: string; href: string }[] = [
   { label: 'Terms of Service', href: '/terms' },
   { label: 'Community Rules', href: '/community-rules' },
   { label: 'Safety', href: '/safety' },
+  { label: 'Law Enforcement', href: '/law-enforcement' },
+  { label: 'Data Breach Policy', href: '/data-breach-policy' },
 ]
 
 export function SiteFooter() {
