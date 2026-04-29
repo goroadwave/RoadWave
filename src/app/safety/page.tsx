@@ -140,6 +140,33 @@ export default function SafetyPage() {
             />
           </Section>
 
+          <Section title="Data deletion request">
+            <p>
+              You can permanently delete your account and every piece of data
+              tied to it from{' '}
+              <Link
+                href="/settings/delete-account"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                Settings → Delete my account
+              </Link>
+              . You&apos;ll get an email receipt and the deletion is logged
+              for compliance.
+            </p>
+            <p>
+              Prefer a manual request, can&apos;t sign in, or need help with
+              someone else&apos;s account (a deceased family member, a
+              suspected impersonator, etc.)? Email{' '}
+              <a
+                href="mailto:safety@getroadwave.com"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                safety@getroadwave.com
+              </a>{' '}
+              with the details and we&apos;ll handle it.
+            </p>
+          </Section>
+
           <Section title="Questions or concerns">
             <p>
               Email{' '}
