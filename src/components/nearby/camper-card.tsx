@@ -83,25 +83,30 @@ export function CamperCard({ camper, campgroundId, waveState }: Props) {
         </ul>
       )}
 
-      <div className="mt-auto pt-2 border-t border-white/5 flex items-center justify-between gap-2">
-        <WaveButton
-          targetId={camper.profile_id}
-          campgroundId={campgroundId}
-          initialState={waveState}
-        />
-        <ReportDialog
-          reportedUserId={camper.profile_id}
-          reportedLabel={`@${camper.username}`}
-          campgroundId={campgroundId}
-        >
-          <button
-            type="button"
-            aria-label={`Report @${camper.username}`}
-            className="text-xs text-mist/70 hover:text-flame underline-offset-2 hover:underline"
+      <div className="mt-auto pt-2 border-t border-white/5 space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <WaveButton
+            targetId={camper.profile_id}
+            campgroundId={campgroundId}
+            initialState={waveState}
+          />
+          <ReportDialog
+            reportedUserId={camper.profile_id}
+            reportedLabel={`@${camper.username}`}
+            campgroundId={campgroundId}
           >
-            Report
-          </button>
-        </ReportDialog>
+            <button
+              type="button"
+              aria-label={`Report @${camper.username}`}
+              className="text-xs text-mist/70 hover:text-flame underline-offset-2 hover:underline"
+            >
+              Report
+            </button>
+          </ReportDialog>
+        </div>
+        <p className="text-[11px] text-mist/70 leading-snug">
+          Suggest meeting in a public campground area.
+        </p>
       </div>
     </article>
   )

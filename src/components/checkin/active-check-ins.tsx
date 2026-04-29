@@ -21,6 +21,10 @@ export function ActiveCheckIns({ checkIns }: { checkIns: CheckIn[] }) {
       <h2 className="text-xs font-semibold uppercase tracking-wide text-mist">
         You&apos;re currently checked in
       </h2>
+      <p className="rounded-xl border border-flame/25 bg-flame/[0.05] px-4 py-3 text-sm text-cream/90 leading-relaxed">
+        You are checked in for 24 hours. Exact campsite not shown. Use Quiet
+        or Invisible mode anytime.
+      </p>
       <ul className="space-y-2">
         {checkIns.map((c) => (
           <ActiveRow key={c.id} checkIn={c} />

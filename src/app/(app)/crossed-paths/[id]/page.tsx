@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { format, formatDistanceToNow, isSameDay } from 'date-fns'
 import { CrossedPathConversation } from '@/components/crossed-paths/crossed-path-conversation'
+import { NewConnectionBanner } from '@/components/crossed-paths/new-connection-banner'
 import { ReportDialog } from '@/components/report/report-dialog'
 import { TRAVEL_STYLE_LABEL } from '@/lib/constants/travel-styles'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -110,6 +111,8 @@ export default async function CrossedPathDetailPage({ params }: Props) {
           </ReportDialog>
         </div>
       </header>
+
+      <NewConnectionBanner crossedPathId={cp.id} />
 
       <CrossedPathConversation
         crossedPathId={cp.id}
