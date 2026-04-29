@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { OwnerNav } from '@/components/owner/owner-nav'
+import { OwnerFooter } from '@/components/ui/owner-footer'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export default async function AuthedOwnerLayout({
@@ -79,6 +80,7 @@ export default async function AuthedOwnerLayout({
       <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-6">
         {children}
       </main>
+      <OwnerFooter />
     </div>
   )
 }
