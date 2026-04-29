@@ -107,9 +107,20 @@ export function OwnerPreview({
           </span>
           This is what your guests see
         </p>
-        <Link href="/owner/dashboard" className="op-banner-btn">
-          Exit Preview ✕
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link href="/owner/dashboard" className="op-banner-btn">
+            Exit Preview ✕
+          </Link>
+          {/* Sign Out is also reachable here so the preview page (which sits
+              outside the owner (authed) layout chrome) doesn't trap the user
+              without a way to log out. Posts to the same shared sign-out
+              route as the rest of the owner dashboard. */}
+          <form action="/auth/sign-out?next=/owner/login" method="post">
+            <button type="submit" className="op-banner-btn">
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
 
       <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-5 space-y-5">
