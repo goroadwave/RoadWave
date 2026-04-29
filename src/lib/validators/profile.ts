@@ -32,7 +32,10 @@ export const profileSchema = z.object({
   hometown: optionalText(80),
   status_tag: optionalText(40),
   personal_note: optionalText(280),
-  years_rving: optionalInt(0, 100),
+  // Was capped at 100 — too tight, surfaced "Too big: expected number to be
+  // <=100" to users who mistyped or interpreted the field broadly. Keeping a
+  // generous defensive upper bound only to prevent absurd integer overflow.
+  years_rving: optionalInt(0, 9_999),
   has_pets: z.boolean(),
   pet_info: optionalText(120),
   travel_style: optionalTravelStyle,
