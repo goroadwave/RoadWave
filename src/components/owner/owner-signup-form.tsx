@@ -47,6 +47,37 @@ export function OwnerSignupForm() {
         />
       </Field>
 
+      <label className="flex items-start gap-2 text-sm text-mist">
+        <input
+          type="checkbox"
+          name="accept_partner_terms"
+          required
+          className="mt-1 h-4 w-4 accent-flame"
+        />
+        <span>
+          I have read and agree to the{' '}
+          <Link
+            href="/partner-terms"
+            target="_blank"
+            className="text-flame underline-offset-2 hover:underline"
+          >
+            RoadWave Partner Terms and Conduct Restrictions
+          </Link>
+          .
+        </span>
+      </label>
+      <p className="text-xs text-mist/80">
+        By creating an account you also agree to the{' '}
+        <Link href="/terms" target="_blank" className="text-flame underline-offset-2 hover:underline">
+          Terms
+        </Link>{' '}
+        and{' '}
+        <Link href="/privacy" target="_blank" className="text-flame underline-offset-2 hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
+
       {state.error && (
         <p className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-300">
           {state.error}

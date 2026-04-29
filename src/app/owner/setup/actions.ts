@@ -1,9 +1,16 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { getRequestIp } from '@/lib/utils'
+import {
+  PARTNER_TERMS_VERSION,
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from '@/lib/constants/interests'
 
 export type OwnerSetupState = { error: string | null }
 
@@ -16,6 +23,9 @@ const schema = z.object({
     .string()
     .url({ message: 'Website must be a full URL (https://…)' })
     .or(z.literal('')),
+  accept_partner_terms: z.boolean().refine((v) => v === true, {
+    message: 'You must agree to the Partner Terms and Conduct Restrictions.',
+  }),
 })
 
 function slugify(name: string): string {
@@ -52,6 +62,7 @@ export async function ownerSetupAction(
     city: formData.get('city') ?? '',
     region: formData.get('region') ?? '',
     website: formData.get('website') ?? '',
+    accept_partner_terms: formData.get('accept_partner_terms') === 'on',
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()
@@ -72,6 +83,7 @@ export async function ownerSetupAction(
   const ownerEmail = user.email ?? ''
 
   const admin = createSupabaseAdminClient()
+  const h = await headers()
 
   // If they already provisioned (e.g. double-submit, refresh), short-circuit.
   const { data: existingLink } = await admin
@@ -80,6 +92,21 @@ export async function ownerSetupAction(
     .eq('user_id', userId)
     .maybeSingle()
   if (existingLink) redirect('/owner/dashboard')
+
+  // 0) Record acceptance of Partner Terms (and the general Terms +
+  // Privacy versions implicit in account creation).
+  const { error: ackError } = await admin.from('legal_acks').insert({
+    user_id: userId,
+    terms_version: TERMS_VERSION,
+    privacy_version: PRIVACY_VERSION,
+    partner_terms_version: PARTNER_TERMS_VERSION,
+    ip_address: getRequestIp(h),
+    user_agent: h.get('user-agent'),
+  })
+  if (ackError) {
+    console.error('[owner-setup] legal_acks insert failed:', ackError.message)
+    // Non-fatal — proceed with provisioning.
+  }
 
   // 1) Update profile — role + display_name. Upgrade username to owner_xxx
   // (the trigger creates one like rv_xxx by default; renaming is cleaner).

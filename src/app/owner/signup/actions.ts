@@ -3,9 +3,14 @@
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { getSiteOrigin } from '@/lib/utils'
+import { getRequestIp, getSiteOrigin } from '@/lib/utils'
 import { headers } from 'next/headers'
 import { sendOwnerSignupConfirmEmail } from '@/lib/email/signup-confirmation'
+import {
+  PARTNER_TERMS_VERSION,
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from '@/lib/constants/interests'
 
 export type OwnerSignupState = { error: string | null }
 
@@ -14,6 +19,9 @@ const schema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(200),
   campground_name: z.string().min(1).max(120),
+  accept_partner_terms: z.boolean().refine((v) => v === true, {
+    message: 'You must agree to the Partner Terms and Conduct Restrictions.',
+  }),
 })
 
 function slugify(name: string): string {
@@ -46,6 +54,7 @@ export async function ownerSignupAction(
     email: formData.get('email'),
     password: formData.get('password'),
     campground_name: formData.get('campground_name'),
+    accept_partner_terms: formData.get('accept_partner_terms') === 'on',
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()
@@ -81,6 +90,22 @@ export async function ownerSignupAction(
   if (!confirmUrl || !userId) {
     console.error('[owner-signup] generateLink returned no link/user id')
     return { error: "Couldn't finish signup. Try logging in." }
+  }
+
+  // 1b) Record acceptance of Partner Terms (and the general Terms +
+  // Privacy versions implicit in account creation). Service-role insert
+  // since the user has no session yet. Append-only by app convention.
+  const { error: ackError } = await admin.from('legal_acks').insert({
+    user_id: userId,
+    terms_version: TERMS_VERSION,
+    privacy_version: PRIVACY_VERSION,
+    partner_terms_version: PARTNER_TERMS_VERSION,
+    ip_address: getRequestIp(h),
+    user_agent: h.get('user-agent'),
+  })
+  if (ackError) {
+    console.error('[owner-signup] legal_acks insert failed:', ackError.message)
+    // Non-fatal — user can finish signup; we just don't have a recorded ack.
   }
 
   // 2) Confirm the auth.users row + the trigger-created profile are visible
