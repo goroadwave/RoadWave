@@ -27,13 +27,14 @@ export default async function OwnerDashboardPage() {
   const supabase = await createSupabaseServerClient()
   const nowIso = new Date().toISOString()
 
-  // Active checked-in count (no names, just the count).
-  const { count: checkedInCount } = await supabase
-    .from('check_ins')
-    .select('*', { count: 'exact', head: true })
-    .eq('campground_id', campground.id)
-    .eq('status', 'active')
-    .gt('expires_at', nowIso)
+  // Active opt-in check-in count via SECURITY DEFINER RPC. The function
+  // filters to privacy_mode='visible' + not suspended, so Quiet/Invisible
+  // users are excluded by design — owners only see counts of users who
+  // explicitly opted into being seen.
+  const { data: checkedInCount } = await supabase.rpc(
+    'owner_active_checkin_count',
+    { _campground_id: campground.id },
+  )
 
   // Active bulletin (most recent unexpired).
   const { data: activeBulletin } = await supabase
