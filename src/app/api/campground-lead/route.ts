@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { getRequestIp } from '@/lib/utils'
 
-const NOTIFY_TO = 'markhalesmith@gmail.com'
+const NOTIFY_TO = 'hello@getroadwave.com'
 // Resend's onboarding sender works without domain verification but only
 // emails the account's own verified address. Override with RESEND_FROM_EMAIL
 // once you've verified getroadwave.com (recommended) — e.g.

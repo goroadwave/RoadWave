@@ -12,7 +12,7 @@ const PRODUCT_LINKS: { label: string; href: string }[] = [
 
 const COMPANY_LINKS: { label: string; href: string }[] = [
   { label: 'About', href: '/about' },
-  { label: 'Contact', href: 'mailto:markhalesmith@gmail.com' },
+  { label: 'Contact', href: '/contact' },
 ]
 
 const LEGAL_LINKS: { label: string; href: string }[] = [

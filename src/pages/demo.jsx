@@ -402,7 +402,14 @@ function GuestApp({ campgroundName }) {
   const [travelStyles, setTravelStyles] = useState(() => new Set())
   const [chosenInterests, setChosenInterests] = useState(['coffee', 'campfire', 'dogs'])
   const [privacy, setPrivacy] = useState('visible')
-  const [waved, setWaved] = useState({}) // id -> 'waved' | 'matched'
+  // Pre-seed a few wave states so the Waves tab shows real entries the
+  // moment the demo loads, instead of an empty list. The user can still
+  // wave at others in Nearby and see those land here too.
+  const [waved, setWaved] = useState({
+    c1: 'matched', // Sarah & Jim — illustrates the matched + chat path
+    c2: 'matched', // Alex — second match for variety
+    c4: 'waved', // Jordan — pending state
+  })
   const [match, setMatch] = useState(null) // { id, name } during celebration
   const [chatWith, setChatWith] = useState(null) // { id, name } when chat is open
   const [crossedChatWith, setCrossedChatWith] = useState(null) // { username, name, ... } when a Crossed paths card is open
@@ -1753,6 +1760,36 @@ function WavesScreen({ waved, onMessage, onRemove, blocked }) {
           Everyone you&apos;ve waved at. Reach out when you&apos;re ready.
         </p>
       </header>
+
+      {/* Sample-conversation preview: shows new visitors how a wave →
+          mutual wave → chat flow plays out, before they've matched
+          with anyone in their own session. */}
+      <section className="rounded-2xl border border-flame/30 bg-flame/[0.04] p-3 space-y-2">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-flame font-semibold">
+          How a wave becomes a hello
+        </p>
+        <div className="space-y-1.5">
+          <div className="flex justify-end">
+            <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-flame text-night px-3 py-2 text-xs font-medium">
+              Hey 👋 saw you in the lakeside loop — coffee tomorrow?
+            </div>
+          </div>
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-white/10 text-cream px-3 py-2 text-xs">
+              Yes! 7am at the rec hall? I&apos;m in the silver Airstream.
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-flame text-night px-3 py-2 text-xs font-medium">
+              See you there ☕
+            </div>
+          </div>
+        </div>
+        <p className="text-[10px] text-mist italic">
+          A mutual wave unlocks a private hello. No public posts, no group
+          chat, no pressure.
+        </p>
+      </section>
 
       {entries.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-6 text-center text-sm text-mist">

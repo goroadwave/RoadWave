@@ -123,7 +123,7 @@ export function OwnerQrPanel({
       <div className="rounded-2xl border border-dashed border-white/10 bg-card p-6 text-center text-sm text-mist">
         No QR token has been issued for your campground yet.{' '}
         <a
-          href="mailto:markhalesmith@gmail.com"
+          href="mailto:hello@getroadwave.com"
           className="text-flame underline-offset-2 hover:underline"
         >
           Email us

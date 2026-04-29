@@ -114,10 +114,10 @@ export default function PrivacyPolicyPage() {
             <p>
               Email{' '}
               <a
-                href="mailto:markhalesmith@gmail.com"
+                href="mailto:hello@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
               >
-                markhalesmith@gmail.com
+                hello@getroadwave.com
               </a>{' '}
               from the address tied to your account and ask. We&apos;ll
               confirm and delete within 7 business days. We&apos;re a small team
@@ -156,10 +156,10 @@ export default function PrivacyPolicyPage() {
             <p>
               Anything unclear? Concerned about something specific? Email{' '}
               <a
-                href="mailto:markhalesmith@gmail.com"
+                href="mailto:hello@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
               >
-                markhalesmith@gmail.com
+                hello@getroadwave.com
               </a>
               . Real human, real reply.
             </p>

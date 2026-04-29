@@ -14,16 +14,46 @@ export const metadata: Metadata = {
 export default function CampgroundsPage() {
   return (
     <>
-      <header className="px-4 py-5 flex items-center justify-between">
-        <Link href="/" className="inline-block">
+      <header className="px-4 py-5 flex items-center justify-between gap-4">
+        <Link href="/" className="inline-block shrink-0">
           <Logo className="text-2xl" />
         </Link>
-        <Link
-          href="/"
-          className="text-sm font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
-        >
-          For RVers ←
-        </Link>
+        <nav>
+          <ul className="flex items-center gap-4 sm:gap-6 text-sm">
+            <li>
+              <Link
+                href="/"
+                className="text-mist hover:text-cream transition-colors"
+              >
+                Home
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/demo"
+                className="text-mist hover:text-cream transition-colors"
+              >
+                Demo
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/about"
+                className="text-mist hover:text-cream transition-colors"
+              >
+                About
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/contact"
+                className="text-mist hover:text-cream transition-colors"
+              >
+                Contact
+              </Link>
+            </li>
+          </ul>
+        </nav>
       </header>
 
       <main>

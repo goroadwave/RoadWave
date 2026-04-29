@@ -163,10 +163,10 @@ export default function TermsPage() {
             <p>
               Questions, complaints, kind notes — email{' '}
               <a
-                href="mailto:markhalesmith@gmail.com"
+                href="mailto:hello@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
               >
-                markhalesmith@gmail.com
+                hello@getroadwave.com
               </a>
               . Real human, real reply.
             </p>
