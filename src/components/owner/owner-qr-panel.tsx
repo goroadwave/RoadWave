@@ -6,58 +6,126 @@ import {
   type RotateState,
 } from '@/app/owner/(authed)/qr/actions'
 
-// Builds a print-ready letter-size PDF: campground name centered up top,
-// QR centered, "Scan to check in for 24 hours" caption, RoadWave footer.
-async function buildQrPdf(args: {
+// Brand colors — kept in sync with tailwind theme tokens.
+const NIGHT: [number, number, number] = [10, 15, 28] // #0a0f1c
+const CARD: [number, number, number] = [17, 26, 46] // #111a2e
+const CREAM: [number, number, number] = [245, 236, 217] // #f5ecd9
+const FLAME: [number, number, number] = [245, 158, 11] // #f59e0b
+const MIST: [number, number, number] = [148, 163, 184] // #94a3b8
+
+// Verbatim safety paragraph required on every printed sign.
+const SAFETY_TEXT =
+  'Meet nearby campers — only if you want to. RoadWave is an optional 18+ guest connection tool. Exact campsite numbers are not shown. Meet in public campground areas. For emergencies call 911 and notify campground staff.'
+
+type SignFormat = 'letter' | '5x7'
+
+// Builds a print-ready, dark-navy-themed signage PDF at the requested size.
+// Layout scales from the page width: same hierarchy at 5×7 and 8.5×11.
+async function buildBrandedQrPdf(args: {
   qrDataUrl: string
   campgroundName: string
-  checkInUrl: string
+  format: SignFormat
 }): Promise<Blob> {
   const { default: JsPDF } = await import('jspdf')
-  // Letter size in inches → 72 dpi points. We use the default 'pt' unit and
-  // 'letter' size; jsPDF gives us 612 × 792.
-  const doc = new JsPDF({ unit: 'pt', format: 'letter' })
-  const pageWidth = doc.internal.pageSize.getWidth() // 612
-  const pageHeight = doc.internal.pageSize.getHeight() // 792
 
-  // Title
+  // jsPDF accepts 'letter' as a name, but '5x7' has to be passed as
+  // explicit dimensions in the unit ('in'). Standard print sizes:
+  //   letter = 8.5 × 11 in → 612 × 792 pt
+  //   5×7    = 5   × 7  in → 360 × 504 pt
+  const doc =
+    args.format === 'letter'
+      ? new JsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' })
+      : new JsPDF({ unit: 'pt', format: [360, 504], orientation: 'portrait' })
+
+  const W = doc.internal.pageSize.getWidth()
+  const H = doc.internal.pageSize.getHeight()
+
+  // Background — solid night across the full page bleed.
+  doc.setFillColor(NIGHT[0], NIGHT[1], NIGHT[2])
+  doc.rect(0, 0, W, H, 'F')
+
+  // Layout pads + sizing scale by page width so 5x7 looks coherent.
+  const pad = W * 0.06
+  const wordmarkSize = W * 0.075
+  const headlineSize = W * 0.05
+  const captionSize = W * 0.03
+  const safetySize = W * 0.0225
+  const footerSize = W * 0.02
+
+  // 1) RoadWave wordmark — two-tone "Road" (cream) + "Wave" (amber).
+  // jsPDF's default WinAnsi fonts don't include emoji, so the wave glyph
+  // is omitted in print to keep this rendering reliably across viewers.
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(28)
-  doc.setTextColor(10, 15, 28) // #0a0f1c
-  doc.text(args.campgroundName, pageWidth / 2, 96, { align: 'center' })
+  doc.setFontSize(wordmarkSize)
+  const yWordmark = pad + wordmarkSize
+  const roadWidth = doc.getTextWidth('Road')
+  const waveWidth = doc.getTextWidth('Wave')
+  const wordmarkTotal = roadWidth + waveWidth
+  const wordmarkStart = (W - wordmarkTotal) / 2
+  doc.setTextColor(CREAM[0], CREAM[1], CREAM[2])
+  doc.text('Road', wordmarkStart, yWordmark)
+  doc.setTextColor(FLAME[0], FLAME[1], FLAME[2])
+  doc.text('Wave', wordmarkStart + roadWidth, yWordmark)
 
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(13)
-  doc.setTextColor(120, 120, 120)
-  doc.text('Welcome to RoadWave', pageWidth / 2, 122, { align: 'center' })
+  // 2) Campground name headline.
+  doc.setFontSize(headlineSize)
+  doc.setTextColor(CREAM[0], CREAM[1], CREAM[2])
+  const yHeadline = yWordmark + headlineSize * 1.15
+  // Soft-truncate very long names to avoid wrapping into the QR.
+  const nameMax = Math.floor(W / (headlineSize * 0.28))
+  const printedName =
+    args.campgroundName.length > nameMax
+      ? args.campgroundName.slice(0, nameMax - 1).trim() + '…'
+      : args.campgroundName
+  doc.text(printedName, W / 2, yHeadline, { align: 'center' })
 
-  // QR — centered, 320pt square (≈4.4 inches).
-  const qrSize = 320
-  const qrX = (pageWidth - qrSize) / 2
-  const qrY = 160
-  doc.addImage(args.qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize)
-
-  // Caption
-  doc.setFontSize(20)
-  doc.setTextColor(245, 158, 11) // flame
-  doc.text('Scan to check in', pageWidth / 2, qrY + qrSize + 48, {
-    align: 'center',
-  })
-  doc.setFontSize(13)
-  doc.setTextColor(80, 80, 80)
-  doc.text(
-    'You are visible for 24 hours, then automatically invisible again.',
-    pageWidth / 2,
-    qrY + qrSize + 72,
-    { align: 'center' },
+  // 3) White rounded card holding the QR — keeps quiet zone + scannability.
+  const qrCardSize = Math.min(W - pad * 2, H * 0.5)
+  const qrCardX = (W - qrCardSize) / 2
+  const qrCardY = yHeadline + headlineSize * 0.6
+  doc.setFillColor(255, 255, 255)
+  // jsPDF's roundedRect uses style 'F' for fill.
+  doc.roundedRect(qrCardX, qrCardY, qrCardSize, qrCardSize, 14, 14, 'F')
+  const qrInset = qrCardSize * 0.07
+  doc.addImage(
+    args.qrDataUrl,
+    'PNG',
+    qrCardX + qrInset,
+    qrCardY + qrInset,
+    qrCardSize - qrInset * 2,
+    qrCardSize - qrInset * 2,
   )
 
-  // Footer
-  doc.setFontSize(10)
-  doc.setTextColor(160, 160, 160)
-  doc.text('getroadwave.com', pageWidth / 2, pageHeight - 48, {
+  // 4) Caption directly under the QR card.
+  doc.setFontSize(captionSize)
+  doc.setTextColor(FLAME[0], FLAME[1], FLAME[2])
+  const yCaption = qrCardY + qrCardSize + captionSize * 1.4
+  doc.text('Scan to meet your neighbors', W / 2, yCaption, { align: 'center' })
+
+  // 5) Safety paragraph in a tinted card — wrapped to width.
+  doc.setFontSize(safetySize)
+  doc.setTextColor(MIST[0], MIST[1], MIST[2])
+  const safetyMaxWidth = W - pad * 2 - 24
+  const safetyLines = doc.splitTextToSize(SAFETY_TEXT, safetyMaxWidth)
+  const safetyLineHeight = safetySize * 1.35
+  const safetyHeight = safetyLines.length * safetyLineHeight + 18
+
+  const ySafetyBox = yCaption + captionSize * 1.1
+  const safetyBoxW = W - pad * 2
+  const safetyBoxX = pad
+  doc.setFillColor(CARD[0], CARD[1], CARD[2])
+  doc.roundedRect(safetyBoxX, ySafetyBox, safetyBoxW, safetyHeight, 10, 10, 'F')
+  doc.setFontSize(safetySize)
+  doc.setTextColor(MIST[0], MIST[1], MIST[2])
+  doc.text(safetyLines, W / 2, ySafetyBox + safetyLineHeight, {
     align: 'center',
+    maxWidth: safetyMaxWidth,
   })
+
+  // 6) Footer — getroadwave.com.
+  doc.setFontSize(footerSize)
+  doc.setTextColor(MIST[0], MIST[1], MIST[2])
+  doc.text('getroadwave.com', W / 2, H - pad * 0.6, { align: 'center' })
 
   return doc.output('blob')
 }
@@ -134,31 +202,31 @@ export function OwnerQrPanel({
   }
 
   const baseFilename = `${slug(campgroundName)}-roadwave-qr`
-  const [pdfBusy, setPdfBusy] = useState(false)
+  const [pdfBusyFormat, setPdfBusyFormat] = useState<SignFormat | null>(null)
 
-  async function downloadPdf() {
+  async function downloadPdf(format: SignFormat) {
     if (!dataUrl || !checkInUrl) return
-    setPdfBusy(true)
+    setPdfBusyFormat(format)
     try {
-      const blob = await buildQrPdf({
+      const blob = await buildBrandedQrPdf({
         qrDataUrl: dataUrl,
         campgroundName,
-        checkInUrl,
+        format,
       })
       const objectUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = objectUrl
-      a.download = `${baseFilename}.pdf`
+      const sizeTag = format === 'letter' ? '8.5x11' : '5x7'
+      a.download = `${baseFilename}-${sizeTag}.pdf`
       document.body.appendChild(a)
       a.click()
       a.remove()
-      // Defer revoke so the browser has time to start the download.
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'PDF render failed.'
       setRenderError(msg)
     } finally {
-      setPdfBusy(false)
+      setPdfBusyFormat(null)
     }
   }
 
@@ -190,7 +258,35 @@ export function OwnerQrPanel({
           )}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 justify-center">
+        <div className="space-y-2">
+          <p className="text-center text-[11px] uppercase tracking-[0.2em] text-mist">
+            Print-ready signage
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => downloadPdf('letter')}
+              disabled={!dataUrl || pdfBusyFormat !== null}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {pdfBusyFormat === 'letter' ? 'Building…' : 'Download 8.5 × 11'}
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadPdf('5x7')}
+              disabled={!dataUrl || pdfBusyFormat !== null}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-flame/40 bg-flame/10 text-flame px-4 py-2.5 text-sm font-semibold hover:bg-flame/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {pdfBusyFormat === '5x7' ? 'Building…' : 'Download 5 × 7'}
+            </button>
+          </div>
+          <p className="text-center text-[11px] text-mist/70">
+            Both sizes include the RoadWave brand, your QR, and the required
+            safety language.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 justify-center pt-1">
           <a
             ref={downloadRef}
             href={dataUrl ?? '#'}
@@ -198,20 +294,12 @@ export function OwnerQrPanel({
             aria-disabled={!dataUrl}
             className={
               dataUrl
-                ? 'inline-flex items-center justify-center gap-2 rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors'
-                : 'inline-flex items-center justify-center gap-2 rounded-lg bg-flame/40 text-night/60 px-4 py-2.5 text-sm font-semibold cursor-not-allowed'
+                ? 'inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 text-cream px-4 py-2.5 text-sm font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors'
+                : 'inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 text-mist/50 px-4 py-2.5 text-sm font-semibold cursor-not-allowed'
             }
           >
-            Download PNG
+            Download PNG (QR only)
           </a>
-          <button
-            type="button"
-            onClick={downloadPdf}
-            disabled={!dataUrl || pdfBusy}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-flame/40 bg-flame/10 text-flame px-4 py-2.5 text-sm font-semibold hover:bg-flame/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {pdfBusy ? 'Building PDF…' : 'Download PDF'}
-          </button>
           <button
             type="button"
             onClick={() => window.print()}
