@@ -1,10 +1,10 @@
 import QR from 'qrcode'
 
-// Domain noreply@getroadwave.com must be verified in Resend; if it isn't,
+// The getroadwave.com domain must be verified in Resend; if it isn't,
 // Resend will reject the send. RESEND_FROM_EMAIL overrides for local/dev
 // (the existing pattern shared with /api/campground-lead).
 const FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL || 'RoadWave <noreply@getroadwave.com>'
+  process.env.RESEND_FROM_EMAIL || 'RoadWave <hello@getroadwave.com>'
 
 type Args = {
   toEmail: string

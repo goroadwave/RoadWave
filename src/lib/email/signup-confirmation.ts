@@ -7,7 +7,7 @@
 // but the two flows have different audiences and need different copy.
 
 const FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL || 'RoadWave <noreply@getroadwave.com>'
+  process.env.RESEND_FROM_EMAIL || 'RoadWave <hello@getroadwave.com>'
 
 const SUBJECT = 'Welcome to RoadWave 👋 — confirm your email'
 
@@ -130,8 +130,12 @@ function buildHtml({ confirmUrl, toEmail, eyebrow, headline, body }: InternalArg
                   <a href="${safeUrl}" style="color:#f59e0b; text-decoration:underline;">${safeUrl}</a>
                 </p>
                 <hr style="border:none; border-top:1px solid rgba(255,255,255,0.08); margin:18px 0;" />
-                <p style="margin:0; color:#94a3b8; font-size:12px; line-height:1.55;">
+                <p style="margin:0 0 8px; color:#94a3b8; font-size:12px; line-height:1.55;">
                   If you didn&rsquo;t sign up for RoadWave, you can safely ignore this email — no account will be created.
+                </p>
+                <p style="margin:0; color:#94a3b8; font-size:12px; line-height:1.55;">
+                  Questions? Reply to this email or write us at
+                  <a href="mailto:hello@getroadwave.com" style="color:#f59e0b; text-decoration:underline;">hello@getroadwave.com</a>.
                 </p>
               </td>
             </tr>
@@ -142,7 +146,7 @@ function buildHtml({ confirmUrl, toEmail, eyebrow, headline, body }: InternalArg
             </tr>
             <tr>
               <td align="center" style="padding:0 12px 8px; color:#64748b; font-size:11px; line-height:1.5;">
-                Sent to ${escapeHtml(toEmail)}.
+                Sent to ${escapeHtml(toEmail)} from hello@getroadwave.com.
               </td>
             </tr>
           </table>

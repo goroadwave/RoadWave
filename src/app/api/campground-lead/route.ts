@@ -6,7 +6,7 @@ const NOTIFY_TO = 'hello@getroadwave.com'
 // Resend's onboarding sender works without domain verification but only
 // emails the account's own verified address. Override with RESEND_FROM_EMAIL
 // once you've verified getroadwave.com (recommended) — e.g.
-//   RESEND_FROM_EMAIL='RoadWave <demos@getroadwave.com>'
+//   RESEND_FROM_EMAIL='RoadWave <hello@getroadwave.com>'
 const DEFAULT_FROM = 'RoadWave <onboarding@resend.dev>'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
