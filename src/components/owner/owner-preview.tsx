@@ -79,8 +79,9 @@ export function OwnerPreview({
         .op-root a { color: inherit; text-decoration: none; }
         .op-root button { font: inherit; }
         .op-banner { background: #7c3aed; color: #fff; }
-        .op-banner-btn { background: rgba(255,255,255,0.18); color: #fff; border-radius: 6px; padding: 4px 12px; font-size: 12px; font-weight: 600; }
+        .op-banner-btn { background: rgba(255,255,255,0.18); color: #fff; border-radius: 6px; padding: 4px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
         .op-banner-btn:hover { background: rgba(255,255,255,0.28); }
+        .op-tabs-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
         .op-card { background: #131a2e; border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; }
         .op-card-flame { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.4); border-radius: 16px; }
         .op-card-leaf { background: rgba(34,197,94,0.10); border: 1px solid rgba(34,197,94,0.40); border-radius: 16px; }
@@ -136,9 +137,12 @@ export function OwnerPreview({
           </div>
         </header>
 
-        {/* Tab nav — same structure as the guest (app) AppNav */}
+        {/* Tab nav — same structure as the guest (app) AppNav. Uses the
+            scoped .op-tabs-grid + .op-tab classes (defined in the <style>
+            block above) so the row-of-pills layout renders reliably even
+            if Tailwind's grid-cols-4 utility doesn't resolve. */}
         <nav>
-          <ul className="grid grid-cols-4 gap-1 text-[11px] sm:text-xs">
+          <ul className="op-tabs-grid grid grid-cols-4 gap-1 text-[11px] sm:text-xs">
             {TABS.map((t) => {
               const active = tab === t.id
               return (
@@ -146,12 +150,12 @@ export function OwnerPreview({
                   <button
                     type="button"
                     onClick={() => setTab(t.id)}
+                    aria-current={active ? 'page' : undefined}
                     className={
                       active
-                        ? 'block w-full text-center rounded-md bg-flame/15 text-flame px-2 py-1.5 font-semibold'
-                        : 'block w-full text-center rounded-md text-mist px-2 py-1.5 hover:text-cream hover:bg-white/5 transition-colors'
+                        ? 'op-tab block w-full text-center rounded-md bg-flame/15 text-flame px-2 py-1.5 font-semibold'
+                        : 'op-tab block w-full text-center rounded-md text-mist px-2 py-1.5 hover:text-cream hover:bg-white/5 transition-colors'
                     }
-                    aria-current={active ? 'page' : undefined}
                   >
                     {t.label}
                   </button>
