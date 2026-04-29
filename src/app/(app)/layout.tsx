@@ -13,6 +13,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect('/login')
   if (!user.email_confirmed_at) redirect('/verify')
 
+  // Suspension gate: if profiles.suspended_at is set, the account can't use
+  // the app. Send them to /suspended where they can sign out or appeal.
+  const { data: suspendedRow } = await supabase
+    .from('profiles')
+    .select('suspended_at')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (suspendedRow?.suspended_at) redirect('/suspended')
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-white/5 bg-night/80 backdrop-blur sticky top-0 z-20">

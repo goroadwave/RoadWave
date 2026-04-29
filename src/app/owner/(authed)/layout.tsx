@@ -19,9 +19,10 @@ export default async function AuthedOwnerLayout({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, suspended_at')
     .eq('id', user.id)
     .single()
+  if (profile?.suspended_at) redirect('/suspended')
   if (profile?.role === 'guest') redirect('/checkin')
 
   // OAuth signups arrive here without a campground link. Route them through

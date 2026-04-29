@@ -3,6 +3,7 @@
 import { INTEREST_EMOJI, INTEREST_LABEL } from '@/lib/constants/interests'
 import { TRAVEL_STYLE_LABEL } from '@/lib/constants/travel-styles'
 import type { NearbyCamper } from '@/lib/types/db'
+import { ReportDialog } from '@/components/report/report-dialog'
 import { WaveButton, type WaveState } from '@/components/waves/wave-button'
 
 type Props = {
@@ -82,12 +83,25 @@ export function CamperCard({ camper, campgroundId, waveState }: Props) {
         </ul>
       )}
 
-      <div className="mt-auto pt-2 border-t border-white/5">
+      <div className="mt-auto pt-2 border-t border-white/5 flex items-center justify-between gap-2">
         <WaveButton
           targetId={camper.profile_id}
           campgroundId={campgroundId}
           initialState={waveState}
         />
+        <ReportDialog
+          reportedUserId={camper.profile_id}
+          reportedLabel={`@${camper.username}`}
+          campgroundId={campgroundId}
+        >
+          <button
+            type="button"
+            aria-label={`Report @${camper.username}`}
+            className="text-xs text-mist/70 hover:text-flame underline-offset-2 hover:underline"
+          >
+            Report
+          </button>
+        </ReportDialog>
       </div>
     </article>
   )

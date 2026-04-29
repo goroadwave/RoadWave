@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { format, formatDistanceToNow, isSameDay } from 'date-fns'
 import { CrossedPathConversation } from '@/components/crossed-paths/crossed-path-conversation'
+import { ReportDialog } from '@/components/report/report-dialog'
 import { TRAVEL_STYLE_LABEL } from '@/lib/constants/travel-styles'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -90,10 +91,24 @@ export default async function CrossedPathDetailPage({ params }: Props) {
             Crossed paths
           </span>
         </div>
-        <p className="text-xs text-mist border-t border-white/5 pt-2">
-          You crossed paths at{' '}
-          <span className="text-cream">{cgName}</span> · {matchedWhen}
-        </p>
+        <div className="flex items-center justify-between gap-3 border-t border-white/5 pt-2">
+          <p className="text-xs text-mist">
+            You crossed paths at{' '}
+            <span className="text-cream">{cgName}</span> · {matchedWhen}
+          </p>
+          <ReportDialog
+            reportedUserId={otherId}
+            reportedLabel={`@${other.username}`}
+            campgroundId={cp.campground_id}
+          >
+            <button
+              type="button"
+              className="text-xs text-mist/70 hover:text-flame underline-offset-2 hover:underline"
+            >
+              Report
+            </button>
+          </ReportDialog>
+        </div>
       </header>
 
       <CrossedPathConversation
