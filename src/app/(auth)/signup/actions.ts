@@ -2,11 +2,11 @@
 
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { signupSchema } from '@/lib/validators/auth'
 import { TERMS_VERSION, PRIVACY_VERSION } from '@/lib/constants/interests'
 import { getRequestIp, getSiteOrigin } from '@/lib/utils'
+import { sendGuestSignupConfirmEmail } from '@/lib/email/signup-confirmation'
 
 export type SignupState = { error: string | null }
 
@@ -29,34 +29,47 @@ export async function signupAction(
   }
   const { email, password, username } = parsed.data
 
-  const supabase = await createSupabaseServerClient()
   const headerList = await headers()
   const origin = getSiteOrigin(headerList)
+  const admin = createSupabaseAdminClient()
 
-  const { data, error } = await supabase.auth.signUp({
+  // generateLink({ type: 'signup' }) creates the auth.users row + returns the
+  // confirmation URL without sending Supabase's global confirmation email.
+  // We then send our branded guest-flavored email via Resend.
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+    type: 'signup',
     email,
     password,
     options: {
       data: { username },
-      emailRedirectTo: `${origin}/auth/callback`,
+      redirectTo: `${origin}/auth/callback`,
     },
   })
-  if (error) return { error: error.message }
-  if (!data.user) return { error: 'Signup failed.' }
+  if (linkError) return { error: linkError.message }
+  const confirmUrl = linkData.properties?.action_link
+  const userId = linkData.user?.id
+  if (!confirmUrl || !userId) return { error: 'Signup failed.' }
 
-  // No session yet (email confirmation pending) — write the legal ack with
-  // the service-role client so the row lands regardless.
-  const admin = createSupabaseAdminClient()
+  // Legal ack — service-role insert so it lands regardless of session state.
   const { error: ackError } = await admin.from('legal_acks').insert({
-    user_id: data.user.id,
+    user_id: userId,
     terms_version: TERMS_VERSION,
     privacy_version: PRIVACY_VERSION,
     ip_address: getRequestIp(headerList),
     user_agent: headerList.get('user-agent'),
   })
   if (ackError) {
-    // Non-fatal for the user but worth knowing about.
     console.error('legal_acks insert failed:', ackError.message)
+  }
+
+  // Custom branded confirmation email.
+  const sent = await sendGuestSignupConfirmEmail({ toEmail: email, confirmUrl })
+  if (!sent.ok) {
+    console.error('[guest-signup] confirmation email failed:', sent.error)
+    return {
+      error:
+        "Account created but we couldn't send the confirmation email. Try requesting a new one from the verify page.",
+    }
   }
 
   redirect(`/verify?email=${encodeURIComponent(email)}`)
