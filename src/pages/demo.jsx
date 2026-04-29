@@ -1302,6 +1302,19 @@ function HomeScreen({ privacyMode, onScreen, campgroundName }) {
         <Tile title="Meetup spots" description="Activities posted by your campground." onClick={() => onScreen('meetups')} />
         <Tile title="Crossed paths" description="Mutual waves you've made." onClick={() => onScreen('paths')} />
       </div>
+
+      {/* Prominent next-action CTA. The Nearby tab is the heart of the
+          product, so we surface a big amber button right under the tile
+          grid so prospects (especially campground owners) have an
+          unmistakable next step. */}
+      <button
+        type="button"
+        onClick={() => onScreen('nearby')}
+        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-4 py-3 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 active:opacity-90 transition-colors"
+      >
+        See Nearby Campers
+        <span aria-hidden>→</span>
+      </button>
     </div>
   )
 }

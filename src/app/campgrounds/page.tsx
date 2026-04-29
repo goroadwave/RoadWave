@@ -69,8 +69,8 @@ export default function CampgroundsPage() {
             </p>
             <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
               RoadWave is a private QR-code amenity. Your guests scan it,
-              find their people across your sites, and leave with friends
-              they want to see again next year.
+              find other campers with shared interests, and leave with
+              people they may want to camp near again.
             </p>
             <div className="pt-2">
               <a
