@@ -52,6 +52,22 @@ export function AvatarUpload({ userId, initialUrl, displayInitial }: Props) {
         (file.name.split('.').pop() || file.type.split('/').pop() || 'jpg').toLowerCase()
       const path = `${userId}.${ext}`
 
+      // Diagnostic for the avatar 400 reports. Logs what the browser
+      // supabase client actually sees at the moment of upload, including
+      // whether userId (server-rendered prop) matches the browser-auth
+      // user id. RLS on storage.objects keys on auth.uid() — a mismatch
+      // here is the smoking gun for "name like 'X.%'" check failing.
+      const { data: authData } = await supabase.auth.getUser()
+      console.log('[avatar-upload] attempting upload', {
+        bucket: 'avatars',
+        path,
+        propUserId: userId,
+        browserUserId: authData?.user?.id ?? null,
+        match: authData?.user?.id === userId,
+        contentType: file.type,
+        sizeBytes: file.size,
+      })
+
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(path, file, {
@@ -60,6 +76,10 @@ export function AvatarUpload({ userId, initialUrl, displayInitial }: Props) {
           cacheControl: '3600',
         })
       if (uploadError) {
+        console.error('[avatar-upload] upload error', {
+          message: uploadError.message,
+          name: uploadError.name,
+        })
         setError(uploadError.message)
         setUploading(false)
         return
