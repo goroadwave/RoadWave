@@ -8,6 +8,7 @@ import {
 } from '@/app/(app)/profile/setup/actions'
 import { AvatarUpload } from '@/components/profile/avatar-upload'
 import { Eyebrow } from '@/components/ui/eyebrow'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import { TRAVEL_STYLES } from '@/lib/constants/travel-styles'
 import type { Profile, PrivacyMode } from '@/lib/types/db'
 
@@ -22,6 +23,28 @@ type Props = {
 
 export function ProfileForm({ userId, profile, interests, myInterestSlugs }: Props) {
   const [state, formAction, pending] = useActionState(saveProfileAction, initialState)
+
+  // Diagnostic for the "RLS at save time" reports. Runs once when the
+  // user submits the form, BEFORE the action fires. Prints what the
+  // browser supabase client thinks the current user is, so we can
+  // compare it to the server action's view of the same submit.
+  // The actual write goes through saveProfileAction (server action) —
+  // there is no browser-side write to public.profiles anywhere.
+  async function logBrowserAuthOnSubmit() {
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      console.log('[profile-save] browser auth at submit:', {
+        propUserId: userId,
+        browserUserId: userData?.user?.id ?? null,
+        browserUserEmail: userData?.user?.email ?? null,
+        match: userData?.user?.id === userId,
+        getUserError: userError?.message ?? null,
+      })
+    } catch (err) {
+      console.log('[profile-save] browser auth check threw:', err)
+    }
+  }
   const [hasPets, setHasPets] = useState(profile?.has_pets ?? false)
   const [travelStyle, setTravelStyle] = useState<string>(profile?.travel_style ?? '')
 
@@ -32,7 +55,17 @@ export function ProfileForm({ userId, profile, interests, myInterestSlugs }: Pro
   ).toUpperCase()
 
   return (
-    <form action={formAction} className="space-y-8">
+    <form
+      action={formAction}
+      onSubmit={() => {
+        // Fire-and-forget — the form still submits via formAction whether
+        // this completes or not. The console.log lands in the browser's
+        // devtools, not Vercel logs, so it's visible client-side at
+        // failure time without affecting the action.
+        void logBrowserAuthOnSubmit()
+      }}
+      className="space-y-8"
+    >
       <AvatarUpload
         userId={userId}
         initialUrl={profile?.avatar_url ?? null}
