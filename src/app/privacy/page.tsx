@@ -137,10 +137,14 @@ export default function PrivacyPolicyPage() {
             </p>
           </Section>
 
-          <Section title="Children">
+          <Section title="Adults only — 18+">
             <p>
-              RoadWave is not for anyone under 16. If you believe a minor has
-              created an account, email us and we&apos;ll remove it.
+              <strong className="text-cream">RoadWave is 18+ only.</strong>{' '}
+              We do not knowingly collect or process personal information from
+              anyone under 18 years of age. Accounts found to belong to a
+              minor are removed and any data tied to them is deleted. If you
+              believe a minor has created an account, email us and we&apos;ll
+              remove it.
             </p>
           </Section>
 

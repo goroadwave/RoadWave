@@ -87,6 +87,19 @@ export function SignupForm() {
       <label className="flex items-start gap-2 text-sm text-mist">
         <input
           type="checkbox"
+          name="confirm_18"
+          required
+          className="mt-1 h-4 w-4 accent-flame"
+        />
+        <span>
+          I confirm I am 18 years of age or older. RoadWave is not available
+          to minors.
+        </span>
+      </label>
+
+      <label className="flex items-start gap-2 text-sm text-mist">
+        <input
+          type="checkbox"
           name="accept"
           required
           className="mt-1 h-4 w-4 accent-flame"

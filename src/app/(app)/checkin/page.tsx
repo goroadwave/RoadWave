@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ActiveCheckIns } from '@/components/checkin/active-check-ins'
 import { CheckInControls } from '@/components/checkin/check-in-controls'
 import { ConfirmCheckIn } from '@/components/checkin/confirm-check-in'
+import { AgeGate } from '@/components/ui/age-gate'
 import { PageHeading } from '@/components/ui/page-heading'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { isUuid } from '@/lib/validators/checkin'
@@ -70,6 +71,7 @@ export default async function CheckinPage({
   }))
 
   return (
+    <AgeGate>
     <div className="space-y-6">
       <PageHeading
         eyebrow="Check in"
@@ -92,5 +94,6 @@ export default async function CheckinPage({
 
       {activeCheckIns.length > 0 && <ActiveCheckIns checkIns={activeCheckIns} />}
     </div>
+    </AgeGate>
   )
 }

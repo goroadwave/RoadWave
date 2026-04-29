@@ -24,6 +24,7 @@ export async function signupAction(
     username: formData.get('username'),
     accept: formData.get('accept') === 'on',
     accept_community_rules: formData.get('accept_community_rules') === 'on',
+    confirm_18: formData.get('confirm_18') === 'on',
   })
 
   if (!parsed.success) {

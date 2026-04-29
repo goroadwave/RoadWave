@@ -22,6 +22,10 @@ const schema = z.object({
   accept_partner_terms: z.boolean().refine((v) => v === true, {
     message: 'You must agree to the Partner Terms and Conduct Restrictions.',
   }),
+  confirm_18_and_authorized: z.boolean().refine((v) => v === true, {
+    message:
+      'You must confirm you are 18+ and authorized to represent the campground.',
+  }),
 })
 
 function slugify(name: string): string {
@@ -55,6 +59,8 @@ export async function ownerSignupAction(
     password: formData.get('password'),
     campground_name: formData.get('campground_name'),
     accept_partner_terms: formData.get('accept_partner_terms') === 'on',
+    confirm_18_and_authorized:
+      formData.get('confirm_18_and_authorized') === 'on',
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()

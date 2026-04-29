@@ -39,6 +39,7 @@ export default function CommunityRulesPage() {
 
           <Section title="What you're agreeing to">
             <p>
+              <strong className="text-cream">RoadWave is 18+ only.</strong>{' '}
               Every RoadWave user agrees to these rules at signup. They exist
               to keep RoadWave a place worth being on. Break them and your
               account can be suspended or removed; serious violations are

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import DemoPage from '@/pages/demo'
+import { AgeGate } from '@/components/ui/age-gate'
 
 // Format a slug like "oak-hollow-rv-resort" into "Oak Hollow Rv Resort".
 // Common acronyms get uppercased so "rv" → "RV", "kc" → "KC", etc.
@@ -38,11 +39,11 @@ export default async function CampgroundDemoPage({
   const name = formatSlug(campground)
 
   return (
-    <>
+    <AgeGate>
       <div className="bg-flame text-night text-center py-2 text-xs font-semibold tracking-[0.15em] uppercase">
         Powered by RoadWave <span aria-hidden>👋</span>
       </div>
       <DemoPage campgroundName={name} />
-    </>
+    </AgeGate>
   )
 }

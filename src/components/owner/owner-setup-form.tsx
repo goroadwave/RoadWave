@@ -67,6 +67,19 @@ export function OwnerSetupForm({ initialDisplayName = '', ownerEmail = '' }: Pro
       <label className="flex items-start gap-2 text-sm text-mist">
         <input
           type="checkbox"
+          name="confirm_18_and_authorized"
+          required
+          className="mt-1 h-4 w-4 accent-flame"
+        />
+        <span>
+          I confirm I am 18 years of age or older and authorized to represent
+          my campground or RV park.
+        </span>
+      </label>
+
+      <label className="flex items-start gap-2 text-sm text-mist">
+        <input
+          type="checkbox"
           name="accept_partner_terms"
           required
           className="mt-1 h-4 w-4 accent-flame"

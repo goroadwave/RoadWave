@@ -12,6 +12,11 @@ export const signupSchema = z.object({
   accept_community_rules: z
     .boolean()
     .refine((v) => v === true, { message: 'You must agree to the Community Rules' }),
+  confirm_18: z
+    .boolean()
+    .refine((v) => v === true, {
+      message: 'You must confirm you are 18 or older to use RoadWave',
+    }),
 })
 
 export const loginSchema = z.object({

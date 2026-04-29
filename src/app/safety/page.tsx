@@ -46,6 +46,21 @@ export default function SafetyPage() {
             </p>
           </Section>
 
+          <Section title="RoadWave is 18+ only">
+            <p>
+              <strong className="text-cream">You must be 18 or older</strong>{' '}
+              to use RoadWave. We do not knowingly allow anyone under 18 on the
+              platform. If you believe a minor has signed up, email{' '}
+              <a
+                href="mailto:hello@getroadwave.com"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                hello@getroadwave.com
+              </a>{' '}
+              and we&apos;ll remove the account.
+            </p>
+          </Section>
+
           <Section title="Meeting other campers">
             <Bullets
               items={[

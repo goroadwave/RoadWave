@@ -47,8 +47,11 @@ export default function TermsPage() {
               away if you think your account has been compromised.
             </p>
             <p>
-              You must be at least 16 years old to have an account. One person
-              per account; no sharing logins.
+              <strong className="text-cream">RoadWave is 18+ only.</strong>{' '}
+              You must be at least 18 years of age to create or use an account.
+              We do not knowingly allow anyone under 18 on the platform; suspected
+              underage accounts will be removed. One person per account; no
+              sharing logins.
             </p>
           </Section>
 
