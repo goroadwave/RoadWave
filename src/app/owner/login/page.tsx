@@ -55,11 +55,6 @@ export default async function OwnerLoginPage() {
           <OwnerLoginForm />
         </div>
       </main>
-      <p className="mt-6 text-center text-xs text-mist/80">
-        <Link href="/campground-safety" className="hover:text-flame transition-colors">
-          Safety overview for campground owners →
-        </Link>
-      </p>
     </div>
   )
 }

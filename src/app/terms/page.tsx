@@ -119,7 +119,7 @@ export default function TermsPage() {
             <p>
               Campgrounds offering RoadWave are also bound by our{' '}
               <Link
-                href="/partner-terms"
+                href="/campground-partner-terms"
                 className="text-flame underline-offset-2 hover:underline"
               >
                 Campground Partner Terms

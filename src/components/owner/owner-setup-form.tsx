@@ -87,7 +87,7 @@ export function OwnerSetupForm({ initialDisplayName = '', ownerEmail = '' }: Pro
         <span>
           I have read and agree to the{' '}
           <Link
-            href="/partner-terms"
+            href="/campground-partner-terms"
             target="_blank"
             className="text-flame underline-offset-2 hover:underline"
           >
