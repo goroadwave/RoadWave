@@ -52,7 +52,7 @@ export default async function OwnerSignupPage() {
           </p>
         </div>
         <div className="space-y-4">
-          <GoogleAuthButton next="/owner" label="Sign up with Google" />
+          <GoogleAuthButton next="/owner/setup" label="Sign up with Google" />
           <AuthDivider />
           <OwnerSignupForm />
         </div>

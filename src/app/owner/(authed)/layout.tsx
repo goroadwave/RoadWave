@@ -23,6 +23,15 @@ export default async function AuthedOwnerLayout({
     .single()
   if (profile?.role === 'guest') redirect('/checkin')
 
+  // OAuth signups arrive here without a campground link. Route them through
+  // the onboarding flow before they can hit the dashboard / nav surfaces.
+  const { data: link } = await supabase
+    .from('campground_admins')
+    .select('campground_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!link) redirect('/owner/setup')
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-white/5 bg-night/80 backdrop-blur sticky top-0 z-20">
