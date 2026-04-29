@@ -35,7 +35,7 @@ export default function CampgroundsPage() {
               Give your guests a reason to come back.
             </h1>
             <p className="font-serif italic text-flame text-xl sm:text-2xl leading-snug">
-              The amenity that turns a stay into a story.
+              A simple QR-code amenity that helps guests meet each other safely.
             </p>
             <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
               RoadWave is a private QR-code amenity. Your guests scan it,
