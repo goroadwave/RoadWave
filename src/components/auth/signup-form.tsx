@@ -93,12 +93,32 @@ export function SignupForm() {
         />
         <span>
           I agree to the{' '}
-          <Link href="/terms" className="text-flame underline-offset-2 hover:underline">
+          <Link href="/terms" target="_blank" className="text-flame underline-offset-2 hover:underline">
             Terms
           </Link>{' '}
           and{' '}
-          <Link href="/privacy" className="text-flame underline-offset-2 hover:underline">
+          <Link href="/privacy" target="_blank" className="text-flame underline-offset-2 hover:underline">
             Privacy Policy
+          </Link>
+          .
+        </span>
+      </label>
+
+      <label className="flex items-start gap-2 text-sm text-mist">
+        <input
+          type="checkbox"
+          name="accept_community_rules"
+          required
+          className="mt-1 h-4 w-4 accent-flame"
+        />
+        <span>
+          I have read and agree to the{' '}
+          <Link
+            href="/community-rules"
+            target="_blank"
+            className="text-flame underline-offset-2 hover:underline"
+          >
+            RoadWave Community Rules
           </Link>
           .
         </span>

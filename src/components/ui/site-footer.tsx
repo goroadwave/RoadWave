@@ -18,6 +18,7 @@ const COMPANY_LINKS: { label: string; href: string }[] = [
 const LEGAL_LINKS: { label: string; href: string }[] = [
   { label: 'Privacy Policy', href: '/privacy' },
   { label: 'Terms of Service', href: '/terms' },
+  { label: 'Community Rules', href: '/community-rules' },
   { label: 'Safety', href: '/safety' },
 ]
 

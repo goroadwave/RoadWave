@@ -9,6 +9,9 @@ export const signupSchema = z.object({
   accept: z
     .boolean()
     .refine((v) => v === true, { message: 'You must accept the Terms and Privacy Policy' }),
+  accept_community_rules: z
+    .boolean()
+    .refine((v) => v === true, { message: 'You must agree to the Community Rules' }),
 })
 
 export const loginSchema = z.object({

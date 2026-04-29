@@ -27,3 +27,4 @@ export const INTEREST_LABEL: Record<string, string> = Object.fromEntries(
 export const TERMS_VERSION = '2026-04-27'
 export const PRIVACY_VERSION = '2026-04-27'
 export const PARTNER_TERMS_VERSION = '2026-04-29'
+export const COMMUNITY_RULES_VERSION = '2026-04-29'

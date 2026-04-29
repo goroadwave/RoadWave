@@ -4,7 +4,11 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { signupSchema } from '@/lib/validators/auth'
-import { TERMS_VERSION, PRIVACY_VERSION } from '@/lib/constants/interests'
+import {
+  COMMUNITY_RULES_VERSION,
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from '@/lib/constants/interests'
 import { getRequestIp, getSiteOrigin } from '@/lib/utils'
 import { sendGuestSignupConfirmEmail } from '@/lib/email/signup-confirmation'
 
@@ -19,6 +23,7 @@ export async function signupAction(
     password: formData.get('password'),
     username: formData.get('username'),
     accept: formData.get('accept') === 'on',
+    accept_community_rules: formData.get('accept_community_rules') === 'on',
   })
 
   if (!parsed.success) {
@@ -51,10 +56,13 @@ export async function signupAction(
   if (!confirmUrl || !userId) return { error: 'Signup failed.' }
 
   // Legal ack — service-role insert so it lands regardless of session state.
+  // Records all three guest-side versions in a single row so audit lookups
+  // can find the active acceptance for each policy with one query.
   const { error: ackError } = await admin.from('legal_acks').insert({
     user_id: userId,
     terms_version: TERMS_VERSION,
     privacy_version: PRIVACY_VERSION,
+    community_rules_version: COMMUNITY_RULES_VERSION,
     ip_address: getRequestIp(headerList),
     user_agent: headerList.get('user-agent'),
   })
