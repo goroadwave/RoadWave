@@ -75,21 +75,36 @@ export async function saveProfileAction(
 
   const { interest_slugs, ...profileData } = parsed.data
 
-  // Upsert with onConflict on the id PK. Most accounts have a profiles row
-  // already (handle_new_user trigger fires on auth.users insert), so this
-  // takes the UPDATE branch. The INSERT branch covers older accounts where
-  // the trigger didn't fire or the row was lost.
+  // SSR client is already wired correctly: createSupabaseServerClient
+  // uses createServerClient from @supabase/ssr with cookies() from
+  // next/headers, so the OAuth session cookie is read on every action
+  // call. user.id above came from auth.getUser(), which forces a JWT
+  // validation round-trip with Supabase Auth — never use getSession()
+  // for the user id in a server action because getSession() returns
+  // unverified storage state and won't revalidate the token. The
+  // database's RLS evaluates auth.uid() from the JWT attached to
+  // subsequent SQL requests on the same client.
   //
-  // Critical: per Supabase docs, the primary key MUST be present in the
-  // upsert payload for RLS to evaluate correctly. id is placed AFTER the
-  // spread so nothing in profileData (now or in the future) can shadow it.
-  // RLS allows both paths (profiles_update_own + profiles_insert_own from
-  // migration 0015) — id = auth.uid() satisfies both WITH CHECK clauses.
+  // Upsert with onConflict on the id PK. id is placed AFTER the spread
+  // so nothing in profileData (now or in the future) can shadow it.
+  // Both INSERT and UPDATE paths satisfy RLS via id = auth.uid() (see
+  // profiles_insert_own + profiles_update_own from migration 0015).
   const upsertPayload = { ...profileData, id: user.id }
   const { error: upsertError } = await supabase
     .from('profiles')
     .upsert(upsertPayload, { onConflict: 'id' })
-  if (upsertError) return { error: upsertError.message, ok: false }
+  if (upsertError) {
+    // Log enough detail to debug RLS issues remotely without leaking
+    // PII. If RLS is rejecting, payloadUserId not matching what the
+    // server thinks auth.uid() is points at a token-refresh or
+    // cookie-handoff bug between middleware and the action.
+    console.error('[profile-save] upsert failed:', {
+      message: upsertError.message,
+      code: upsertError.code,
+      payloadUserId: user.id,
+    })
+    return { error: upsertError.message, ok: false }
+  }
 
   // Replace interests: delete all current, insert new selection.
   const { error: deleteError } = await supabase
