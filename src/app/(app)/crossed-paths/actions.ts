@@ -3,8 +3,44 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { isUuid } from '@/lib/validators/checkin'
 
 export type SendMessageResult = { ok: boolean; error: string | null }
+export type WaveConsentStatus =
+  | 'connected'
+  | 'pending'
+  | 'declined'
+  | 'not_found'
+  | 'unauthorized'
+export type WaveConsentResult = {
+  status: WaveConsentStatus | null
+  error: string | null
+}
+
+export async function waveConsentAction(
+  crossedPathId: string,
+  connect: boolean,
+): Promise<WaveConsentResult> {
+  if (!isUuid(crossedPathId))
+    return { status: null, error: 'Invalid request.' }
+
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { status: null, error: 'Not signed in.' }
+
+  const { data, error } = await supabase.rpc('wave_consent', {
+    _crossed_path_id: crossedPathId,
+    _connect: connect,
+  })
+  if (error) return { status: null, error: error.message }
+
+  revalidatePath('/crossed-paths')
+  revalidatePath(`/crossed-paths/${crossedPathId}`)
+  revalidatePath('/home')
+  return { status: (data as WaveConsentStatus) ?? null, error: null }
+}
 
 const schema = z.object({
   crossed_path_id: z.string().uuid(),

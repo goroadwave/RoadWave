@@ -106,21 +106,12 @@ export interface LegalAck {
   accepted_at: string
 }
 
-// Shape returned by the nearby_campers() RPC. Fields are null when the
-// target user has the matching share_* toggle off.
+// Shape returned by the nearby_campers() RPC. Pre-connection privacy
+// rule: identifying fields (name, avatar, notes, hometown, etc.) are
+// never returned. The discovery card renders shared-interest overlap
+// + rig type only.
 export interface NearbyCamper {
   profile_id: string
-  username: string
-  display_name: string | null
-  avatar_url: string | null
   rig_type: string | null
-  miles_driven: number | null
-  hometown: string | null
-  status_tag: string | null
-  personal_note: string | null
-  years_rving: number | null
-  has_pets: boolean | null
-  pet_info: string | null
-  travel_style: string | null
   interests: string[] | null
 }

@@ -1,9 +1,14 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { sendWaveAction } from '@/lib/actions/waves'
 
-export type WaveState = 'none' | 'waved' | 'matched'
+export type WaveState =
+  | 'none'
+  | 'waved'
+  | 'matched'
+  | 'connected'
+  | 'declined'
 
 type Props = {
   targetId: string
@@ -11,23 +16,55 @@ type Props = {
   initialState?: WaveState
 }
 
-export function WaveButton({ targetId, campgroundId, initialState = 'none' }: Props) {
+const LABEL_BY_STATE: Record<Exclude<WaveState, 'none'>, string> = {
+  waved: 'Waved · waiting',
+  matched: 'Mutual wave · check your Lantern',
+  connected: 'Connected',
+  declined: 'Waved',
+}
+
+export function WaveButton({
+  targetId,
+  campgroundId,
+  initialState = 'none',
+}: Props) {
   const [state, setState] = useState<WaveState>(initialState)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  // The post-wave confirmation toast. Per spec, the button itself
+  // becomes inactive immediately and a brief confirmation appears.
+  const [showToast, setShowToast] = useState(false)
 
-  if (state === 'matched') {
-    return (
-      <div className="rounded-lg border border-flame/40 bg-flame/15 px-3 py-2 text-center text-sm font-semibold text-flame">
-        <span aria-hidden>👋</span> Crossed paths
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (!showToast) return
+    const t = window.setTimeout(() => setShowToast(false), 4500)
+    return () => window.clearTimeout(t)
+  }, [showToast])
 
-  if (state === 'waved') {
+  if (state !== 'none') {
+    const label = LABEL_BY_STATE[state]
+    const tone =
+      state === 'connected' || state === 'matched'
+        ? 'border-flame/40 bg-flame/15 text-flame'
+        : 'border-white/10 bg-white/5 text-mist'
     return (
-      <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center text-sm text-mist">
-        Waved · waiting
+      <div className="space-y-1.5">
+        <div
+          aria-disabled
+          className={`rounded-lg border px-3 py-2 text-center text-sm font-semibold ${tone}`}
+        >
+          {state === 'matched' && <span aria-hidden>👋 </span>}
+          {label}
+        </div>
+        {showToast && (
+          <p
+            role="status"
+            className="rounded-md border border-flame/30 bg-flame/10 px-2.5 py-1.5 text-[11px] leading-snug text-cream"
+          >
+            Your wave was sent. If they wave back, you&apos;ll hear about it
+            in your Lantern.
+          </p>
+        )}
       </div>
     )
   }
@@ -41,6 +78,7 @@ export function WaveButton({ targetId, campgroundId, initialState = 'none' }: Pr
         return
       }
       setState(result.matched ? 'matched' : 'waved')
+      setShowToast(true)
     })
   }
 

@@ -820,3 +820,360 @@ test('notifications migration declares the spec columns + types', async () => {
   expect(src).not.toContain('notifications_insert_')
   expect(src).not.toContain('notifications_delete_')
 })
+
+// ---------------------------------------------------------------------------
+// Wave 5-step flow — Discover → Wave Sent → Wave Received → Mutual
+// Consent → Connected. The full multi-account UX requires two
+// authenticated browsers and is exercised manually; the assertions
+// below are the structural / public-surface checks Playwright can run
+// against the deployed app + the demo.
+// ---------------------------------------------------------------------------
+
+test.describe('Wave 5-step flow — schema + structure', () => {
+  test('migration 0026 adds the consent flow schema + RPCs', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile(
+      'supabase/migrations/0026_wave_consent_flow.sql',
+      'utf8',
+    )
+    // waves status column with the four spec values.
+    for (const v of ['pending', 'matched', 'declined', 'connected']) {
+      expect(src, `waves status must include '${v}'`).toContain(`'${v}'`)
+    }
+    // crossed_paths consent state.
+    expect(src).toContain('consent_a boolean')
+    expect(src).toContain('consent_b boolean')
+    for (const v of ['pending_consent', 'connected', 'declined']) {
+      expect(src, `crossed_paths status must include '${v}'`).toContain(
+        `'${v}'`,
+      )
+    }
+    // New enum members.
+    expect(src).toContain("add value if not exists 'wave_sent'")
+    expect(src).toContain("add value if not exists 'wave_connected'")
+    // Consent prompt copy.
+    expect(src).toContain(
+      'You have a mutual wave! Would you like to connect?',
+    )
+    // Celebration copy.
+    expect(src).toContain('New connection 🎉 Tap to say hello.')
+    // Receiver wave copy mentions a shared interest.
+    expect(src).toContain('shares your interest in')
+    // RPCs the client uses.
+    expect(src).toContain('public.wave_consent(_crossed_path_id uuid')
+    expect(src).toContain('public.decline_wave(_wave_id uuid')
+    expect(src).toContain('public.incoming_wave(_wave_id uuid')
+    expect(src).toContain('public.pending_consent_summary(_crossed_path_id uuid')
+    // Pre-populated first message.
+    expect(src).toContain("'Hey, nice to meet you!'")
+    // Messaging RLS gated on status='connected'.
+    expect(src).toContain("cp.status = 'connected'")
+    // nearby_campers redacts identifying fields.
+    expect(src).toContain('drop function if exists public.nearby_campers(uuid)')
+  })
+
+  test('nearby_campers RPC type signature carries no identifying fields', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile('src/lib/types/db.ts', 'utf8')
+    const block = src.match(/export interface NearbyCamper \{[^}]+\}/)
+    expect(block, 'NearbyCamper type must exist').toBeTruthy()
+    const body = block?.[0] ?? ''
+    // Allowed fields only.
+    for (const allowed of ['profile_id', 'rig_type', 'interests']) {
+      expect(body).toContain(allowed)
+    }
+    // Pre-connection redaction: name + adjacent profile fields are NOT
+    // part of the type. (display_name, hometown, miles_driven, status_tag,
+    // personal_note, years_rving, has_pets, pet_info, travel_style.)
+    for (const banned of [
+      'username',
+      'display_name',
+      'avatar_url',
+      'hometown',
+      'miles_driven',
+      'status_tag',
+      'personal_note',
+      'years_rving',
+      'has_pets',
+      'pet_info',
+      'travel_style',
+    ]) {
+      expect(body, `${banned} must not appear in NearbyCamper`).not.toContain(
+        banned,
+      )
+    }
+  })
+
+  test('Nearby camper card renders only rig + shared interests + Wave', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile(
+      'src/components/nearby/camper-card.tsx',
+      'utf8',
+    )
+    // Must NOT render any of these identifying surfaces.
+    expect(src).not.toContain('camper.username')
+    expect(src).not.toContain('camper.display_name')
+    expect(src).not.toContain('camper.hometown')
+    expect(src).not.toContain('camper.miles_driven')
+    expect(src).not.toContain('camper.status_tag')
+    expect(src).not.toContain('camper.personal_note')
+    expect(src).not.toContain('camper.years_rving')
+    expect(src).not.toContain('camper.has_pets')
+    expect(src).not.toContain('camper.pet_info')
+    expect(src).not.toContain('camper.travel_style')
+    expect(src).not.toContain('avatar_url')
+    // Must show a single Wave button.
+    expect(src).toContain('initialState={waveState}')
+    // Shared interests come from intersection with viewer.
+    expect(src).toContain('viewerInterests')
+  })
+
+  test('IncomingWaveCard exposes Wave Back + Ignore', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile(
+      'src/components/waves/incoming-wave-card.tsx',
+      'utf8',
+    )
+    expect(src).toContain('Wave Back')
+    expect(src).toContain('Ignore')
+    expect(src).toContain('declineWaveAction')
+    expect(src).toContain('sendWaveAction')
+    // Spec privacy guarantee: no name surfaces here either.
+    expect(src).not.toContain('camper.name')
+    expect(src).not.toContain('display_name')
+  })
+
+  test('ConsentPrompt exposes Connect + Not Yet, no name reveal', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile(
+      'src/components/crossed-paths/consent-prompt.tsx',
+      'utf8',
+    )
+    expect(src).toContain('Connect')
+    expect(src).toContain('Not Yet')
+    expect(src).toContain('waveConsentAction')
+    expect(src).toContain(
+      'You and a nearby camper have waved at each other',
+    )
+    expect(src).not.toContain('display_name')
+    expect(src).not.toContain('username')
+  })
+
+  test('crossed-path detail page branches on status', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile(
+      'src/app/(app)/crossed-paths/[id]/page.tsx',
+      'utf8',
+    )
+    expect(src).toContain("cp.status === 'declined'")
+    expect(src).toContain("cp.status === 'pending_consent'")
+    expect(src).toContain('ConsentPrompt')
+    // First-name-only display in the header.
+    expect(src).toContain("split(/\\s+/)")
+    // Spec safety banner.
+    expect(src).toContain(
+      'Meet smart: use public campground areas, trust your instincts, and report pressure, harassment, or suspicious behavior.',
+    )
+  })
+
+  test('live Nearby page uses spec safety reminder copy', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile('src/app/(app)/nearby/page.tsx', 'utf8')
+    expect(src).toContain(
+      'Safety reminder: Meet in public campground areas, trust your instincts, and do not share your exact site number unless you choose to.',
+    )
+  })
+
+  test('live AppLantern wires the new wave routes and clamps panel for mobile', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile(
+      'src/components/lantern/app-lantern.tsx',
+      'utf8',
+    )
+    // New notification types.
+    expect(src).toContain("'wave_sent'")
+    expect(src).toContain("'wave_connected'")
+    // Routing.
+    expect(src).toContain('/waves/incoming/${n.reference_id}')
+    expect(src).toContain('/crossed-paths/${n.reference_id}')
+    // Mobile-overflow clamp.
+    expect(src).toContain('Math.min(desiredRight, maxRight)')
+    expect(src).toContain('Math.max(SAFE,')
+  })
+
+  test('demo NearbyScreen card has no name and shows the Wave button', async ({
+    page,
+  }) => {
+    await page.goto('/demo')
+    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    // The "A nearby camper" privacy label appears on each card.
+    await expect(page.getByText('A nearby camper').first()).toBeVisible()
+    // Wave button is rendered.
+    await expect(
+      page.getByRole('button', { name: /^Wave$/ }).first(),
+    ).toBeVisible()
+    // No "site number" text anywhere on the screen.
+    // No concrete site identifier like "Site 23" or "Site #5".
+    await expect(page.getByText(/\bsite\s+#?\d+/i)).toHaveCount(0)
+    // Sample camper full names from SAMPLE_CAMPERS must NOT appear on the
+    // Nearby screen pre-connection.
+    await expect(page.getByText(/Sarah & Jim/)).toHaveCount(0)
+    await expect(page.getByText(/Pat & Linda/)).toHaveCount(0)
+  })
+
+  test('demo Wave tap deactivates the button and shows lantern hint', async ({
+    page,
+  }) => {
+    await page.goto('/demo')
+    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    const firstWave = page
+      .getByRole('button', { name: /^Wave$/ })
+      .first()
+    await firstWave.click()
+    // Inline confirmation referencing the Lantern.
+    await expect(
+      page
+        .getByText(/your wave was sent\. if they wave back/i)
+        .first(),
+    ).toBeVisible({ timeout: 8000 })
+    // The original Wave button shows "Waved · waiting" instead.
+    await expect(
+      page.getByText(/waved.*waiting/i).first(),
+    ).toBeVisible({ timeout: 8000 })
+  })
+
+  test('demo auto-wave-back lands on the consent prompt — no name reveal', async ({
+    page,
+  }) => {
+    await page.goto('/demo')
+    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    // Tap the very first wave button — c1 (Sarah & Jim) waves back at
+    // 1500ms, the fastest matcher.
+    await page.getByRole('button', { name: /^Wave$/ }).first().click()
+    // Consent prompt appears with the spec heading.
+    await expect(
+      page.getByRole('heading', { name: /Would you like to connect/i }),
+    ).toBeVisible({ timeout: 6000 })
+    await expect(
+      page.getByText(
+        'You and a nearby camper have waved at each other. Would you like to connect and say hello?',
+      ),
+    ).toBeVisible()
+    // Both buttons present.
+    await expect(
+      page.getByRole('button', { name: /^Connect/ }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('button', { name: /^Not Yet$/ }),
+    ).toBeVisible()
+    // Pre-connection name privacy: full sample name must NOT be on this
+    // screen.
+    await expect(page.getByText(/Sarah & Jim/)).toHaveCount(0)
+  })
+
+  test('demo Connect tap opens chat with pre-populated welcome', async ({
+    page,
+  }) => {
+    await page.goto('/demo')
+    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Wave$/ }).first().click()
+    await page
+      .getByRole('button', { name: /^Connect/ })
+      .click({ timeout: 6000 })
+    // Step 5 — first names visible. Sarah's first name appears in
+    // the chat header.
+    await expect(page.getByText('Sarah').first()).toBeVisible({
+      timeout: 8000,
+    })
+    // Pre-populated welcome message is the visitor's first message.
+    await expect(
+      page.getByText(/Hey, nice to meet you!/i).first(),
+    ).toBeVisible()
+    // Brief celebration banner ("New Connection!").
+    await expect(
+      page.getByText(/New Connection!/i).first(),
+    ).toBeVisible()
+    // Spec messaging-screen safety copy.
+    await expect(
+      page.getByText(
+        /Meet smart: use public campground areas, trust your instincts/i,
+      ),
+    ).toBeVisible()
+    // Site number must never surface anywhere in chat.
+    // No concrete site identifier like "Site 23" or "Site #5".
+    await expect(page.getByText(/\bsite\s+#?\d+/i)).toHaveCount(0)
+  })
+
+  test('demo Not Yet returns to Nearby silently', async ({ page }) => {
+    await page.goto('/demo')
+    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Wave$/ }).first().click()
+    await page
+      .getByRole('button', { name: /^Not Yet$/ })
+      .click({ timeout: 6000 })
+    // Back to the Nearby header.
+    await expect(
+      page.getByRole('heading', { name: /Nearby campers/i }),
+    ).toBeVisible()
+  })
+
+  test('demo Restart option is available after Step 5', async ({ page }) => {
+    await page.goto('/demo')
+    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Wave$/ }).first().click()
+    await page
+      .getByRole('button', { name: /^Connect/ })
+      .click({ timeout: 6000 })
+    // Open the chat options menu (the "⋮" button).
+    await page
+      .getByRole('button', { name: /Conversation options/i })
+      .click({ timeout: 6000 })
+    await expect(
+      page.getByRole('menuitem', { name: /Restart demo/i }),
+    ).toBeVisible()
+  })
+
+  test('demo Nearby safety banner uses the spec copy', async ({ page }) => {
+    await page.goto('/demo')
+    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await expect(
+      page.getByText(
+        /Meet in public campground areas, trust your instincts, and do not share your exact site number/i,
+      ),
+    ).toBeVisible()
+  })
+
+  test('lantern panel stays within viewport on mobile', async ({ browser }) => {
+    // iPhone SE-ish viewport: 375x667. The live lantern requires
+    // auth, so this assertion targets the demo lantern, which uses
+    // the same containment math (same right-anchored portal pattern).
+    const ctx = await browser.newContext({
+      viewport: { width: 375, height: 667 },
+    })
+    const page = await ctx.newPage()
+    await page.goto('/demo')
+    const lanternBtn = page.getByRole('button', {
+      name: /Your Lantern — tap to see activity/i,
+    })
+    await lanternBtn.click()
+    const panel = page.getByRole('menu', { name: /Demo notifications/i })
+    await expect(panel).toBeVisible()
+    const box = await panel.boundingBox()
+    expect(box, 'panel should have a bounding box').toBeTruthy()
+    if (box) {
+      expect(box.x, 'panel left edge must be ≥ 0').toBeGreaterThanOrEqual(0)
+      expect(
+        box.x + box.width,
+        'panel right edge must be ≤ viewport width',
+      ).toBeLessThanOrEqual(375)
+    }
+    // Close and verify nav tabs are tappable.
+    await page.keyboard.press('Escape')
+    await expect(panel).toBeHidden()
+    await page.getByRole('button', { name: /^Home$/ }).first().click()
+    await expect(
+      page.getByText(/Welcome to Riverbend RV Park/i),
+    ).toBeVisible()
+    await ctx.close()
+  })
+})

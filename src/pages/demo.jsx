@@ -328,7 +328,11 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
           </header>
 
           <PhoneFrame>
-            <GuestApp key={demoKey} campgroundName={campgroundName} />
+            <GuestApp
+              key={demoKey}
+              campgroundName={campgroundName}
+              onReset={resetDemo}
+            />
           </PhoneFrame>
 
           <button
@@ -397,20 +401,18 @@ function PhoneFrame({ children }) {
 // Guest app
 // ----------------------------------------------------------------------------
 
-function GuestApp({ campgroundName }) {
+function GuestApp({ campgroundName, onReset }) {
   const [screen, setScreen] = useState('home')
   // Multi-select travel styles. Empty Set = "All" (no preference declared).
   const [travelStyles, setTravelStyles] = useState(() => new Set())
   const [chosenInterests, setChosenInterests] = useState(['coffee', 'campfire', 'dogs'])
   const [privacy, setPrivacy] = useState('visible')
-  // Pre-seed a few wave states so the Waves tab shows real entries the
-  // moment the demo loads, instead of an empty list. The user can still
-  // wave at others in Nearby and see those land here too.
-  const [waved, setWaved] = useState({
-    c1: 'matched', // Sarah & Jim — illustrates the matched + chat path
-    c2: 'matched', // Alex — second match for variety
-    c4: 'waved', // Jordan — pending state
-  })
+  // The 5-step flow requires the visitor to be the initiator of every
+  // wave they experience, so we start with no pre-seeded wave state.
+  // Wave states: 'waved' (Step 2) → 'consent' (Step 4) → 'connected'
+  // (Step 5). 'declined' is used when the visitor taps Not Yet.
+  // 'noresponse' is the no-cringe fallback for non-matchers.
+  const [waved, setWaved] = useState({})
   const [match, setMatch] = useState(null) // { id, name } during celebration
   const [chatWith, setChatWith] = useState(null) // { id, name } when chat is open
   const [crossedChatWith, setCrossedChatWith] = useState(null) // { username, name, ... } when a Crossed paths card is open
@@ -488,25 +490,24 @@ function GuestApp({ campgroundName }) {
   }
 
   function handleWave(id) {
-    // First, show "Waved · waiting" so the user feels their tap registered.
+    // Step 2 — Wave Sent: button on card flips to "Waved · waiting" and
+    // a brief inline confirmation appears. The visitor cannot wave the
+    // same person twice (CamperCard renders the disabled state when
+    // waved[id] is set).
     setWaved((prev) => ({ ...prev, [id]: 'waved' }))
 
     const matcherDelay = WAVE_BACK_DELAYS[id]
     if (matcherDelay) {
-      // They're going to wave back after a realistic delay.
+      // Step 3 happens on the receiver's side — the spec calls for
+      // walking through it visibly, so we use the toast as a brief
+      // narrative beat ("they got your wave...") before flipping into
+      // the consent prompt at Step 4.
       window.setTimeout(() => {
         const camper = SAMPLE_CAMPERS.find((c) => c.id === id)
         if (!camper) return
-        setWaved((prev) => ({ ...prev, [id]: 'matched' }))
-        setMatch({ id, name: camper.name })
-        window.setTimeout(() => {
-          setMatch(null)
-          setChatWith({ id, name: camper.name })
-          // Don't auto-open chat — give the user the explicit "do you want
-          // to message them?" opt-in screen first. Both parties have to
-          // choose before a private hello opens.
-          setScreen('matchchoice')
-        }, 2000)
+        setWaved((prev) => ({ ...prev, [id]: 'consent' }))
+        setChatWith({ id, name: camper.name })
+        setScreen('matchchoice')
       }, matcherDelay)
       return
     }
@@ -516,6 +517,27 @@ function GuestApp({ campgroundName }) {
     window.setTimeout(() => {
       setWaved((prev) => ({ ...prev, [id]: 'noresponse' }))
     }, NO_RESPONSE_TIMEOUT)
+  }
+
+  // Visitor-side consent for Step 4. Tapping Connect promotes the wave
+  // to 'connected' and opens the chat (Step 5). Tapping Not Yet silently
+  // dismisses and returns to Nearby — no notification to the other side.
+  function handleConsent(id, connect) {
+    if (!connect) {
+      setWaved((prev) => ({ ...prev, [id]: 'declined' }))
+      setChatWith(null)
+      setScreen('nearby')
+      return
+    }
+    const camper = SAMPLE_CAMPERS.find((c) => c.id === id)
+    if (!camper) return
+    setWaved((prev) => ({ ...prev, [id]: 'connected' }))
+    setMatch({ id, name: camper.name })
+    window.setTimeout(() => {
+      setMatch(null)
+      setChatWith({ id, name: camper.name })
+      setScreen('chat')
+    }, 1500)
   }
 
   return (
@@ -589,11 +611,11 @@ function GuestApp({ campgroundName }) {
           <NearbyScreen
             waved={waved}
             onWave={handleWave}
-            onMessage={handleMessage}
             campgroundName={campgroundName}
             blocked={blocked}
             toast={toast}
             onDismissToast={() => setToast(null)}
+            viewerInterests={chosenInterests}
           />
         )}
         {screen === 'meetups' && <MeetupsScreen campgroundName={campgroundName} />}
@@ -625,13 +647,11 @@ function GuestApp({ campgroundName }) {
           />
         )}
         {screen === 'matchchoice' && chatWith && (
-          <MatchChoiceScreen
-            camper={chatWith}
-            onMessage={() => setScreen('chat')}
-            onJustWave={() => {
-              setChatWith(null)
-              setScreen('nearby')
-            }}
+          <ConsentPromptScreen
+            camper={SAMPLE_CAMPERS.find((c) => c.id === chatWith.id)}
+            viewerInterests={chosenInterests}
+            onConnect={() => handleConsent(chatWith.id, true)}
+            onNotYet={() => handleConsent(chatWith.id, false)}
           />
         )}
         {screen === 'chat' && chatWith && (
@@ -643,6 +663,7 @@ function GuestApp({ campgroundName }) {
             }}
             onLeave={leaveConversation}
             onBlock={blockCamper}
+            onReset={onReset}
           />
         )}
       </div>
@@ -652,51 +673,77 @@ function GuestApp({ campgroundName }) {
 }
 
 // ----------------------------------------------------------------------------
-// MatchChoiceScreen — the opt-in gate between celebration and chat. Both
-// campers waved at each other; this screen reinforces the no-cringe promise:
-// a wave is enough on its own. Chat only opens when the user actively picks
-// "Send a message" (and the other side, by mutual-wave, has implicitly opted
-// in too).
+// ConsentPromptScreen — Step 4 of the wave flow. Both campers waved at each
+// other; both must explicitly tap Connect for the connection to land.
+// Tapping Not Yet silently dismisses without notifying the other camper.
+// Per spec: NO name reveal here — the camper card stays anonymous until
+// Step 5 (Connected).
 // ----------------------------------------------------------------------------
 
-function MatchChoiceScreen({ camper, onMessage, onJustWave }) {
+function ConsentPromptScreen({ camper, viewerInterests, onConnect, onNotYet }) {
+  const viewerSet = new Set(viewerInterests ?? [])
+  const shared = (camper?.interests ?? []).filter((slug) => viewerSet.has(slug))
   return (
-    <div className="flex h-full flex-col items-center justify-center px-6 py-8 text-center gap-5">
-      <div className="text-4xl" aria-hidden>
-        👋
-      </div>
-      <div>
+    <div className="px-4 py-6 space-y-4">
+      <header className="space-y-2 text-center">
         <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-flame">
-          Crossed paths with
+          You have a mutual wave
         </p>
-        <p className="font-display text-2xl font-extrabold tracking-tight text-cream mt-1">
-          {camper.name}
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
+          Would you like to connect?
+        </h1>
+        <p className="text-sm text-cream/85 leading-relaxed">
+          You and a nearby camper have waved at each other. Would you like to
+          connect and say hello?
         </p>
+      </header>
+
+      <div className="space-y-3 rounded-xl border border-white/5 bg-night/60 p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-mist/70">
+          A nearby camper
+        </p>
+        {camper?.rig && (
+          <p className="text-xs text-cream">
+            <span className="text-mist">Rig · </span>
+            <span className="font-semibold">{camper.rig}</span>
+          </p>
+        )}
+        {shared.length > 0 && (
+          <ul className="flex flex-wrap gap-1">
+            {shared.map((slug) => (
+              <li
+                key={slug}
+                className="inline-flex items-center gap-1 rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[10px] text-cream"
+              >
+                <span aria-hidden>{INTEREST_EMOJI[slug]}</span>
+                {INTEREST_LABEL[slug]}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-      <div className="space-y-2 max-w-[260px]">
-        <p className="text-cream text-base leading-snug">
-          You both waved! What would you like to do?
-        </p>
-        <p className="font-serif italic text-flame/90 text-sm leading-snug">
-          No pressure — a wave is enough. Chat only opens if you both want it.
-        </p>
-      </div>
-      <div className="w-full max-w-[260px] space-y-2 pt-1">
+
+      <div className="grid gap-2">
         <button
           type="button"
-          onClick={onMessage}
+          onClick={onConnect}
           className="w-full rounded-xl bg-flame text-night px-4 py-3 text-sm font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 inline-flex items-center justify-center gap-2"
         >
-          Send a message <span aria-hidden>💬</span>
+          Connect <span aria-hidden>🎉</span>
         </button>
         <button
           type="button"
-          onClick={onJustWave}
-          className="w-full rounded-xl border border-white/10 bg-white/5 text-mist px-4 py-3 text-sm font-medium hover:bg-white/10 hover:text-cream"
+          onClick={onNotYet}
+          className="w-full rounded-xl border border-white/10 bg-white/5 text-cream px-4 py-3 text-sm font-medium hover:bg-white/10"
         >
-          Just a wave for now
+          Not Yet
         </button>
       </div>
+
+      <p className="text-[11px] text-mist/70 leading-snug text-center">
+        We connect you only if both of you tap Connect. Tapping Not Yet
+        dismisses this quietly — the other person isn&apos;t notified.
+      </p>
     </div>
   )
 }
@@ -705,23 +752,22 @@ function MatchChoiceScreen({ camper, onMessage, onJustWave }) {
 // Chat screen + bubble
 // ----------------------------------------------------------------------------
 
-function ChatScreen({ camper, onBack, onLeave, onBlock }) {
-  const [messages, setMessages] = useState([])
+function ChatScreen({ camper, onBack, onLeave, onBlock, onReset }) {
+  // The pre-populated welcome lands as the visitor's first message
+  // (Step 5: "First message pre-populated as: 'Hey, nice to meet you!'").
+  // The camper's per-camper opening line then arrives as their reply.
+  const [messages, setMessages] = useState(() => [
+    { id: 'welcome', from: 'you', text: 'Hey, nice to meet you!' },
+  ])
   const [currentStep, setCurrentStep] = useState('start')
   const [typing, setTyping] = useState(false)
-  // 'opening'  — camper is about to send the first message
-  // 'waiting'  — quick replies visible
-  // 'replying' — user just tapped, camper is typing
-  // 'done'     — leaf reached, no more quick replies
   const [phase, setPhase] = useState('opening')
   const [menuOpen, setMenuOpen] = useState(false)
-  // null | 'block' | 'leave'
   const [confirm, setConfirm] = useState(null)
   const scrollRef = useRef(null)
 
-  // On mount: typing indicator first, then deliver the opener after 1s.
-  // Opening text is per-camper (see OPENING_LINES); replies come from the
-  // shared CHAT_SCRIPT.start step.
+  // On mount: brief typing indicator, then the camper replies to the
+  // pre-populated welcome with their per-camper opener.
   useEffect(() => {
     let cancelled = false
     setTyping(true)
@@ -729,10 +775,13 @@ function ChatScreen({ camper, onBack, onLeave, onBlock }) {
       if (cancelled) return
       const step = CHAT_SCRIPT.start
       const openingText = getOpeningLine(camper.id)
-      setMessages([{ id: `t-start-${Date.now()}`, from: 'them', text: openingText }])
+      setMessages((prev) => [
+        ...prev,
+        { id: `t-start-${Date.now()}`, from: 'them', text: openingText },
+      ])
       setTyping(false)
       setPhase(step.replies ? 'waiting' : 'done')
-    }, 1000)
+    }, 1100)
     return () => {
       cancelled = true
       window.clearTimeout(timer)
@@ -775,8 +824,20 @@ function ChatScreen({ camper, onBack, onLeave, onBlock }) {
   const currentReplies =
     phase === 'waiting' ? CHAT_SCRIPT[currentStep]?.replies ?? null : null
 
+  // Step 5 — Connected. Show first names only, never last names. Even
+  // though SAMPLE_CAMPERS includes pairs like "Sarah & Jim", we render
+  // only the leading first-name token here.
+  const firstName = (camper.name ?? '').trim().split(/\s+/)[0] || 'Camper'
+
   return (
     <div className="relative flex h-full flex-col">
+      <div className="px-3 pt-2">
+        <div className="rounded-md border border-flame/30 bg-flame/[0.08] px-3 py-2 text-[11px] text-cream leading-snug">
+          <span className="font-semibold text-flame">New Connection! 🎉 </span>
+          Meet smart: use public campground areas, trust your instincts, and
+          report pressure, harassment, or suspicious behavior.
+        </div>
+      </div>
       <div className="flex items-center gap-3 border-b border-white/5 bg-card px-3 py-2.5">
         <button
           type="button"
@@ -788,7 +849,7 @@ function ChatScreen({ camper, onBack, onLeave, onBlock }) {
         </button>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-cream leading-tight truncate">
-            {camper.name}
+            {firstName}
           </p>
           <p className="flex items-center gap-1 text-[10px] text-leaf">
             <span className="h-1.5 w-1.5 rounded-full bg-leaf" />
@@ -796,7 +857,7 @@ function ChatScreen({ camper, onBack, onLeave, onBlock }) {
           </p>
         </div>
         <span className="rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[9px] font-semibold text-flame">
-          MATCHED
+          CONNECTED
         </span>
         <div className="relative">
           <button
@@ -820,6 +881,19 @@ function ChatScreen({ camper, onBack, onLeave, onBlock }) {
                 role="menu"
                 className="absolute right-0 top-8 z-20 w-44 rounded-xl border border-white/10 bg-card shadow-2xl shadow-black/60 overflow-hidden"
               >
+                {onReset && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      onReset()
+                    }}
+                    className="block w-full text-left px-3 py-2 text-xs text-flame hover:bg-flame/10 border-b border-white/5"
+                  >
+                    Restart demo
+                  </button>
+                )}
                 <button
                   type="button"
                   role="menuitem"
@@ -1163,6 +1237,7 @@ function LeaveConfirmScreen({ camperName, onCancel, onConfirm }) {
 // ----------------------------------------------------------------------------
 
 function MatchCelebration({ name }) {
+  const firstName = (name ?? '').trim().split(/\s+/)[0] || 'Camper'
   return (
     <>
       <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
@@ -1174,10 +1249,10 @@ function MatchCelebration({ name }) {
             <span className="match-hand-right text-5xl" aria-hidden>👋</span>
           </div>
           <h2 className="match-title font-display text-3xl font-extrabold tracking-tight text-white">
-            You matched!
+            New Connection!
           </h2>
           <p className="match-name font-display text-lg font-extrabold text-flame mt-1">
-            {name}
+            {firstName}
           </p>
           <p className="match-sub mt-3 font-serif italic text-cream/80 text-sm">
             Chat is now open
@@ -1502,11 +1577,11 @@ function CheckInScreen({
 function NearbyScreen({
   waved,
   onWave,
-  onMessage,
   campgroundName,
   blocked,
   toast,
   onDismissToast,
+  viewerInterests,
 }) {
   // Multi-select style + interest filters. Both use OR semantics — adding
   // more selections *broadens* the result set. Empty set = "All".
@@ -1552,6 +1627,14 @@ function NearbyScreen({
 
   return (
     <div className="space-y-4 py-3">
+      <p
+        role="note"
+        className="rounded-md border border-flame/30 bg-flame/[0.08] px-3 py-2 text-[11px] text-cream leading-snug"
+      >
+        <span className="font-semibold text-flame">Safety reminder: </span>
+        Meet in public campground areas, trust your instincts, and do not
+        share your exact site number unless you choose to.
+      </p>
       <header className="relative">
         <Eyebrow>Currently at {campgroundName}</Eyebrow>
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
@@ -1657,8 +1740,8 @@ function NearbyScreen({
             <CamperCard
               camper={c}
               state={waved[c.id]}
+              viewerInterests={viewerInterests}
               onWave={() => onWave(c.id)}
-              onMessage={() => onMessage(c.id)}
             />
           </li>
         ))}
@@ -1680,59 +1763,59 @@ function NearbyScreen({
   )
 }
 
-function CamperCard({ camper, state, onWave, onMessage }) {
+function CamperCard({ camper, state, viewerInterests, onWave }) {
+  // Privacy rule: pre-connection cards reveal NO identifying data —
+  // only the rig type and the shared-interest overlap with the viewer.
+  // Names + per-camper details appear only after Step 5 (Connected).
+  const viewerSet = new Set(viewerInterests ?? [])
+  const shared = (camper.interests ?? []).filter((slug) => viewerSet.has(slug))
+  const justWaved = state === 'waved' || state === 'consent'
+
   return (
     <article className="rounded-2xl border border-white/5 bg-card p-3 shadow-lg shadow-black/20 space-y-2">
-      <header>
-        <h3 className="text-sm font-semibold text-cream">{camper.name}</h3>
-        <p className="text-[11px] text-mist">@{camper.username}</p>
-        <span className="mt-1 inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[10px] font-semibold text-flame">
-          {camper.style}
-        </span>
-        {camper.status && (
-          <p className="mt-1.5 font-serif italic text-flame text-sm leading-snug">
-            &ldquo;{camper.status}&rdquo;
+      <header className="space-y-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-mist/70">
+          A nearby camper
+        </p>
+        {camper.rig && (
+          <p className="text-xs text-cream">
+            <span className="text-mist">Rig · </span>
+            <span className="font-semibold">{camper.rig}</span>
           </p>
         )}
       </header>
 
-      <div className="flex flex-wrap gap-1">
-        <Pill label="Rig" value={camper.rig} />
-        <Pill label="From" value={camper.from} />
-        <Pill label="Years" value={camper.years.toString()} />
-      </div>
+      {shared.length > 0 ? (
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-flame/80">
+            Shared interests
+          </p>
+          <ul className="flex flex-wrap gap-1">
+            {shared.map((slug) => (
+              <li
+                key={slug}
+                className="inline-flex items-center gap-1 rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[10px] text-cream"
+              >
+                <span aria-hidden>{INTEREST_EMOJI[slug]}</span>
+                {INTEREST_LABEL[slug]}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="text-[11px] text-mist italic">No shared interests yet.</p>
+      )}
 
-      <ul className="flex flex-wrap gap-1">
-        {camper.interests.map((slug) => (
-          <li
-            key={slug}
-            className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-cream"
-          >
-            <span aria-hidden>{INTEREST_EMOJI[slug]}</span>
-            {INTEREST_LABEL[slug]}
-          </li>
-        ))}
-      </ul>
-
-      <div className="pt-1.5 border-t border-white/5">
-        {state === 'matched' ? (
-          <div className="space-y-1.5">
-            <div className="rounded-lg border border-flame/40 bg-flame/15 px-3 py-1.5 text-center text-xs font-semibold text-flame">
-              New Connection! <span aria-hidden>🎉</span>
-            </div>
-            <button
-              type="button"
-              onClick={onMessage}
-              className="w-full rounded-lg border border-flame/40 bg-transparent px-3 py-1.5 text-xs font-semibold text-flame hover:bg-flame/10 transition-colors"
-            >
-              Send a message
-            </button>
+      <div className="pt-1.5 border-t border-white/5 space-y-1.5">
+        {state === 'connected' ? (
+          <div className="rounded-lg border border-flame/40 bg-flame/15 px-3 py-1.5 text-center text-xs font-semibold text-flame">
+            Connected
           </div>
         ) : state === 'noresponse' ? (
           <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-center text-[11px] italic text-mist/70">
             No response yet — only you know you waved. <span aria-hidden>😊</span>
           </div>
-        ) : state === 'waved' ? (
+        ) : justWaved ? (
           <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-center text-xs text-mist">
             Waved · waiting
           </div>
@@ -1744,6 +1827,15 @@ function CamperCard({ camper, state, onWave, onMessage }) {
           >
             Wave <span aria-hidden>👋</span>
           </button>
+        )}
+        {justWaved && (
+          <p
+            role="status"
+            className="rounded-md border border-flame/30 bg-flame/10 px-2 py-1 text-[10px] leading-snug text-cream text-center"
+          >
+            Your wave was sent. If they wave back, you&apos;ll hear about it
+            in your Lantern.
+          </p>
         )}
       </div>
     </article>
@@ -1828,24 +1920,28 @@ function WavesScreen({ waved, onMessage, onRemove, blocked }) {
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h3 className="text-sm font-semibold text-cream leading-tight">
-                    {camper.name}
-                  </h3>
-                  <p className="text-[11px] text-mist">@{camper.username}</p>
-                  <span className="mt-1 inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[10px] font-semibold text-flame">
-                    {camper.style}
-                  </span>
+                  {state === 'connected' ? (
+                    <h3 className="text-sm font-semibold text-cream leading-tight">
+                      {(camper.name ?? '').trim().split(/\s+/)[0] ?? 'Camper'}
+                    </h3>
+                  ) : (
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-mist/70">
+                      A nearby camper
+                    </p>
+                  )}
                 </div>
                 <WaveStateBadge state={state} />
               </div>
               <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => onMessage(camper.id)}
-                  className="flex-1 rounded-lg border border-flame/40 bg-transparent px-3 py-1.5 text-xs font-semibold text-flame hover:bg-flame/10 transition-colors"
-                >
-                  Send a message
-                </button>
+                {state === 'connected' && (
+                  <button
+                    type="button"
+                    onClick={() => onMessage(camper.id)}
+                    className="flex-1 rounded-lg border border-flame/40 bg-transparent px-3 py-1.5 text-xs font-semibold text-flame hover:bg-flame/10 transition-colors"
+                  >
+                    Open conversation
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => onRemove(camper.id)}
@@ -1863,10 +1959,24 @@ function WavesScreen({ waved, onMessage, onRemove, blocked }) {
 }
 
 function WaveStateBadge({ state }) {
-  if (state === 'matched') {
+  if (state === 'connected') {
     return (
       <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-flame/15 border border-flame/30 px-2 py-0.5 text-[10px] font-semibold text-flame">
-        Matched <span aria-hidden>🎉</span>
+        Connected <span aria-hidden>🎉</span>
+      </span>
+    )
+  }
+  if (state === 'consent') {
+    return (
+      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-flame/10 border border-flame/30 px-2 py-0.5 text-[10px] font-semibold text-flame">
+        Mutual wave
+      </span>
+    )
+  }
+  if (state === 'declined') {
+    return (
+      <span className="shrink-0 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] italic text-mist">
+        Dismissed
       </span>
     )
   }

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CamperCard } from './camper-card'
 import { saveNearbyFiltersAction } from '@/app/(app)/nearby/actions'
 import { INTERESTS } from '@/lib/constants/interests'
-import { TRAVEL_STYLES } from '@/lib/constants/travel-styles'
 import type { NearbyCamper } from '@/lib/types/db'
 import type { WaveState } from '@/components/waves/wave-button'
 import { Eyebrow } from '@/components/ui/eyebrow'
@@ -13,7 +12,7 @@ type Props = {
   campers: NearbyCamper[]
   campgroundId: string
   waveStateByProfileId: Record<string, WaveState>
-  initialStyles?: string[]
+  viewerInterests: string[]
   initialInterests?: string[]
 }
 
@@ -21,19 +20,13 @@ export function NearbyList({
   campers,
   campgroundId,
   waveStateByProfileId,
-  initialStyles = [],
+  viewerInterests,
   initialInterests = [],
 }: Props) {
   const [selectedInterests, setSelectedInterests] = useState<Set<string>>(
     () => new Set(initialInterests),
   )
-  const [selectedStyles, setSelectedStyles] = useState<Set<string>>(
-    () => new Set(initialStyles),
-  )
 
-  // Persist changes to the user's profile, debounced so a rapid burst of
-  // toggles batches into one write. Skip the very first effect run so we
-  // don't immediately re-save the initial values we just hydrated from.
   const skipFirstSave = useRef(true)
   useEffect(() => {
     if (skipFirstSave.current) {
@@ -41,34 +34,21 @@ export function NearbyList({
       return
     }
     const timer = window.setTimeout(() => {
-      void saveNearbyFiltersAction(
-        Array.from(selectedStyles),
-        Array.from(selectedInterests),
-      )
+      void saveNearbyFiltersAction([], Array.from(selectedInterests))
     }, 400)
     return () => window.clearTimeout(timer)
-  }, [selectedStyles, selectedInterests])
+  }, [selectedInterests])
 
   const filtered = useMemo(() => {
+    if (selectedInterests.size === 0) return campers
     return campers.filter((c) => {
-      if (selectedInterests.size > 0) {
-        if (!c.interests || c.interests.length === 0) return false
-        let any = false
-        for (const slug of selectedInterests) {
-          if (c.interests.includes(slug)) {
-            any = true
-            break
-          }
-        }
-        if (!any) return false
+      if (!c.interests || c.interests.length === 0) return false
+      for (const slug of selectedInterests) {
+        if (c.interests.includes(slug)) return true
       }
-      if (selectedStyles.size > 0) {
-        if (!c.travel_style) return false
-        if (!selectedStyles.has(c.travel_style)) return false
-      }
-      return true
+      return false
     })
-  }, [campers, selectedInterests, selectedStyles])
+  }, [campers, selectedInterests])
 
   function toggleInterest(slug: string) {
     setSelectedInterests((prev) => {
@@ -79,20 +59,10 @@ export function NearbyList({
     })
   }
 
-  function toggleStyle(slug: string) {
-    setSelectedStyles((prev) => {
-      const next = new Set(prev)
-      if (next.has(slug)) next.delete(slug)
-      else next.add(slug)
-      return next
-    })
-  }
-
-  const anyFilter = selectedInterests.size > 0 || selectedStyles.size > 0
+  const anyFilter = selectedInterests.size > 0
 
   function resetFilters() {
     setSelectedInterests(new Set())
-    setSelectedStyles(new Set())
   }
 
   return (
@@ -106,42 +76,6 @@ export function NearbyList({
           Reset filters
         </button>
       )}
-
-      <div className="space-y-2">
-        <Eyebrow>Travel style</Eyebrow>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setSelectedStyles(new Set())}
-            aria-pressed={selectedStyles.size === 0}
-            className={
-              selectedStyles.size === 0
-                ? 'rounded-full bg-flame px-3 py-1.5 text-sm font-semibold text-night shadow-md shadow-flame/20'
-                : 'rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-cream hover:border-flame/40'
-            }
-          >
-            All
-          </button>
-          {TRAVEL_STYLES.map((t) => {
-            const active = selectedStyles.has(t.slug)
-            return (
-              <button
-                key={t.slug}
-                type="button"
-                onClick={() => toggleStyle(t.slug)}
-                aria-pressed={active}
-                className={
-                  active
-                    ? 'rounded-full bg-flame px-3 py-1.5 text-sm font-semibold text-night shadow-md shadow-flame/20'
-                    : 'rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-cream hover:border-flame/40'
-                }
-              >
-                {t.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
 
       <div className="space-y-2">
         <Eyebrow>Interest</Eyebrow>
@@ -170,11 +104,7 @@ export function NearbyList({
 
       {filtered.length === 0 ? (
         campers.length === 0 ? (
-          // Nobody is checked in here. If the user has saved filter prefs,
-          // confirm we've recorded them; otherwise show the plain empty
-          // message. selectedStyles/selectedInterests reflects what the
-          // debounced action just persisted to the DB (or is about to).
-          selectedStyles.size > 0 || selectedInterests.size > 0 ? (
+          selectedInterests.size > 0 ? (
             <div className="rounded-2xl border border-leaf/40 bg-leaf/10 p-6 text-center text-sm text-cream">
               <p className="font-semibold text-leaf">
                 <span aria-hidden>✓</span> Your preferences are saved.
@@ -202,6 +132,7 @@ export function NearbyList({
                 camper={c}
                 campgroundId={campgroundId}
                 waveState={waveStateByProfileId[c.profile_id] ?? 'none'}
+                viewerInterests={viewerInterests}
               />
             </li>
           ))}

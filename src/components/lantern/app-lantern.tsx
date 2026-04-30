@@ -20,8 +20,10 @@ import {
 // notifications are real.
 
 type NotificationType =
+  | 'wave_sent'
   | 'wave_received'
   | 'wave_matched'
+  | 'wave_connected'
   | 'new_message'
   | 'bulletin'
   | 'meetup_invite'
@@ -141,9 +143,20 @@ export function AppLantern({ pollIntervalMs = POLL_INTERVAL_DEFAULT }: Props) {
   function openPanel() {
     const rect = buttonRef.current?.getBoundingClientRect()
     if (rect) {
+      // Anchor below the button. Clamp `right` so the 320px-wide
+      // panel never overflows the LEFT edge on narrow viewports —
+      // if the button is far from the right edge of the viewport
+      // (e.g., header padding + adjacent buttons), the natural
+      // `right = innerWidth - rect.right` would push the panel
+      // past the screen's left side. Cap it so the panel always
+      // fits (or shrinks via max-width).
+      const PANEL = 320
+      const SAFE = 8
+      const desiredRight = Math.round(window.innerWidth - rect.right)
+      const maxRight = Math.max(SAFE, window.innerWidth - PANEL - SAFE)
       setPos({
         top: Math.round(rect.bottom + 8),
-        right: Math.round(window.innerWidth - rect.right),
+        right: Math.max(SAFE, Math.min(desiredRight, maxRight)),
       })
     } else {
       setPos({ top: 56, right: 12 })
@@ -217,10 +230,24 @@ export function AppLantern({ pollIntervalMs = POLL_INTERVAL_DEFAULT }: Props) {
     void markRead(n.id)
 
     switch (n.type) {
-      case 'wave_received':
+      case 'wave_sent':
+        // Sender confirmation — no destination. Just collapse the panel.
         router.push('/waves')
         break
+      case 'wave_received':
+        // Receiver tap → the Wave Back / Ignore card.
+        router.push(
+          n.reference_id ? `/waves/incoming/${n.reference_id}` : '/waves',
+        )
+        break
       case 'wave_matched':
+        // Mutual wave — open the consent prompt. The crossed-paths
+        // detail page branches on status='pending_consent'.
+        router.push(
+          n.reference_id ? `/crossed-paths/${n.reference_id}` : '/crossed-paths',
+        )
+        break
+      case 'wave_connected':
       case 'new_message':
         router.push(
           n.reference_id ? `/crossed-paths/${n.reference_id}` : '/crossed-paths',
@@ -288,7 +315,7 @@ export function AppLantern({ pollIntervalMs = POLL_INTERVAL_DEFAULT }: Props) {
                 role="menu"
                 aria-label="Notifications"
                 style={{ top: pos.top, right: pos.right }}
-                className="fixed w-80 max-w-[calc(100vw-1.5rem)] z-[101] rounded-2xl border border-white/10 bg-card p-2 shadow-2xl shadow-black/60"
+                className="fixed w-80 max-w-[calc(100vw-1rem)] z-[101] rounded-2xl border border-white/10 bg-card p-2 shadow-2xl shadow-black/60"
               >
                 <div className="px-2 pt-1.5 pb-2 flex items-center justify-between">
                   <p className="text-[10px] uppercase tracking-[0.2em] text-flame">

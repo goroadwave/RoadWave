@@ -12,15 +12,23 @@ export default async function NearbyPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Filter prefs are stored on the profile so they survive even when the
-  // user isn't currently checked in anywhere.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('nearby_filter_styles, nearby_filter_interests')
+    .select('nearby_filter_interests')
     .eq('id', user!.id)
     .single()
-  const initialStyles = profile?.nearby_filter_styles ?? []
   const initialInterests = profile?.nearby_filter_interests ?? []
+
+  const { data: viewerInterestRows } = await supabase
+    .from('profile_interests')
+    .select('interests(slug)')
+    .eq('profile_id', user!.id)
+  const viewerInterests = (viewerInterestRows ?? [])
+    .map((row) => {
+      const i = row.interests as unknown as { slug: string } | null
+      return i?.slug ?? null
+    })
+    .filter((s): s is string => typeof s === 'string')
 
   const { data: latestCheckIn } = await supabase
     .from('check_ins')
@@ -47,7 +55,7 @@ export default async function NearbyPage() {
           Check in
           <span aria-hidden>👋</span>
         </Link>
-        {(initialStyles.length > 0 || initialInterests.length > 0) && (
+        {initialInterests.length > 0 && (
           <p className="text-xs text-mist">
             Your saved filter preferences are ready — they&apos;ll apply the
             moment you check in.
@@ -68,22 +76,34 @@ export default async function NearbyPage() {
   })
 
   const [{ data: myWaves }, { data: matches }] = await Promise.all([
-    supabase.from('waves').select('to_profile_id').eq('from_profile_id', user!.id),
-    supabase.from('crossed_paths').select('profile_a_id, profile_b_id'),
+    supabase
+      .from('waves')
+      .select('to_profile_id, status')
+      .eq('from_profile_id', user!.id),
+    supabase
+      .from('crossed_paths')
+      .select('profile_a_id, profile_b_id, status'),
   ])
 
   const waveStateByProfileId: Record<string, WaveState> = {}
   for (const w of myWaves ?? []) {
-    waveStateByProfileId[w.to_profile_id] = 'waved'
+    const s = (w.status as string | null) ?? 'pending'
+    if (s === 'declined') waveStateByProfileId[w.to_profile_id] = 'declined'
+    else if (s === 'connected') waveStateByProfileId[w.to_profile_id] = 'connected'
+    else if (s === 'matched') waveStateByProfileId[w.to_profile_id] = 'matched'
+    else waveStateByProfileId[w.to_profile_id] = 'waved'
   }
   for (const m of matches ?? []) {
     const otherId = m.profile_a_id === user!.id ? m.profile_b_id : m.profile_a_id
-    waveStateByProfileId[otherId] = 'matched'
+    const s = (m.status as string | null) ?? 'pending_consent'
+    if (s === 'connected') waveStateByProfileId[otherId] = 'connected'
+    else if (s === 'declined') waveStateByProfileId[otherId] = 'declined'
+    else waveStateByProfileId[otherId] = 'matched'
   }
 
   return (
     <div className="space-y-5">
-      <SafetyBanner message="RoadWave helps campers connect, but you choose if, when, and where to meet. Meet in public campground areas, trust your instincts, and report anything that feels off." />
+      <SafetyBanner message="Safety reminder: Meet in public campground areas, trust your instincts, and do not share your exact site number unless you choose to." />
       <PageHeading
         eyebrow={`Currently at ${campground?.name ?? 'your campground'}`}
         title="Nearby campers"
@@ -99,7 +119,7 @@ export default async function NearbyPage() {
           campers={(campers ?? []) as NearbyCamper[]}
           campgroundId={latestCheckIn.campground_id}
           waveStateByProfileId={waveStateByProfileId}
-          initialStyles={initialStyles}
+          viewerInterests={viewerInterests}
           initialInterests={initialInterests}
         />
       )}

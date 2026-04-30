@@ -199,14 +199,16 @@ test.describe('Demo — simulated phone, real interaction', () => {
     await page.goto('/demo')
     await page.getByRole('button', { name: /^Nearby$/ }).click()
     const firstWave = page
-      .getByRole('button', { name: /^Wave/i })
+      .getByRole('button', { name: /^Wave$/ })
       .first()
     await firstWave.click()
-    // The card transitions through Waved → matched|noresponse. Any of
-    // those substrings on the page after the click confirms the
-    // mechanic fired.
+    // The card transitions through Waved · waiting → consent prompt
+    // → connected. Any of those substrings on the page after the click
+    // confirms the mechanic fired.
     await expect(
-      page.getByText(/Waved.*waiting|New Connection|No response yet/i).first(),
+      page
+        .getByText(/Waved.*waiting|Would you like to connect|New Connection/i)
+        .first(),
     ).toBeVisible({ timeout: 10_000 })
   })
 
