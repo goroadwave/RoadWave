@@ -120,7 +120,7 @@ export default function PrivacyPolicyPage() {
                 hello@getroadwave.com
               </a>{' '}
               from the address tied to your account and ask. We&apos;ll
-              confirm and delete within 7 business days. We&apos;re a small team
+              confirm and delete within 30 days. We&apos;re a small team
               — we read every email.
             </p>
             <p>

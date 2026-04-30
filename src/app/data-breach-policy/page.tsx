@@ -53,7 +53,7 @@ export default function DataBreachPolicyPage() {
             <Ordered
               items={[
                 'Anyone at RoadWave (or a vendor, researcher, or user) who suspects a security incident reports it to safety@getroadwave.com or directly to the founder.',
-                'Within 1 business hour of receipt during working hours (or as soon as reachable outside them), the incident is logged with a severity level — Low, Medium, High, or Critical — based on what data may be affected and whether the issue is ongoing.',
+                'As soon as reasonably practicable after receipt, the incident is logged with a severity level — Low, Medium, High, or Critical — based on what data may be affected and whether the issue is ongoing.',
                 'If the report is Medium or above, the incident is treated as Active until ruled out. We do not wait for confirmation to start containment.',
               ]}
             />
@@ -174,7 +174,7 @@ export default function DataBreachPolicyPage() {
                 safety@getroadwave.com
               </a>{' '}
               with as much detail as you can share. We acknowledge receipt
-              and triage within 1 business hour during working hours.
+              and triage as soon as reasonably practicable.
             </p>
             <p className="text-xs text-mist/70 pt-2">
               See also: our{' '}
