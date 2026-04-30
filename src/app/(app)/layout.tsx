@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { AppLantern } from '@/components/lantern/app-lantern'
 import { AppNav } from '@/components/ui/app-nav'
 import { Logo } from '@/components/ui/logo'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -41,14 +42,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Link href="/home" className="inline-block">
             <Logo className="text-2xl" />
           </Link>
-          <form action="/auth/sign-out?next=/" method="post">
-            <button
-              type="submit"
-              className="text-sm text-mist hover:text-cream underline-offset-2 hover:underline"
-            >
-              Sign out
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            <AppLantern />
+            <form action="/auth/sign-out?next=/" method="post">
+              <button
+                type="submit"
+                className="text-sm text-mist hover:text-cream underline-offset-2 hover:underline"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </header>
       <AppNav />

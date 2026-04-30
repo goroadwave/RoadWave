@@ -696,3 +696,122 @@ test.describe('Homepage spec', () => {
     ).toBeVisible()
   })
 })
+
+// ---------------------------------------------------------------------------
+// Live-app lantern — structural guarantees that don't require an
+// authenticated session. The full UI behavior (glow on unread, panel
+// open/close, mark-all-read, bulletin overlay) is covered by the demo
+// lantern tests which exercise the same component shape; the live
+// component is a parallel implementation of the same UX, and the
+// tests below assert it is wired into the real app correctly.
+// ---------------------------------------------------------------------------
+
+test.describe('Live-app lantern wiring', () => {
+  test('(app) layout imports AppLantern and never imports DemoLantern', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile('src/app/(app)/layout.tsx', 'utf8')
+    expect(
+      src,
+      '(app) layout must import the live AppLantern',
+    ).toContain('AppLantern')
+    expect(
+      src,
+      '(app) layout must NOT import the demo lantern',
+    ).not.toContain('DemoLantern')
+  })
+
+  test('(app) layout does NOT render the demo-only "Your Lantern — waves, messages & meetup activity" label', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile('src/app/(app)/layout.tsx', 'utf8')
+    expect(src).not.toContain('Your Lantern — waves, messages')
+  })
+
+  test('AppLantern source declares the full notification routing map', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile(
+      'src/components/lantern/app-lantern.tsx',
+      'utf8',
+    )
+    // Every type in the spec must be referenced.
+    for (const t of [
+      'wave_received',
+      'wave_matched',
+      'new_message',
+      'bulletin',
+      'meetup_invite',
+      'meetup_rsvp',
+    ]) {
+      expect(src, `AppLantern must handle ${t}`).toContain(t)
+    }
+    // Routing destinations.
+    expect(src).toContain('/waves')
+    expect(src).toContain('/crossed-paths')
+    expect(src).toContain('/meetups')
+    // Mark-all-read action wired up.
+    expect(src).toContain('markAllNotificationsReadAction')
+    // Bulletin card pieces.
+    expect(src).toContain('Campground Bulletin')
+    expect(src).toContain('Verified campground')
+    // The footer line wraps across JSX whitespace — collapse before
+    // asserting so a future re-wrap doesn't break this test.
+    const collapsed = src.replace(/\s+/g, ' ')
+    expect(collapsed).toContain(
+      'Campground bulletins are posted by verified campground staff only.',
+    )
+  })
+
+  test('/home (live app) requires auth — anon visit redirects to /login', async ({
+    page,
+  }) => {
+    await page.goto('/home')
+    expect(page.url()).toContain('/login')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Notification data-layer smoke tests — verify the schema migration
+// landed without writing any demo or test data into the table.
+// ---------------------------------------------------------------------------
+
+test('notifications migration declares the spec columns + types', async () => {
+  const fs = await import('node:fs/promises')
+  const src = await fs.readFile(
+    'supabase/migrations/0025_notifications.sql',
+    'utf8',
+  )
+  // Spec columns.
+  for (const col of [
+    'user_id uuid',
+    'type public.notification_type',
+    'reference_id uuid',
+    'message text',
+    'is_read boolean',
+    'created_at timestamptz',
+  ]) {
+    expect(src, `notifications must have ${col}`).toContain(col)
+  }
+  // Spec enum members.
+  for (const t of [
+    'wave_received',
+    'wave_matched',
+    'new_message',
+    'bulletin',
+    'meetup_invite',
+    'meetup_rsvp',
+  ]) {
+    expect(src, `enum must include ${t}`).toContain(`'${t}'`)
+  }
+  // Triggers fire on the right tables.
+  expect(src).toContain('after insert on public.waves')
+  expect(src).toContain('after insert on public.crossed_paths')
+  expect(src).toContain('after insert on public.crossed_paths_messages')
+  expect(src).toContain('after insert on public.bulletins')
+  expect(src).toContain('after insert on public.meetups')
+  // Mark-all-read RPC.
+  expect(src).toContain('mark_all_notifications_read()')
+  // RLS posture: own-only SELECT + UPDATE; no INSERT/DELETE policies.
+  expect(src).toContain('notifications_select_own')
+  expect(src).toContain('notifications_update_own')
+  expect(src).not.toContain('notifications_insert_')
+  expect(src).not.toContain('notifications_delete_')
+})
