@@ -108,6 +108,65 @@ test.describe('Signup consent gates', () => {
     expect(acceptValid).toBe(false)
     expect(rulesValid).toBe(false)
   })
+
+  test('Google signup button is disabled until all three checkboxes are checked', async ({
+    page,
+  }) => {
+    await page.goto('/signup')
+
+    const googleBtn = page.getByRole('button', {
+      name: /Sign up with Google/i,
+    })
+    const submitBtn = page.getByRole('button', { name: /Create account/i })
+    const ageBox = page.locator('input[name="confirm_18"]')
+    const termsBox = page.locator('input[name="accept"]')
+    const rulesBox = page.locator('input[name="accept_community_rules"]')
+
+    // Initial state — both buttons must be disabled and the helper text
+    // explaining why must be visible.
+    await expect(googleBtn).toBeDisabled()
+    await expect(submitBtn).toBeDisabled()
+    await expect(
+      page.getByText(
+        /Confirm 18\+, agree to the Terms and Privacy Policy, and accept the Community Rules/i,
+      ),
+    ).toBeVisible()
+
+    // Tick first two boxes — Google button should still be disabled.
+    await ageBox.check()
+    await termsBox.check()
+    await expect(googleBtn).toBeDisabled()
+
+    // Final box → button enables. Helper text disappears.
+    await rulesBox.check()
+    await expect(googleBtn).toBeEnabled()
+    await expect(
+      page.getByText(
+        /Confirm 18\+, agree to the Terms and Privacy Policy, and accept the Community Rules/i,
+      ),
+    ).toHaveCount(0)
+
+    // Uncheck one box again — button must dim back out.
+    await termsBox.uncheck()
+    await expect(googleBtn).toBeDisabled()
+  })
+
+  test('Google button click does nothing while disabled (no OAuth nav)', async ({
+    page,
+  }) => {
+    await page.goto('/signup')
+    const googleBtn = page.getByRole('button', {
+      name: /Sign up with Google/i,
+    })
+    await expect(googleBtn).toBeDisabled()
+    // Force-clicking a disabled button shouldn't navigate. Use force:true
+    // to bypass Playwright's actionability check (we're proving the
+    // browser respects the disabled attribute even under attack).
+    await googleBtn.click({ force: true }).catch(() => {})
+    await page.waitForTimeout(400)
+    // Still on /signup. No accounts.google.com redirect happened.
+    expect(page.url()).toContain('/signup')
+  })
 })
 
 // ---------------------------------------------------------------------------

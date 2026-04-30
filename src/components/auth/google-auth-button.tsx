@@ -8,13 +8,29 @@ type Props = {
   next?: string
   /** Override the button copy if needed (default "Continue with Google"). */
   label?: string
+  /**
+   * Externally-driven disabled flag — used on the signup page to gate
+   * the Google button on the three required consent checkboxes. When
+   * true the button is non-clickable AND visually dulled, matching the
+   * standard submit button's behavior.
+   */
+  disabled?: boolean
 }
 
-export function GoogleAuthButton({ next = '/', label = 'Continue with Google' }: Props) {
+export function GoogleAuthButton({
+  next = '/',
+  label = 'Continue with Google',
+  disabled = false,
+}: Props) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleClick() {
+    // Defense-in-depth: never start the OAuth flow if the caller hasn't
+    // satisfied its gating condition. The button is also visually
+    // disabled below, but the explicit guard means a stray re-enable
+    // can't slip a click through.
+    if (disabled || pending) return
     setPending(true)
     setError(null)
     const supabase = createSupabaseBrowserClient()
@@ -31,12 +47,15 @@ export function GoogleAuthButton({ next = '/', label = 'Continue with Google' }:
     // state to clear here.
   }
 
+  const isDisabled = disabled || pending
+
   return (
     <div className="space-y-2">
       <button
         type="button"
         onClick={handleClick}
-        disabled={pending}
+        disabled={isDisabled}
+        aria-disabled={isDisabled}
         className="w-full inline-flex items-center justify-center gap-3 rounded-lg border border-white/15 bg-white/95 px-4 py-2.5 text-sm font-semibold text-night shadow-sm hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         <GoogleG className="h-4 w-4" aria-hidden />

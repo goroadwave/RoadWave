@@ -10,10 +10,33 @@ const initialState: SignupState = { error: null }
 type CheckResult = 'available' | 'taken' | 'error'
 type UsernameStatus = 'idle' | 'invalid' | 'checking' | CheckResult
 
-export function SignupForm() {
+type Props = {
+  /**
+   * Controlled state for the three required consent checkboxes. Lifted
+   * to the parent SignupCard so the Google button (rendered alongside
+   * this form) shares the same enable/disable trigger as the standard
+   * submit button.
+   */
+  confirm18: boolean
+  onConfirm18Change: (v: boolean) => void
+  acceptTerms: boolean
+  onAcceptTermsChange: (v: boolean) => void
+  acceptRules: boolean
+  onAcceptRulesChange: (v: boolean) => void
+}
+
+export function SignupForm({
+  confirm18,
+  onConfirm18Change,
+  acceptTerms,
+  onAcceptTermsChange,
+  acceptRules,
+  onAcceptRulesChange,
+}: Props) {
   const [state, formAction, pending] = useActionState(signupAction, initialState)
   const [username, setUsername] = useState('')
   const [checked, setChecked] = useState<{ name: string; result: CheckResult } | null>(null)
+  const allChecked = confirm18 && acceptTerms && acceptRules
 
   const status: UsernameStatus = !username
     ? 'idle'
@@ -89,6 +112,8 @@ export function SignupForm() {
           type="checkbox"
           name="confirm_18"
           required
+          checked={confirm18}
+          onChange={(e) => onConfirm18Change(e.target.checked)}
           className="mt-0.5 h-5 w-5 shrink-0 rounded border border-white/30 bg-white/5 accent-flame cursor-pointer"
         />
         <span>
@@ -102,6 +127,8 @@ export function SignupForm() {
           type="checkbox"
           name="accept"
           required
+          checked={acceptTerms}
+          onChange={(e) => onAcceptTermsChange(e.target.checked)}
           className="mt-0.5 h-5 w-5 shrink-0 rounded border border-white/30 bg-white/5 accent-flame cursor-pointer"
         />
         <span>
@@ -122,6 +149,8 @@ export function SignupForm() {
           type="checkbox"
           name="accept_community_rules"
           required
+          checked={acceptRules}
+          onChange={(e) => onAcceptRulesChange(e.target.checked)}
           className="mt-0.5 h-5 w-5 shrink-0 rounded border border-white/30 bg-white/5 accent-flame cursor-pointer"
         />
         <span>
@@ -141,7 +170,7 @@ export function SignupForm() {
 
       <button
         type="submit"
-        disabled={pending || status !== 'available'}
+        disabled={pending || status !== 'available' || !allChecked}
         className={primaryButtonClass}
       >
         {pending ? (
