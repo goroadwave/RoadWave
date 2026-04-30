@@ -700,6 +700,48 @@ test.describe('Homepage spec', () => {
       ),
     ).toBeVisible()
   })
+
+  test('signup OAuth path skips the duplicate /consent screen via cookie bridge', async () => {
+    const fs = await import('node:fs/promises')
+    // SignupCard wires recordConsentBeforeOAuth from the all-checked
+    // state so the cookie is only set when consent was given here.
+    const card = await fs.readFile(
+      'src/components/auth/signup-card.tsx',
+      'utf8',
+    )
+    expect(card).toContain('recordConsentBeforeOAuth={allChecked}')
+    // GoogleAuthButton calls the server action only when the prop is set.
+    const btn = await fs.readFile(
+      'src/components/auth/google-auth-button.tsx',
+      'utf8',
+    )
+    expect(btn).toContain('recordOAuthConsentIntentAction')
+    expect(btn).toContain('if (recordConsentBeforeOAuth)')
+    // /auth/callback consumes the cookie, writes legal_acks, and clears
+    // the cookie before redirecting to next.
+    const cb = await fs.readFile(
+      'src/app/auth/callback/route.ts',
+      'utf8',
+    )
+    expect(cb).toContain('CONSENT_INTENT_COOKIE')
+    expect(cb).toContain('parseConsentIntent')
+    expect(cb).toContain("admin.from('legal_acks').insert")
+    expect(cb).toContain('response.cookies.delete(CONSENT_INTENT_COOKIE)')
+    // Cookie helpers carry the full validation surface.
+    const helper = await fs.readFile(
+      'src/lib/auth/consent-intent.ts',
+      'utf8',
+    )
+    expect(helper).toContain('CONSENT_INTENT_TTL_SECONDS')
+    expect(helper).toContain('parseConsentIntent')
+    // Login page does NOT pass the consent prop (returning users go
+    // through /consent if they somehow lack a row).
+    const login = await fs.readFile(
+      'src/app/(auth)/login/page.tsx',
+      'utf8',
+    )
+    expect(login).not.toContain('recordConsentBeforeOAuth')
+  })
 })
 
 // ---------------------------------------------------------------------------

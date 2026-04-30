@@ -28,6 +28,7 @@ export function SignupCard() {
         next="/"
         label="Sign up with Google"
         disabled={!allChecked}
+        recordConsentBeforeOAuth={allChecked}
       />
       {!allChecked && (
         <p className="text-center text-[11px] text-mist/70 leading-snug">

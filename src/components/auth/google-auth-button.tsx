@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+import { recordOAuthConsentIntentAction } from '@/app/(auth)/signup/consent-intent-action'
 
 type Props = {
   /** Where to send the user after the OAuth round-trip (default "/"). */
@@ -15,12 +16,21 @@ type Props = {
    * standard submit button's behavior.
    */
   disabled?: boolean
+  /**
+   * When set, the click handler will record an HTTP-only consent-intent
+   * cookie before kicking off OAuth. /auth/callback uses that cookie to
+   * write legal_acks and skip the duplicate /consent screen. This is
+   * intentionally OPT-IN: only the signup page (where the three boxes
+   * gate the button) sets this. The plain login page does not.
+   */
+  recordConsentBeforeOAuth?: boolean
 }
 
 export function GoogleAuthButton({
   next = '/',
   label = 'Continue with Google',
   disabled = false,
+  recordConsentBeforeOAuth = false,
 }: Props) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,6 +43,17 @@ export function GoogleAuthButton({
     if (disabled || pending) return
     setPending(true)
     setError(null)
+    // If the signup page enabled the consent-intent path, write the
+    // cookie before navigating to Google so /auth/callback can consume
+    // it on return. Failure here is non-fatal — worst case the
+    // /consent screen still shows post-OAuth.
+    if (recordConsentBeforeOAuth) {
+      try {
+        await recordOAuthConsentIntentAction()
+      } catch {
+        // Swallow — fallback path is /consent.
+      }
+    }
     const supabase = createSupabaseBrowserClient()
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
     const { error: oauthError } = await supabase.auth.signInWithOAuth({

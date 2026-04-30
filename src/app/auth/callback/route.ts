@@ -2,6 +2,16 @@ import { type EmailOtpType } from '@supabase/supabase-js'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import {
+  CONSENT_INTENT_COOKIE,
+  parseConsentIntent,
+} from '@/lib/auth/consent-intent'
+import {
+  COMMUNITY_RULES_VERSION,
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from '@/lib/constants/interests'
+import { getRequestIp } from '@/lib/utils'
 
 // Supabase email-confirmation links land here. Two link formats supported:
 //   * ?code=...                   (PKCE, newer Supabase email templates)
@@ -34,7 +44,7 @@ export async function GET(request: NextRequest) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(await consentOrNextUrl(supabase, origin, next))
+      return await consentOrNextResponse(request, supabase, origin, next)
     }
     return NextResponse.redirect(
       new URL(`/login?error=${encodeURIComponent(error.message)}`, origin),
@@ -47,7 +57,7 @@ export async function GET(request: NextRequest) {
       type,
     })
     if (!error) {
-      return NextResponse.redirect(await consentOrNextUrl(supabase, origin, next))
+      return await consentOrNextResponse(request, supabase, origin, next)
     }
     return NextResponse.redirect(
       new URL(`/login?error=${encodeURIComponent(error.message)}`, origin),
@@ -59,24 +69,29 @@ export async function GET(request: NextRequest) {
   )
 }
 
-// After a successful auth exchange / verify, route the user through the
-// consent screen if they have NEVER recorded a legal_acks row. Email
-// signups always have a row (signupAction writes one), so they pass
-// straight through. First-time OAuth users land on /consent with the
-// original `next` preserved.
-async function consentOrNextUrl(
+// After a successful auth exchange / verify, route the user.
+//
+// Order of operations:
+//   1. If a legal_acks row already exists for this user → straight to
+//      `next`. (Email signups land their row at /signup time; returning
+//      OAuth users land theirs from a previous /consent acceptance.)
+//   2. Else if a valid consent-intent cookie is present → write the
+//      legal_acks row server-side using the cookie's claim, clear the
+//      cookie, and proceed to `next`. This is the path triggered by
+//      checking the three boxes on /signup before clicking Google —
+//      it eliminates the duplicate /consent screen.
+//   3. Else → /consent?next=<original> for explicit confirmation.
+async function consentOrNextResponse(
+  request: NextRequest,
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   origin: string,
   next: string,
-): Promise<URL> {
+): Promise<NextResponse> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return new URL(next, origin)
+  if (!user) return NextResponse.redirect(new URL(next, origin))
 
-  // Use the admin client for this read so we don't depend on the user's
-  // RLS context immediately after exchange — RLS allows SELECT on
-  // legal_acks_select_own anyway, but admin keeps the check robust.
   const admin = createSupabaseAdminClient()
   const { data: existing } = await admin
     .from('legal_acks')
@@ -85,11 +100,46 @@ async function consentOrNextUrl(
     .limit(1)
     .maybeSingle()
 
-  if (existing) return new URL(next, origin)
+  if (existing) return NextResponse.redirect(new URL(next, origin))
 
-  // No consent on file — gate with /consent and preserve next.
+  // No legal_acks row yet. Try the consent-intent cookie set by the
+  // signup page before OAuth.
+  const intent = parseConsentIntent(
+    request.cookies.get(CONSENT_INTENT_COOKIE)?.value,
+  )
+  if (intent) {
+    const headerList = request.headers
+    const { error: ackError } = await admin.from('legal_acks').insert({
+      user_id: user.id,
+      age_confirmed: true,
+      accepted_terms: true,
+      accepted_rules: true,
+      terms_version: TERMS_VERSION,
+      privacy_version: PRIVACY_VERSION,
+      community_rules_version: COMMUNITY_RULES_VERSION,
+      ip_address: getRequestIp(headerList),
+      user_agent: headerList.get('user-agent'),
+    })
+    if (!ackError) {
+      // Consent recorded — proceed to next, and clear the cookie so it
+      // can't be reused by a later session.
+      const response = NextResponse.redirect(new URL(next, origin))
+      response.cookies.delete(CONSENT_INTENT_COOKIE)
+      return response
+    }
+    console.error(
+      '[auth/callback] consent-intent legal_acks insert failed:',
+      ackError.message,
+    )
+    // Fall through to /consent so the user has a manual path.
+  }
+
+  // No consent on file and no usable intent — gate with /consent.
   const consentUrl = new URL('/consent', origin)
   consentUrl.searchParams.set('next', next)
-  return consentUrl
+  const response = NextResponse.redirect(consentUrl)
+  // Clear any stale intent cookie on this path too.
+  response.cookies.delete(CONSENT_INTENT_COOKIE)
+  return response
 }
 
