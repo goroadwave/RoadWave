@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { TappableCard } from '@/components/crossed-paths/tappable-card'
 import { PageHeading } from '@/components/ui/page-heading'
+import { SafetyBanner } from '@/components/ui/safety-banner'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { INTEREST_EMOJI, INTEREST_LABEL } from '@/lib/constants/interests'
 import { TRAVEL_STYLE_LABEL } from '@/lib/constants/travel-styles'
@@ -44,6 +45,7 @@ export default async function CrossedPathsPage() {
   if (!paths || paths.length === 0) {
     return (
       <div className="space-y-5">
+        <SafetyBanner />
         <PageHeading
           eyebrow="Mutual waves"
           title="Crossed paths"
@@ -106,6 +108,7 @@ export default async function CrossedPathsPage() {
 
   return (
     <div className="space-y-5">
+      <SafetyBanner />
       <PageHeading
         eyebrow="Mutual waves"
         title="Crossed paths"

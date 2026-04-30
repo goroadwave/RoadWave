@@ -85,7 +85,7 @@ export function OwnerSetupForm({ initialDisplayName = '', ownerEmail = '' }: Pro
           type="checkbox"
           name="confirm_18_and_authorized"
           required
-          className="mt-1 h-4 w-4 accent-flame"
+          className="mt-0.5 h-5 w-5 shrink-0 rounded border border-white/30 bg-white/5 accent-flame cursor-pointer"
         />
         <span>
           I confirm I am 18 years of age or older and authorized to represent
@@ -98,7 +98,7 @@ export function OwnerSetupForm({ initialDisplayName = '', ownerEmail = '' }: Pro
           type="checkbox"
           name="accept_partner_terms"
           required
-          className="mt-1 h-4 w-4 accent-flame"
+          className="mt-0.5 h-5 w-5 shrink-0 rounded border border-white/30 bg-white/5 accent-flame cursor-pointer"
         />
         <span>
           I have read and agree to the{' '}

@@ -89,7 +89,7 @@ export function SignupForm() {
           type="checkbox"
           name="confirm_18"
           required
-          className="mt-1 h-4 w-4 accent-flame"
+          className="mt-0.5 h-5 w-5 shrink-0 rounded border border-white/30 bg-white/5 accent-flame cursor-pointer"
         />
         <span>
           I confirm I am 18 years of age or older. RoadWave is not available
@@ -102,7 +102,7 @@ export function SignupForm() {
           type="checkbox"
           name="accept"
           required
-          className="mt-1 h-4 w-4 accent-flame"
+          className="mt-0.5 h-5 w-5 shrink-0 rounded border border-white/30 bg-white/5 accent-flame cursor-pointer"
         />
         <span>
           I agree to the{' '}
@@ -122,7 +122,7 @@ export function SignupForm() {
           type="checkbox"
           name="accept_community_rules"
           required
-          className="mt-1 h-4 w-4 accent-flame"
+          className="mt-0.5 h-5 w-5 shrink-0 rounded border border-white/30 bg-white/5 accent-flame cursor-pointer"
         />
         <span>
           I have read and agree to the{' '}

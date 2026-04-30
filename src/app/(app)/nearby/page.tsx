@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { NearbyList } from '@/components/nearby/nearby-list'
 import { PageHeading } from '@/components/ui/page-heading'
+import { SafetyBanner } from '@/components/ui/safety-banner'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import type { NearbyCamper } from '@/lib/types/db'
 import type { WaveState } from '@/components/waves/wave-button'
@@ -82,6 +83,7 @@ export default async function NearbyPage() {
 
   return (
     <div className="space-y-5">
+      <SafetyBanner />
       <PageHeading
         eyebrow={`Currently at ${campground?.name ?? 'your campground'}`}
         title="Nearby campers"

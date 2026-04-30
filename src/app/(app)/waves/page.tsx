@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { RemoveWaveButton } from '@/components/waves/remove-wave-button'
 import { PageHeading } from '@/components/ui/page-heading'
+import { SafetyBanner } from '@/components/ui/safety-banner'
 import { TRAVEL_STYLE_LABEL } from '@/lib/constants/travel-styles'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -31,6 +32,7 @@ export default async function WavesPage() {
   if (!waves || waves.length === 0) {
     return (
       <div className="space-y-5">
+        <SafetyBanner />
         <PageHeading
           eyebrow="Your waves"
           title="Waves"
@@ -65,6 +67,7 @@ export default async function WavesPage() {
 
   return (
     <div className="space-y-5">
+      <SafetyBanner />
       <PageHeading
         eyebrow="Your waves"
         title="Waves"

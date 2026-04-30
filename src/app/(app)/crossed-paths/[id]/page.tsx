@@ -4,6 +4,7 @@ import { format, formatDistanceToNow, isSameDay } from 'date-fns'
 import { CrossedPathConversation } from '@/components/crossed-paths/crossed-path-conversation'
 import { NewConnectionBanner } from '@/components/crossed-paths/new-connection-banner'
 import { ReportDialog } from '@/components/report/report-dialog'
+import { SafetyBanner } from '@/components/ui/safety-banner'
 import { TRAVEL_STYLE_LABEL } from '@/lib/constants/travel-styles'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -69,6 +70,7 @@ export default async function CrossedPathDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-4">
+      <SafetyBanner />
       <header className="rounded-2xl border border-flame/30 bg-card p-4 space-y-2">
         <div className="flex items-start justify-between gap-3">
           <div>

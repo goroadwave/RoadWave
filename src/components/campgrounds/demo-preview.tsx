@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, type FormEvent } from 'react'
+import { SafetyBanner } from '@/components/ui/safety-banner'
 
 // Mock guest-experience preview used both in the InteractiveDemo wizard and
 // on the shareable /demo/<slug> page. Two exports:
@@ -320,6 +321,11 @@ function GuestTabs({
           </TabButton>
         </nav>
       </div>
+      {(tab === 'nearby' || tab === 'meetups') && (
+        <div className="px-4 sm:px-6 pt-3 -mb-2">
+          <SafetyBanner />
+        </div>
+      )}
       <div className="px-4 sm:px-6 py-5">
         {tab === 'checkin' && (
           <CheckInPanel
