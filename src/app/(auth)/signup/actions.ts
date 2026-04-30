@@ -57,10 +57,15 @@ export async function signupAction(
   if (!confirmUrl || !userId) return { error: 'Signup failed.' }
 
   // Legal ack — service-role insert so it lands regardless of session state.
-  // Records all three guest-side versions in a single row so audit lookups
-  // can find the active acceptance for each policy with one query.
+  // Records the explicit consent flags (age_confirmed / accepted_terms /
+  // accepted_rules) alongside the version strings, plus request metadata.
+  // The form's required checkboxes + zod schema both gate submission, so
+  // anything that reaches this insert has affirmatively consented.
   const { error: ackError } = await admin.from('legal_acks').insert({
     user_id: userId,
+    age_confirmed: true,
+    accepted_terms: true,
+    accepted_rules: true,
     terms_version: TERMS_VERSION,
     privacy_version: PRIVACY_VERSION,
     community_rules_version: COMMUNITY_RULES_VERSION,

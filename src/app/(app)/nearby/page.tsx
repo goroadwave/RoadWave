@@ -83,7 +83,7 @@ export default async function NearbyPage() {
 
   return (
     <div className="space-y-5">
-      <SafetyBanner />
+      <SafetyBanner message="RoadWave helps campers connect, but you choose if, when, and where to meet. Meet in public campground areas, trust your instincts, and report anything that feels off." />
       <PageHeading
         eyebrow={`Currently at ${campground?.name ?? 'your campground'}`}
         title="Nearby campers"

@@ -70,7 +70,7 @@ export default async function CrossedPathDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-4">
-      <SafetyBanner />
+      <SafetyBanner message="Meet smart: Use public campground areas, let someone know where you are going, and report pressure, harassment, or suspicious behavior." />
       <header className="rounded-2xl border border-flame/30 bg-card p-4 space-y-2">
         <div className="flex items-start justify-between gap-3">
           <div>

@@ -153,6 +153,11 @@ export function SignupForm() {
         )}
       </button>
 
+      <p className="text-center text-[11px] text-mist/80 leading-snug">
+        RoadWave is not for emergencies, background checks, or campground
+        security.
+      </p>
+
       <p className="text-center text-sm text-mist">
         Already have an account?{' '}
         <Link href="/login" className="font-semibold text-flame underline-offset-2 hover:underline">

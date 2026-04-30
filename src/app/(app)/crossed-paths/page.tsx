@@ -45,7 +45,7 @@ export default async function CrossedPathsPage() {
   if (!paths || paths.length === 0) {
     return (
       <div className="space-y-5">
-        <SafetyBanner />
+        <SafetyBanner message="Meet smart: Use public campground areas, let someone know where you are going, and report pressure, harassment, or suspicious behavior." />
         <PageHeading
           eyebrow="Mutual waves"
           title="Crossed paths"
@@ -108,7 +108,7 @@ export default async function CrossedPathsPage() {
 
   return (
     <div className="space-y-5">
-      <SafetyBanner />
+      <SafetyBanner message="Meet smart: Use public campground areas, let someone know where you are going, and report pressure, harassment, or suspicious behavior." />
       <PageHeading
         eyebrow="Mutual waves"
         title="Crossed paths"

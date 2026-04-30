@@ -32,7 +32,7 @@ export default async function WavesPage() {
   if (!waves || waves.length === 0) {
     return (
       <div className="space-y-5">
-        <SafetyBanner />
+        <SafetyBanner message="A wave is only an introduction. Do not share your exact site number unless you choose to. Meet in public areas first." />
         <PageHeading
           eyebrow="Your waves"
           title="Waves"
@@ -67,7 +67,7 @@ export default async function WavesPage() {
 
   return (
     <div className="space-y-5">
-      <SafetyBanner />
+      <SafetyBanner message="A wave is only an introduction. Do not share your exact site number unless you choose to. Meet in public areas first." />
       <PageHeading
         eyebrow="Your waves"
         title="Waves"

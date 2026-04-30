@@ -321,9 +321,14 @@ function GuestTabs({
           </TabButton>
         </nav>
       </div>
-      {(tab === 'nearby' || tab === 'meetups') && (
+      {tab === 'nearby' && (
         <div className="px-4 sm:px-6 pt-3 -mb-2">
-          <SafetyBanner />
+          <SafetyBanner message="RoadWave helps campers connect, but you choose if, when, and where to meet. Meet in public campground areas, trust your instincts, and report anything that feels off." />
+        </div>
+      )}
+      {tab === 'meetups' && (
+        <div className="px-4 sm:px-6 pt-3 -mb-2">
+          <SafetyBanner message="Meet smart: Use public campground areas, let someone know where you are going, and report pressure, harassment, or suspicious behavior." />
         </div>
       )}
       <div className="px-4 sm:px-6 py-5">
@@ -583,6 +588,11 @@ function OwnerDashboard({
           Your dashboard
         </h2>
       </div>
+
+      <p className="rounded-xl border border-flame/25 bg-flame/[0.05] px-4 py-3 text-xs text-cream/90 leading-relaxed">
+        RoadWave is designed to encourage real-life campground connection
+        without exact site sharing, public group chats, or pressure to meet.
+      </p>
 
       <section className="grid grid-cols-2 gap-2">
         <StatCard label="Checked in today" value="12" emphasis />
