@@ -164,6 +164,24 @@ test.describe('Admin dashboard — anon + structural', () => {
     expect(src).toContain("'visible'")
   })
 
+  test('home/page.tsx must NOT auto-redirect admins to /admin', async () => {
+    // Regression guard. Earlier commit f8146f9 sent admins straight to
+    // /admin on every login, which blocked the founder from using the
+    // regular camper app. The fix (commit 3303a1f) deliberately lets
+    // admins land on /home with the Admin nav link visible — this
+    // test fails if anyone re-introduces the redirect.
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile('src/app/(app)/home/page.tsx', 'utf8')
+    // Strip ALL whitespace so a multiline reformat can't smuggle the
+    // redirect past the assertion.
+    const collapsed = src.replace(/\s+/g, '')
+    expect(collapsed).not.toContain("redirect('/admin')")
+    expect(collapsed).not.toContain('redirect("/admin")')
+    expect(collapsed).not.toContain("redirect(`/admin`)")
+    // Sanity: the admin-bypass for the setup wall must remain in place.
+    expect(src).toMatch(/!isAdmin\s*&&\s*!profile\?\.display_name/)
+  })
+
   test('admin nav link in (app) layout is gated on is_admin', async () => {
     const fs = await import('node:fs/promises')
     const src = await fs.readFile('src/app/(app)/layout.tsx', 'utf8')
