@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Logo } from '@/components/ui/logo'
-import { CampgroundLeadForm } from '@/components/campgrounds/lead-form'
+import { InteractiveDemo } from '@/components/campgrounds/interactive-demo'
 import { CampgroundRileyButton } from '@/components/campgrounds/riley-campground-button'
 
 export const metadata: Metadata = {
@@ -298,26 +298,22 @@ export default function CampgroundsPage() {
           </div>
         </section>
 
-        {/* CTA form */}
+        {/* Interactive demo wizard — replaces the old lead-only form. */}
         <section
           id="request-demo"
           className="px-4 py-16 border-t border-white/5 bg-flame/[0.06]"
         >
-          <div className="mx-auto max-w-md">
-            <div className="text-center mb-6 space-y-2">
-              <Eyebrow>Request a demo</Eyebrow>
+          <div className="mx-auto max-w-2xl">
+            <div className="text-center mb-8 space-y-2">
+              <Eyebrow>Try it now — no sign-up</Eyebrow>
               <h2 className="font-display text-3xl font-extrabold tracking-tight text-cream">
                 See RoadWave with your campground name built in.
               </h2>
               <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
-                A short walkthrough, your campground name baked in.
+                Three quick steps. Yours to share.
               </p>
             </div>
-            <CampgroundLeadForm />
-            <p className="mt-4 text-center text-sm text-mist leading-snug">
-              We&apos;ll follow up with a personalized demo link. No commitment
-              required.
-            </p>
+            <InteractiveDemo />
           </div>
         </section>
       </main>
