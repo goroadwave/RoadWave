@@ -16,12 +16,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   // Suspension gate: if profiles.suspended_at is set, the account can't use
   // the app. Send them to /suspended where they can sign out or appeal.
-  const { data: suspendedRow } = await supabase
+  // We also pull is_admin in the same round-trip so the founder admin
+  // link can be conditionally rendered in the header.
+  const { data: profileRow } = await supabase
     .from('profiles')
-    .select('suspended_at')
+    .select('suspended_at, is_admin')
     .eq('id', user.id)
     .maybeSingle()
-  if (suspendedRow?.suspended_at) redirect('/suspended')
+  if (profileRow?.suspended_at) redirect('/suspended')
+  const isAdmin = profileRow?.is_admin === true
 
   // Consent gate: every user must have a legal_acks row before reaching
   // the app. Email signups land one at signup; OAuth users go through
@@ -44,6 +47,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </Link>
           <div className="flex items-center gap-3">
             <AppLantern />
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
+              >
+                Admin
+              </Link>
+            )}
             <form action="/auth/sign-out?next=/" method="post">
               <button
                 type="submit"
