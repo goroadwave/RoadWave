@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
   const websiteRaw = stringOrEmpty(form.get('website')).trim()
   const city = stringOrEmpty(form.get('city')).trim()
   const region = stringOrEmpty(form.get('region')).trim()
+  const phone = stringOrEmpty(form.get('phone')).trim()
   const email = stringOrEmpty(form.get('email')).trim()
   const logo = form.get('logo')
 
@@ -64,6 +65,9 @@ export async function POST(request: NextRequest) {
   }
   if (city.length > 80 || region.length > 80) {
     return new NextResponse('City / region too long.', { status: 400 })
+  }
+  if (phone.length > 60) {
+    return new NextResponse('Phone number too long.', { status: 400 })
   }
 
   const admin = createSupabaseAdminClient()
@@ -123,6 +127,7 @@ export async function POST(request: NextRequest) {
     website: website || null,
     city: city || null,
     region: region || null,
+    phone: phone || null,
     email: email || null,
     ip_address: getRequestIp(request.headers),
     user_agent: request.headers.get('user-agent'),

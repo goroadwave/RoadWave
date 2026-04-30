@@ -23,6 +23,7 @@ const schema = z.object({
     .string()
     .url({ message: 'Website must be a full URL (https://…)' })
     .or(z.literal('')),
+  phone: z.string().max(60).optional().or(z.literal('')),
   accept_partner_terms: z.boolean().refine((v) => v === true, {
     message: 'You must agree to the Partner Terms and Conduct Restrictions.',
   }),
@@ -66,6 +67,7 @@ export async function ownerSetupAction(
     city: formData.get('city') ?? '',
     region: formData.get('region') ?? '',
     website: formData.get('website') ?? '',
+    phone: formData.get('phone') ?? '',
     accept_partner_terms: formData.get('accept_partner_terms') === 'on',
     confirm_18_and_authorized:
       formData.get('confirm_18_and_authorized') === 'on',
@@ -76,7 +78,7 @@ export async function ownerSetupAction(
       Object.values(flat.fieldErrors).flat()[0] ?? 'Check your fields and try again.'
     return { error: String(first) }
   }
-  const { display_name, campground_name, city, region, website } = parsed.data
+  const { display_name, campground_name, city, region, website, phone } = parsed.data
 
   const supabase = await createSupabaseServerClient()
   const {
@@ -137,6 +139,7 @@ export async function ownerSetupAction(
       city: city || null,
       region: region || null,
       website: website || null,
+      phone: phone || null,
       is_active: true,
     })
     .select('id')

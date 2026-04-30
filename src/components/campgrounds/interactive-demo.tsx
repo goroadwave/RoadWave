@@ -31,6 +31,7 @@ type DemoInput = {
   website: string
   city: string
   region: string
+  phone: string
 }
 
 const initialInput: DemoInput = {
@@ -40,6 +41,7 @@ const initialInput: DemoInput = {
   website: '',
   city: '',
   region: '',
+  phone: '',
 }
 
 export function InteractiveDemo() {
@@ -286,6 +288,20 @@ function InputStep({
           />
         </Field>
       </div>
+
+      <Field label="Phone number" hint="Optional.">
+        <input
+          name="phone"
+          type="tel"
+          value={input.phone}
+          onChange={(e) => onChange({ phone: e.target.value })}
+          maxLength={60}
+          autoComplete="tel"
+          inputMode="tel"
+          placeholder="(407) 555-0100"
+          className={inputCls}
+        />
+      </Field>
 
       <button
         type="submit"
@@ -548,7 +564,9 @@ function SetThisUpAction({
         slug = await createDemo({ ...input, email })
         onSaved(slug)
       }
-      // Lead capture into campground_leads.
+      // Lead capture into campground_leads. Phone is carried through
+      // from Step 1 (input.phone) so the lead row gets it without us
+      // asking for it again here.
       const res = await fetch('/api/campground-lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -556,6 +574,7 @@ function SetThisUpAction({
           name: name.trim(),
           campground: input.campgroundName.trim(),
           email,
+          phone: input.phone.trim() || null,
         }),
       })
       if (!res.ok && res.status >= 500) {
@@ -659,6 +678,7 @@ async function createDemo(input: {
   website: string
   city: string
   region: string
+  phone: string
   email: string
 }): Promise<string> {
   const fd = new FormData()
@@ -667,6 +687,7 @@ async function createDemo(input: {
   if (input.website.trim()) fd.set('website', input.website.trim())
   if (input.city.trim()) fd.set('city', input.city.trim())
   if (input.region.trim()) fd.set('region', input.region.trim())
+  if (input.phone.trim()) fd.set('phone', input.phone.trim())
   if (input.email) fd.set('email', input.email)
   const res = await fetch('/api/demo', { method: 'POST', body: fd })
   if (!res.ok) {

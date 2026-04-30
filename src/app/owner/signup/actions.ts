@@ -19,6 +19,7 @@ const schema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(200),
   campground_name: z.string().min(1).max(120),
+  phone: z.string().max(60).optional().or(z.literal('')),
   accept_partner_terms: z.boolean().refine((v) => v === true, {
     message: 'You must agree to the Partner Terms and Conduct Restrictions.',
   }),
@@ -58,6 +59,7 @@ export async function ownerSignupAction(
     email: formData.get('email'),
     password: formData.get('password'),
     campground_name: formData.get('campground_name'),
+    phone: formData.get('phone') ?? '',
     accept_partner_terms: formData.get('accept_partner_terms') === 'on',
     confirm_18_and_authorized:
       formData.get('confirm_18_and_authorized') === 'on',
@@ -68,7 +70,7 @@ export async function ownerSignupAction(
       Object.values(flat.fieldErrors).flat()[0] ?? 'Check your fields and try again.'
     return { error: String(first) }
   }
-  const { display_name, email, password, campground_name } = parsed.data
+  const { display_name, email, password, campground_name, phone } = parsed.data
 
   const h = await headers()
   const origin = getSiteOrigin(h)
@@ -166,6 +168,7 @@ export async function ownerSignupAction(
       name: campground_name,
       slug,
       owner_email: email,
+      phone: phone || null,
       is_active: true,
     })
     .select('id')

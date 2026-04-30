@@ -47,6 +47,18 @@ export function OwnerSignupForm() {
         />
       </Field>
 
+      <Field label="Phone number" hint="Optional.">
+        <input
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          inputMode="tel"
+          maxLength={60}
+          className={inputCls}
+          placeholder="(407) 555-0100"
+        />
+      </Field>
+
       <label className="flex items-start gap-2 text-sm text-mist">
         <input
           type="checkbox"

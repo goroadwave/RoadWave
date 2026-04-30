@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
     name?: unknown
     campground?: unknown
     email?: unknown
+    phone?: unknown
   }
   try {
     payload = await request.json()
@@ -27,12 +28,16 @@ export async function POST(request: NextRequest) {
   const campgroundName =
     typeof payload.campground === 'string' ? payload.campground.trim() : ''
   const email = typeof payload.email === 'string' ? payload.email.trim() : ''
+  const phone = typeof payload.phone === 'string' ? payload.phone.trim() : ''
 
   if (!name || !campgroundName || !email) {
     return new NextResponse('Missing required fields.', { status: 400 })
   }
   if (name.length > 200 || campgroundName.length > 200 || email.length > 320) {
     return new NextResponse('One of those is way too long.', { status: 400 })
+  }
+  if (phone.length > 60) {
+    return new NextResponse('Phone number too long.', { status: 400 })
   }
   if (!EMAIL_RE.test(email)) {
     return new NextResponse('Enter a valid email.', { status: 400 })
@@ -48,6 +53,7 @@ export async function POST(request: NextRequest) {
     name,
     campground_name: campgroundName,
     email,
+    phone: phone || null,
     ip_address: ip,
     user_agent: userAgent,
   })
@@ -72,8 +78,8 @@ export async function POST(request: NextRequest) {
           // Replying in your inbox goes straight back to the prospect.
           reply_to: email,
           subject: `New RoadWave demo request — ${campgroundName}`,
-          html: buildHtml({ name, campgroundName, email }),
-          text: buildText({ name, campgroundName, email }),
+          html: buildHtml({ name, campgroundName, email, phone }),
+          text: buildText({ name, campgroundName, email, phone }),
         }),
       })
       if (!resendRes.ok) {
@@ -103,11 +109,20 @@ function buildHtml({
   name,
   campgroundName,
   email,
+  phone,
 }: {
   name: string
   campgroundName: string
   email: string
+  phone: string
 }): string {
+  const phoneRow = phone
+    ? `
+          <tr>
+            <td style="padding:6px 12px 6px 0; color:#94a3b8; font-size:13px;">Phone</td>
+            <td style="padding:6px 0;"><a style="color:#f59e0b; text-decoration:none;" href="tel:${escapeHtml(phone)}">${escapeHtml(phone)}</a></td>
+          </tr>`
+    : ''
   return `<!doctype html>
 <html>
   <body style="font-family: -apple-system, system-ui, sans-serif; background:#0a0f1c; color:#f5ecd9; padding:24px; margin:0;">
@@ -128,7 +143,7 @@ function buildHtml({
           <tr>
             <td style="padding:6px 12px 6px 0; color:#94a3b8; font-size:13px;">Email</td>
             <td style="padding:6px 0;"><a style="color:#f59e0b; text-decoration:none;" href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></td>
-          </tr>
+          </tr>${phoneRow}
         </table>
         <p style="color:#94a3b8; font-size:12px; margin:24px 0 0;">Submitted ${new Date().toUTCString()} · Reply to this email to respond directly.</p>
       </td></tr>
@@ -141,16 +156,18 @@ function buildText({
   name,
   campgroundName,
   email,
+  phone,
 }: {
   name: string
   campgroundName: string
   email: string
+  phone: string
 }): string {
   return `New RoadWave demo request
 
 Owner name: ${name}
 Campground:  ${campgroundName}
-Email:       ${email}
+Email:       ${email}${phone ? `\nPhone:       ${phone}` : ''}
 
 Submitted ${new Date().toUTCString()}
 Reply to this email to respond directly to the prospect.`

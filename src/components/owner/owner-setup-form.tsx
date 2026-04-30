@@ -58,6 +58,18 @@ export function OwnerSetupForm({ initialDisplayName = '', ownerEmail = '' }: Pro
         />
       </Field>
 
+      <Field label="Phone number" hint="Optional.">
+        <input
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          inputMode="tel"
+          maxLength={60}
+          className={inputCls}
+          placeholder="(407) 555-0100"
+        />
+      </Field>
+
       {ownerEmail && (
         <p className="text-xs text-mist">
           Signed in as <span className="text-cream">{ownerEmail}</span>.
