@@ -679,9 +679,14 @@ test.describe('Homepage spec', () => {
   }) => {
     await page.goto('/')
     await expect(
-      page.getByText('Example RoadWave-Friendly Campground Setup', {
+      page.getByText('Sample RoadWave-Friendly Campground Experience', {
         exact: false,
       }).first(),
+    ).toBeVisible()
+    await expect(
+      page.getByText(
+        "Here's how participating campgrounds could appear inside RoadWave once they activate their guest page.",
+      ),
     ).toBeVisible()
   })
 

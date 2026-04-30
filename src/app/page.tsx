@@ -284,12 +284,13 @@ export default async function RootPage() {
         <section className="px-4 py-14 border-t border-white/5">
           <div className="mx-auto max-w-4xl">
             <div className="text-center mb-8 space-y-2">
-              <Eyebrow>Example RoadWave-Friendly Campground Setup</Eyebrow>
+              <Eyebrow>Sample RoadWave-Friendly Campground Experience</Eyebrow>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                Example RoadWave-Friendly Campground Setup.
+                Sample RoadWave-Friendly Campground Experience
               </h2>
               <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-                See how participating campgrounds could appear once RoadWave is live.
+                Here&apos;s how participating campgrounds could appear inside
+                RoadWave once they activate their guest page.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">

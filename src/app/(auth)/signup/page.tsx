@@ -23,6 +23,16 @@ export default async function SignupPage() {
         Your check-in is temporary. You control visibility. RoadWave is 18+
         only.
       </p>
+      <div className="rounded-xl border border-flame/20 bg-flame/[0.04] px-4 py-4 space-y-1.5">
+        <h2 className="font-display text-base font-semibold text-cream">
+          What happens after you join?
+        </h2>
+        <p className="text-sm text-cream/85 leading-relaxed">
+          You&apos;ll be part of the early RoadWave launch list. As campground
+          pages go live, you&apos;ll be able to check in privately, choose your
+          visibility, find shared interests, and wave before messaging.
+        </p>
+      </div>
       <SignupCard />
     </div>
   )
