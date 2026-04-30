@@ -57,16 +57,23 @@ export default async function CrossedPathDetailPage({ params }: Props) {
   }
 
   if (cp.status === 'pending_consent') {
+    type ConsentSummary = {
+      crossed_path_id: string
+      campground_id: string | null
+      rig_type: string | null
+      interests: string[] | null
+      status: string
+    }
     const { data: summary } = await supabase
       .rpc('pending_consent_summary', { _crossed_path_id: id })
-      .maybeSingle()
+      .maybeSingle<ConsentSummary>()
     return (
       <div className="space-y-4">
         <SafetyBanner message={SAFETY_COPY} />
         <ConsentPrompt
           crossedPathId={cp.id}
-          rigType={(summary?.rig_type as string | null) ?? null}
-          interests={(summary?.interests as string[] | null) ?? []}
+          rigType={summary?.rig_type ?? null}
+          interests={summary?.interests ?? []}
         />
       </div>
     )

@@ -18,12 +18,20 @@ export default async function IncomingWavePage({ params }: Props) {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  type IncomingWave = {
+    wave_id: string
+    sender_id: string
+    campground_id: string
+    rig_type: string | null
+    interests: string[] | null
+    status: string
+  }
   const { data: summary } = await supabase
     .rpc('incoming_wave', { _wave_id: id })
-    .maybeSingle()
+    .maybeSingle<IncomingWave>()
   if (!summary) notFound()
 
-  const status = (summary.status as string | null) ?? 'pending'
+  const status = summary.status ?? 'pending'
   if (status === 'declined' || status === 'connected') {
     return (
       <div className="space-y-4">
@@ -50,10 +58,10 @@ export default async function IncomingWavePage({ params }: Props) {
       <SafetyBanner message={SAFETY_COPY} />
       <IncomingWaveCard
         waveId={id}
-        senderId={summary.sender_id as string}
-        campgroundId={summary.campground_id as string}
-        rigType={(summary.rig_type as string | null) ?? null}
-        interests={(summary.interests as string[] | null) ?? []}
+        senderId={summary.sender_id}
+        campgroundId={summary.campground_id}
+        rigType={summary.rig_type}
+        interests={summary.interests ?? []}
       />
     </div>
   )
