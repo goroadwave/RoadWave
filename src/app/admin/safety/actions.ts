@@ -23,11 +23,15 @@ export async function updateReportStatusAction(
     .eq('id', id)
     .maybeSingle()
   const reviewed = status === 'actioned' || status === 'dismissed'
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('reports')
     .update({ status, reviewed_at: reviewed ? new Date().toISOString() : null })
     .eq('id', id)
+    .select('id')
   if (error) return { ok: false, error: error.message }
+  if (!updated || updated.length === 0) {
+    return { ok: false, error: 'No report updated.' }
+  }
   await supabase.from('admin_audit_log').insert({
     admin_id: user.id,
     action: 'report.status_updated',

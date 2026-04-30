@@ -40,14 +40,18 @@ export async function updateLeadStatusAction(
     .select('status')
     .eq('id', id)
     .maybeSingle()
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('campground_leads')
     .update({
       status,
       replied_at: status === 'replied' ? new Date().toISOString() : null,
     })
     .eq('id', id)
+    .select('id')
   if (error) return { ok: false, error: error.message }
+  if (!updated || updated.length === 0) {
+    return { ok: false, error: 'No lead updated.' }
+  }
   await logAudit('lead.status_updated', 'campground_leads', id, prior, { status })
   revalidatePath('/admin/inbox')
   return { ok: true, error: null }
@@ -64,14 +68,18 @@ export async function updateRequestStatusAction(
     .select('status')
     .eq('id', id)
     .maybeSingle()
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('campground_requests')
     .update({
       status,
       replied_at: status === 'replied' ? new Date().toISOString() : null,
     })
     .eq('id', id)
+    .select('id')
   if (error) return { ok: false, error: error.message }
+  if (!updated || updated.length === 0) {
+    return { ok: false, error: 'No request updated.' }
+  }
   await logAudit('request.status_updated', 'campground_requests', id, prior, { status })
   revalidatePath('/admin/inbox')
   return { ok: true, error: null }
