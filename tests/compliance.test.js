@@ -409,7 +409,7 @@ test.describe('Demo lantern', () => {
     ).toBeVisible()
   })
 
-  test('clicking lantern opens panel with the three hardcoded notifications', async ({
+  test('clicking lantern opens panel with the four hardcoded notifications', async ({
     page,
   }) => {
     await page.goto('/demo')
@@ -425,6 +425,83 @@ test.describe('Demo lantern', () => {
     await expect(
       panel.getByText(/Campfire Night at Site Loop B/),
     ).toBeVisible()
+    await expect(
+      panel.getByText(
+        /Riverbend RV Park: Ranger-led nature walk tomorrow at 8am/,
+      ),
+    ).toBeVisible()
+  })
+
+  test('tapping the bulletin notification opens the bulletin card overlay', async ({
+    page,
+  }) => {
+    await page.goto('/demo')
+    // Open the lantern panel.
+    await page
+      .getByRole('button', { name: /Your Lantern.*tap to see activity/i })
+      .click()
+    const panel = page.getByRole('menu', { name: /Demo notifications/i })
+    await expect(panel).toBeVisible()
+
+    // Tap the bulletin entry.
+    await panel
+      .getByRole('menuitem', {
+        name: /Ranger-led nature walk tomorrow at 8am/i,
+      })
+      .click()
+
+    // Panel closes; bulletin card opens with all required pieces.
+    await expect(panel).toHaveCount(0)
+    const card = page.getByRole('dialog')
+    await expect(card).toBeVisible()
+    // Exact match to disambiguate from the footer line that starts
+    // with "Campground bulletins are posted by…"
+    await expect(
+      card.getByText('Campground Bulletin', { exact: true }),
+    ).toBeVisible()
+    await expect(card.getByText('Riverbend RV Park')).toBeVisible()
+    await expect(
+      card.getByText(
+        'Ranger-led nature walk tomorrow at 8am — meet at the front gate.',
+      ),
+    ).toBeVisible()
+    await expect(card.getByText('Posted today at 6:00 PM')).toBeVisible()
+    await expect(
+      card.getByText(
+        /Campground bulletins are posted by verified campground staff only\./,
+      ),
+    ).toBeVisible()
+
+    // Verified check is rendered as an inline SVG with role=img.
+    await expect(
+      card.getByRole('img', { name: /Verified campground/i }),
+    ).toBeVisible()
+
+    // Tapping Dismiss closes the card and marks the notification as read.
+    await card.getByRole('button', { name: /^Dismiss$/i }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+
+    // Reopen the lantern — bulletin entry should now read as muted
+    // (text-mist) rather than the unread cream + amber-dot styling.
+    await page
+      .getByRole('button', { name: /Your Lantern.*tap to see activity/i })
+      .click()
+    const reopened = page.getByRole('menu', { name: /Demo notifications/i })
+    await expect(reopened).toBeVisible()
+    const bulletinEntry = reopened.getByRole('menuitem', {
+      name: /Ranger-led nature walk tomorrow at 8am/i,
+    })
+    await expect(bulletinEntry).toHaveClass(/text-mist/)
+  })
+
+  test('demo navigation does NOT include a Bulletins tab', async ({ page }) => {
+    await page.goto('/demo')
+    // Tabs in the legacy demo are role=button. There must be no
+    // tab labeled "Bulletins" — bulletins are lantern-delivered only
+    // per spec.
+    await expect(
+      page.getByRole('button', { name: /^Bulletins$/i }),
+    ).toHaveCount(0)
   })
 
   test('real (app) and owner (authed) layouts never import the lantern', async () => {

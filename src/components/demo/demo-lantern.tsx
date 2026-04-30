@@ -10,24 +10,54 @@ import { createPortal } from 'react-dom'
 // hardcoded notifications are intentionally fake — never pull from the
 // real database.
 
-type DemoNotification = {
-  id: string
-  text: string
-  /** Demo screen id to route to when tapped, if any. */
-  target: string | null
-}
+type DemoNotification =
+  | {
+      kind: 'screen'
+      id: string
+      text: string
+      /** Demo screen id to route to when tapped. */
+      target: string
+    }
+  | {
+      kind: 'bulletin'
+      id: string
+      text: string
+      bulletin: {
+        campgroundName: string
+        message: string
+        postedAt: string
+      }
+    }
 
 const NOTIFICATIONS: DemoNotification[] = [
-  { id: 'wave-1', text: 'CampingFan42 sent you a wave 🏕️', target: 'waves' },
   {
+    kind: 'screen',
+    id: 'wave-1',
+    text: 'CampingFan42 sent you a wave 🏕️',
+    target: 'waves',
+  },
+  {
+    kind: 'screen',
     id: 'match-1',
     text: 'You matched with OutdoorMike! Say hello 👋',
     target: 'paths',
   },
   {
+    kind: 'screen',
     id: 'meetup-1',
     text: 'New meetup: Campfire Night at Site Loop B — Tonight at 7pm 🔥',
     target: 'meetups',
+  },
+  {
+    kind: 'bulletin',
+    id: 'bulletin-1',
+    text: '📢 Riverbend RV Park: Ranger-led nature walk tomorrow at 8am — meet at the front gate.',
+    bulletin: {
+      campgroundName: 'Riverbend RV Park',
+      message:
+        'Ranger-led nature walk tomorrow at 8am — meet at the front gate.',
+      postedAt: 'Posted today at 6:00 PM',
+    },
   },
 ]
 
@@ -42,11 +72,21 @@ type Props = {
 
 type PanelPos = { top: number; right: number }
 
+type ActiveBulletin = {
+  notificationId: string
+  campgroundName: string
+  message: string
+  postedAt: string
+}
+
 export function DemoLantern({ onNavigate }: Props) {
   const [open, setOpen] = useState(false)
   const [readIds, setReadIds] = useState<Set<string>>(new Set())
   const [pos, setPos] = useState<PanelPos | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [activeBulletin, setActiveBulletin] = useState<ActiveBulletin | null>(
+    null,
+  )
   const buttonRef = useRef<HTMLButtonElement | null>(null)
 
   // Only portal after mount — keeps SSR clean (no document reference at
@@ -67,6 +107,16 @@ export function DemoLantern({ onNavigate }: Props) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
+
+  // Same Escape behavior for the bulletin card overlay.
+  useEffect(() => {
+    if (!activeBulletin) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setActiveBulletin(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [activeBulletin])
 
   const unread = NOTIFICATIONS.filter((n) => !readIds.has(n.id)).length
 
@@ -98,16 +148,41 @@ export function DemoLantern({ onNavigate }: Props) {
     else openPanel()
   }
 
-  function tapNotification(n: DemoNotification) {
+  function markRead(id: string) {
     setReadIds((prev) => {
+      if (prev.has(id)) return prev
       const next = new Set(prev)
-      next.add(n.id)
+      next.add(id)
       return next
     })
-    if (n.target && onNavigate) {
+  }
+
+  function tapNotification(n: DemoNotification) {
+    if (n.kind === 'bulletin') {
+      // Bulletins open a one-way overlay card. The notification is NOT
+      // marked read on tap — only when the user dismisses the card.
+      // That way reopening the panel after viewing keeps the unread
+      // dot off only after explicit dismissal, matching how a real
+      // bulletin would feel.
+      closePanel()
+      setActiveBulletin({
+        notificationId: n.id,
+        campgroundName: n.bulletin.campgroundName,
+        message: n.bulletin.message,
+        postedAt: n.bulletin.postedAt,
+      })
+      return
+    }
+    markRead(n.id)
+    if (onNavigate) {
       onNavigate(n.target)
       closePanel()
     }
+  }
+
+  function dismissBulletin() {
+    if (activeBulletin) markRead(activeBulletin.notificationId)
+    setActiveBulletin(null)
   }
 
   return (
@@ -199,7 +274,83 @@ export function DemoLantern({ onNavigate }: Props) {
             document.body,
           )
         : null}
+
+      {/* Bulletin card overlay. Independent of the activity panel — opens
+          when the user taps the bulletin notification. Full-screen modal
+          with a one-way announcement layout (no reply UI, no thread). */}
+      {mounted && activeBulletin
+        ? createPortal(
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="demo-bulletin-title"
+              className="fixed inset-0 z-[110] flex items-center justify-center bg-night/90 backdrop-blur px-4"
+              onClick={dismissBulletin}
+            >
+              <div
+                className="relative w-full max-w-md rounded-2xl border border-flame/40 bg-card p-6 shadow-2xl shadow-black/70 space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-mist">
+                  Campground Bulletin
+                </p>
+                <div className="flex items-center gap-2">
+                  <h2
+                    id="demo-bulletin-title"
+                    className="font-display text-xl font-extrabold text-cream"
+                  >
+                    {activeBulletin.campgroundName}
+                  </h2>
+                  <VerifiedCheck className="h-5 w-5 shrink-0" />
+                </div>
+                <p className="text-sm text-cream leading-relaxed">
+                  {activeBulletin.message}
+                </p>
+                <p className="text-[11px] text-mist">
+                  {activeBulletin.postedAt}
+                </p>
+                <button
+                  type="button"
+                  onClick={dismissBulletin}
+                  className="w-full rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
+                >
+                  Dismiss
+                </button>
+                <p className="text-center text-[10px] text-mist/70 leading-snug">
+                  Campground bulletins are posted by verified campground
+                  staff only.
+                </p>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
+  )
+}
+
+function VerifiedCheck({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+      aria-label="Verified campground"
+      role="img"
+    >
+      <path
+        d="M12 2l2.39 1.74 2.96-.34 1.13 2.76 2.52 1.6-.6 2.92.6 2.92-2.52 1.6-1.13 2.76-2.96-.34L12 22l-2.39-1.74-2.96.34-1.13-2.76-2.52-1.6.6-2.92-.6-2.92 2.52-1.6 1.13-2.76 2.96.34L12 2z"
+        fill="#f59e0b"
+      />
+      <path
+        d="M8.5 12.2l2.4 2.4 4.6-5"
+        stroke="#0a0f1c"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
   )
 }
 
