@@ -1,6 +1,7 @@
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
 // Supabase email-confirmation links land here. Two link formats supported:
 //   * ?code=...                   (PKCE, newer Supabase email templates)
@@ -32,7 +33,9 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) return NextResponse.redirect(new URL(next, origin))
+    if (!error) {
+      return NextResponse.redirect(await consentOrNextUrl(supabase, origin, next))
+    }
     return NextResponse.redirect(
       new URL(`/login?error=${encodeURIComponent(error.message)}`, origin),
     )
@@ -43,7 +46,9 @@ export async function GET(request: NextRequest) {
       token_hash: tokenHash,
       type,
     })
-    if (!error) return NextResponse.redirect(new URL(next, origin))
+    if (!error) {
+      return NextResponse.redirect(await consentOrNextUrl(supabase, origin, next))
+    }
     return NextResponse.redirect(
       new URL(`/login?error=${encodeURIComponent(error.message)}`, origin),
     )
@@ -53,3 +58,38 @@ export async function GET(request: NextRequest) {
     new URL('/login?error=Missing+verification+token', origin),
   )
 }
+
+// After a successful auth exchange / verify, route the user through the
+// consent screen if they have NEVER recorded a legal_acks row. Email
+// signups always have a row (signupAction writes one), so they pass
+// straight through. First-time OAuth users land on /consent with the
+// original `next` preserved.
+async function consentOrNextUrl(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  origin: string,
+  next: string,
+): Promise<URL> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return new URL(next, origin)
+
+  // Use the admin client for this read so we don't depend on the user's
+  // RLS context immediately after exchange — RLS allows SELECT on
+  // legal_acks_select_own anyway, but admin keeps the check robust.
+  const admin = createSupabaseAdminClient()
+  const { data: existing } = await admin
+    .from('legal_acks')
+    .select('id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+
+  if (existing) return new URL(next, origin)
+
+  // No consent on file — gate with /consent and preserve next.
+  const consentUrl = new URL('/consent', origin)
+  consentUrl.searchParams.set('next', next)
+  return consentUrl
+}
+

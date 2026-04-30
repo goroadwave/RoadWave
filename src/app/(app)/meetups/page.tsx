@@ -4,7 +4,11 @@ import { MeetupForm } from '@/components/meetups/meetup-form'
 import { DeleteMeetupForm } from '@/components/meetups/delete-meetup-form'
 import { PageHeading } from '@/components/ui/page-heading'
 import { Eyebrow } from '@/components/ui/eyebrow'
+import { SafetyBanner } from '@/components/ui/safety-banner'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+
+const MEETUPS_BANNER_MESSAGE =
+  'Meet smart: Use public campground areas, let someone know where you are going, and report pressure, harassment, or suspicious behavior.'
 
 function formatMeetupTime(start: Date, end: Date | null) {
   const startStr = format(start, 'EEE, MMM d · h:mm a')
@@ -32,6 +36,7 @@ export default async function MeetupsPage() {
   if (!latestCheckIn) {
     return (
       <div className="space-y-5">
+        <SafetyBanner message={MEETUPS_BANNER_MESSAGE} />
         <PageHeading
           eyebrow="Meetup spots"
           title="Check in to see what's on"
@@ -110,6 +115,7 @@ export default async function MeetupsPage() {
 
   return (
     <div className="space-y-7">
+      <SafetyBanner message={MEETUPS_BANNER_MESSAGE} />
       <PageHeading
         eyebrow="Meetups"
         title="What's happening"

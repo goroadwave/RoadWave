@@ -24,6 +24,18 @@ export default async function AuthedOwnerLayout({
   if (profile?.suspended_at) redirect('/suspended')
   if (profile?.role === 'guest') redirect('/checkin')
 
+  // Consent gate: defense-in-depth, same as the (app) layout. First-time
+  // OAuth owners flow through /auth/callback → /consent → /owner/setup,
+  // but if anything bypasses that, we send them back to /consent with
+  // next pointing at the owner dashboard.
+  const { data: ackRow } = await supabase
+    .from('legal_acks')
+    .select('id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+  if (!ackRow) redirect('/consent?next=/owner')
+
   // OAuth signups arrive here without a campground link. Route them through
   // the onboarding flow before they can hit the dashboard / nav surfaces.
   const { data: link } = await supabase

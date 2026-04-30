@@ -22,6 +22,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .maybeSingle()
   if (suspendedRow?.suspended_at) redirect('/suspended')
 
+  // Consent gate: every user must have a legal_acks row before reaching
+  // the app. Email signups land one at signup; OAuth users go through
+  // /consent on their first sign-in. This block is defense-in-depth in
+  // case anyone bypasses /auth/callback.
+  const { data: ackRow } = await supabase
+    .from('legal_acks')
+    .select('id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+  if (!ackRow) redirect('/consent?next=/home')
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-white/5 bg-night/80 backdrop-blur sticky top-0 z-20">

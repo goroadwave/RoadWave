@@ -13,6 +13,18 @@ export default async function OwnerSetupPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/owner/login')
 
+  // Consent gate: first-time OAuth owners must record consent before
+  // provisioning a campground. Defense-in-depth — /auth/callback already
+  // sends them through /consent, but if anyone reaches setup directly
+  // we bounce them with next pointing back here.
+  const { data: ackRow } = await supabase
+    .from('legal_acks')
+    .select('id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+  if (!ackRow) redirect('/consent?next=/owner/setup')
+
   // If they already have a campground, skip setup.
   const { data: existingLink } = await supabase
     .from('campground_admins')
