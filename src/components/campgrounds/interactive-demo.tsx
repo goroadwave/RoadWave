@@ -314,6 +314,21 @@ function PreviewStep({
   onBack: () => void
   onContinue: () => void
 }) {
+  // The Continue + Edit buttons are PURE state transitions — they never
+  // navigate. The whole demo is a no-login-required, no-redirect flow.
+  // preventDefault + stopPropagation here so a future edit that wraps
+  // this component in a parent <form> can't accidentally submit and
+  // cause a page nav.
+  function handleContinue(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault()
+    e.stopPropagation()
+    onContinue()
+  }
+  function handleBack(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault()
+    e.stopPropagation()
+    onBack()
+  }
   return (
     <div className="space-y-4">
       <InteractiveDemoPreview
@@ -325,19 +340,24 @@ function PreviewStep({
       <div className="grid sm:grid-cols-2 gap-2">
         <button
           type="button"
-          onClick={onBack}
+          onClick={handleBack}
           className="rounded-lg border border-white/15 bg-white/5 text-cream px-4 py-2.5 text-sm font-semibold hover:bg-white/10 transition-colors"
         >
           Edit info
         </button>
         <button
           type="button"
-          onClick={onContinue}
+          onClick={handleContinue}
+          aria-label="Continue to share options"
           className="rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
         >
-          Continue <span aria-hidden>→</span>
+          Continue to share <span aria-hidden>→</span>
         </button>
       </div>
+      <p className="text-center text-[11px] text-mist/70">
+        Next: email yourself this preview, or ask us to set it up. No
+        sign-up, no redirect.
+      </p>
     </div>
   )
 }
