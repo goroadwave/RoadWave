@@ -389,3 +389,66 @@ test.describe('Demo lantern', () => {
     }
   })
 })
+
+// ---------------------------------------------------------------------------
+// Mobile interactivity — proves the lantern overlay isn't blocking
+// the demo nav tabs. Regression test for the "non-interactive on mobile"
+// bug.
+// ---------------------------------------------------------------------------
+
+test.describe('Demo mobile nav interactivity', () => {
+  // iPhone-13-ish viewport. Touch is enabled so .tap() actually works.
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true })
+
+  test('Home, Nearby, Waves, Meetups tabs are all tappable on mobile', async ({
+    page,
+  }) => {
+    await page.goto('/demo')
+
+    // Each button toggles screen state via React. The active button gets
+    // bg-flame/15 + text-flame + font-semibold. Walk through the four
+    // requested tabs; assert each becomes active when tapped.
+    for (const label of ['Home', 'Nearby', 'Waves', 'Meetups']) {
+      const btn = page.getByRole('button', {
+        name: new RegExp(`^${label}$`, 'i'),
+      })
+      await expect(btn, `${label} tab should be on the page`).toBeVisible()
+      await btn.tap()
+      // Active state asserts the tap actually changed React state — if
+      // an overlay was eating taps, the class wouldn't toggle.
+      await expect(
+        btn,
+        `${label} should become the active tab after tap`,
+      ).toHaveClass(/bg-flame\/15/)
+    }
+  })
+
+  test('opening then closing the lantern leaves nav tappable', async ({
+    page,
+  }) => {
+    await page.goto('/demo')
+
+    // Open the lantern.
+    await page
+      .getByRole('button', { name: /Your Lantern.*tap to see activity/i })
+      .tap()
+    await expect(
+      page.getByRole('menu', { name: /Demo notifications/i }),
+    ).toBeVisible()
+
+    // Close by tapping the backdrop at a specific point near the bottom
+    // of the viewport, well outside the panel (which sits in the upper
+    // third of the demo's phone-frame layout).
+    await page
+      .getByRole('button', { name: /Close notifications/i })
+      .tap({ position: { x: 50, y: 780 } })
+    await expect(
+      page.getByRole('menu', { name: /Demo notifications/i }),
+    ).toHaveCount(0)
+
+    // Now Nearby should be tappable.
+    const nearby = page.getByRole('button', { name: /^Nearby$/i })
+    await nearby.tap()
+    await expect(nearby).toHaveClass(/bg-flame\/15/)
+  })
+})

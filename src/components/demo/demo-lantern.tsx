@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 // DEMO-ONLY component. The real authenticated app does not import this.
 // Renders a small lantern icon in the demo nav with three hardcoded
 // notifications, an amber glow when there's unread activity, a desktop
-// hover tooltip, and a soft cricket chirp the first time the panel
-// opens. The hardcoded notifications are intentionally fake — never
-// pull from the real database.
+// hover tooltip, and a soft cricket chirp when the panel opens. The
+// hardcoded notifications are intentionally fake — never pull from the
+// real database.
 
 type DemoNotification = {
   id: string
@@ -39,48 +40,62 @@ type Props = {
   onNavigate?: (screen: string) => void
 }
 
+type PanelPos = { top: number; right: number }
+
 export function DemoLantern({ onNavigate }: Props) {
   const [open, setOpen] = useState(false)
   const [readIds, setReadIds] = useState<Set<string>>(new Set())
-  const audioPlayedRef = useRef(false)
+  const [pos, setPos] = useState<PanelPos | null>(null)
+  const [mounted, setMounted] = useState(false)
   const buttonRef = useRef<HTMLButtonElement | null>(null)
-  const panelRef = useRef<HTMLDivElement | null>(null)
 
-  const unread = NOTIFICATIONS.filter((n) => !readIds.has(n.id)).length
+  // Only portal after mount — keeps SSR clean (no document reference at
+  // render time, no hydration mismatch).
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-  // Click-outside dismissal so the panel feels native.
+  // Escape key closes the panel. The visual backdrop handles outside
+  // taps; we don't attach a document-level mousedown listener because
+  // it raced with mobile touch synthesis on iOS Safari and could keep
+  // the panel from closing reliably.
   useEffect(() => {
     if (!open) return
-    function onClick(e: MouseEvent) {
-      const t = e.target as Node | null
-      if (
-        t &&
-        !buttonRef.current?.contains(t) &&
-        !panelRef.current?.contains(t)
-      ) {
-        setOpen(false)
-      }
-    }
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false)
     }
-    window.addEventListener('mousedown', onClick)
     window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('mousedown', onClick)
-      window.removeEventListener('keydown', onKey)
-    }
+    return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  function toggleOpen() {
-    if (!open) {
-      // Play cricket on open. We re-trigger every open since the spec
-      // calls for ambient feedback on the panel opening, but cap the
-      // volume / length so it stays subtle.
-      void playCricketChirp()
-      audioPlayedRef.current = true
+  const unread = NOTIFICATIONS.filter((n) => !readIds.has(n.id)).length
+
+  function openPanel() {
+    const rect = buttonRef.current?.getBoundingClientRect()
+    if (rect) {
+      // Anchor the panel below the button's bottom edge, right-aligned
+      // to the button's right edge. Use viewport coords so the portal-
+      // rendered fixed panel lines up correctly.
+      setPos({
+        top: Math.round(rect.bottom + 8),
+        right: Math.round(window.innerWidth - rect.right),
+      })
+    } else {
+      // Fallback for the rare case where the ref isn't attached yet:
+      // just float in the upper-right corner.
+      setPos({ top: 56, right: 12 })
     }
-    setOpen((o) => !o)
+    void playCricketChirp()
+    setOpen(true)
+  }
+
+  function closePanel() {
+    setOpen(false)
+  }
+
+  function toggleOpen() {
+    if (open) closePanel()
+    else openPanel()
   }
 
   function tapNotification(n: DemoNotification) {
@@ -91,12 +106,12 @@ export function DemoLantern({ onNavigate }: Props) {
     })
     if (n.target && onNavigate) {
       onNavigate(n.target)
-      setOpen(false)
+      closePanel()
     }
   }
 
   return (
-    <div className="relative">
+    <>
       <button
         ref={buttonRef}
         type="button"
@@ -106,66 +121,85 @@ export function DemoLantern({ onNavigate }: Props) {
         aria-haspopup="menu"
         className={
           unread > 0
-            ? 'group inline-flex h-9 w-9 items-center justify-center rounded-full transition-shadow shadow-[0_0_14px_3px_rgba(245,158,11,0.45)] hover:shadow-[0_0_18px_4px_rgba(245,158,11,0.55)]'
-            : 'group inline-flex h-9 w-9 items-center justify-center rounded-full transition-shadow hover:shadow-[0_0_10px_2px_rgba(245,158,11,0.25)]'
+            ? 'group relative inline-flex h-9 w-9 items-center justify-center rounded-full transition-shadow shadow-[0_0_14px_3px_rgba(245,158,11,0.45)] hover:shadow-[0_0_18px_4px_rgba(245,158,11,0.55)]'
+            : 'group relative inline-flex h-9 w-9 items-center justify-center rounded-full transition-shadow hover:shadow-[0_0_10px_2px_rgba(245,158,11,0.25)]'
         }
       >
         <LanternIcon className="h-5 w-5" lit={unread > 0} />
-        {/* Desktop-only hover tooltip. The md: breakpoint keeps it off
-            touch devices where hover doesn't apply. */}
+        {/* Desktop-only hover tooltip. Hidden on touch via the md:
+            breakpoint and by display:none. pointer-events:none so it
+            never intercepts clicks on its own. */}
         <span
           aria-hidden
-          className="hidden md:group-hover:block absolute top-full mt-2 right-0 whitespace-nowrap rounded-md border border-flame/40 bg-night px-2 py-1 text-[10px] font-medium text-cream pointer-events-none z-50"
+          className="hidden md:group-hover:block absolute top-full mt-2 right-0 whitespace-nowrap rounded-md border border-flame/40 bg-night px-2 py-1 text-[10px] font-medium text-cream pointer-events-none z-10"
         >
           Your Lantern — tap to see activity
         </span>
       </button>
 
-      {open && (
-        <div
-          ref={panelRef}
-          role="menu"
-          aria-label="Demo notifications"
-          className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-card p-2 shadow-2xl shadow-black/60 z-50"
-        >
-          <p className="px-2 pt-1.5 pb-2 text-[10px] uppercase tracking-[0.2em] text-flame">
-            Activity
-          </p>
-          <ul className="space-y-1">
-            {NOTIFICATIONS.map((n) => {
-              const read = readIds.has(n.id)
-              return (
-                <li key={n.id}>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => tapNotification(n)}
-                    className={
-                      read
-                        ? 'w-full text-left rounded-lg px-3 py-2 text-sm text-mist hover:bg-white/[0.03] transition-colors'
-                        : 'w-full text-left rounded-lg px-3 py-2 text-sm text-cream hover:bg-flame/10 transition-colors'
-                    }
-                  >
-                    <span className="flex items-start gap-2">
-                      {!read && (
-                        <span
-                          aria-hidden
-                          className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-flame"
-                        />
-                      )}
-                      <span className={read ? 'opacity-70' : ''}>{n.text}</span>
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-          <p className="px-3 pt-2 pb-1 text-[10px] text-mist/60">
-            Demo activity — not from your real account.
-          </p>
-        </div>
-      )}
-    </div>
+      {/* When closed, render NOTHING outside the button. No backdrop,
+          no panel, no hidden overlay. When open, portal the backdrop +
+          panel to document.body so they sit at the top of the stacking
+          order and can't get trapped behind the demo's phone-frame
+          chrome or any other positioning context. */}
+      {mounted && open && pos
+        ? createPortal(
+            <>
+              <button
+                type="button"
+                aria-label="Close notifications"
+                onClick={closePanel}
+                className="fixed inset-0 z-[100] cursor-default bg-transparent"
+              />
+              <div
+                role="menu"
+                aria-label="Demo notifications"
+                style={{ top: pos.top, right: pos.right }}
+                className="fixed w-72 max-w-[calc(100vw-1.5rem)] z-[101] rounded-2xl border border-white/10 bg-card p-2 shadow-2xl shadow-black/60"
+              >
+                <p className="px-2 pt-1.5 pb-2 text-[10px] uppercase tracking-[0.2em] text-flame">
+                  Activity
+                </p>
+                <ul className="space-y-1">
+                  {NOTIFICATIONS.map((n) => {
+                    const read = readIds.has(n.id)
+                    return (
+                      <li key={n.id}>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => tapNotification(n)}
+                          className={
+                            read
+                              ? 'w-full text-left rounded-lg px-3 py-2 text-sm text-mist hover:bg-white/[0.03] transition-colors'
+                              : 'w-full text-left rounded-lg px-3 py-2 text-sm text-cream hover:bg-flame/10 transition-colors'
+                          }
+                        >
+                          <span className="flex items-start gap-2">
+                            {!read && (
+                              <span
+                                aria-hidden
+                                className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-flame"
+                              />
+                            )}
+                            <span className={read ? 'opacity-70' : ''}>
+                              {n.text}
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <p className="px-3 pt-2 pb-1 text-[10px] text-mist/60">
+                  Demo activity — not from your real account.
+                </p>
+              </div>
+            </>,
+            document.body,
+          )
+        : null}
+    </>
   )
 }
 
@@ -188,7 +222,6 @@ function LanternIcon({
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden
     >
-      {/* Top loop */}
       <path
         d="M12 3c-1.5 0-2.5 1-2.5 2"
         stroke={bodyStroke}
@@ -201,7 +234,6 @@ function LanternIcon({
         strokeWidth="1.5"
         strokeLinecap="round"
       />
-      {/* Cap */}
       <rect
         x="8"
         y="5"
@@ -211,7 +243,6 @@ function LanternIcon({
         stroke={bodyStroke}
         strokeWidth="1.3"
       />
-      {/* Body */}
       <rect
         x="7"
         y="7"
@@ -221,12 +252,10 @@ function LanternIcon({
         stroke={bodyStroke}
         strokeWidth="1.3"
       />
-      {/* Inner flame */}
       <path
         d="M12 10c-1.2 1-1.6 2.2-1 3.3.4.7 1.1 1 1 2-.7-.3-1.2-.9-1.4-1.7-.6.7-.7 1.6-.2 2.5C11 16.7 11.5 17 12 17s1-.3 1.6-1c.5-.9.4-1.8-.2-2.5-.2.8-.7 1.4-1.4 1.7-.1-1 .6-1.3 1-2 .6-1.1.2-2.3-1-3.2z"
         fill={flameFill}
       />
-      {/* Base */}
       <rect
         x="8.5"
         y="18"
@@ -253,14 +282,12 @@ async function playCricketChirp() {
         .webkitAudioContext
     if (!Ctor) return
     const ctx = new Ctor()
-    // iOS: resume context on user-gesture path.
     if (ctx.state === 'suspended') {
       await ctx.resume().catch(() => {})
     }
     const now = ctx.currentTime
     chirp(ctx, now, 4500, 5500, 0.04)
     chirp(ctx, now + 0.18, 4500, 5500, 0.035)
-    // Schedule a graceful close so we don't leak contexts.
     window.setTimeout(() => ctx.close().catch(() => {}), 800)
   } catch {
     // Audio policy denied — silent fail.
