@@ -26,12 +26,12 @@ export default async function HomePage() {
     .eq('id', user!.id)
     .single()
 
-  // Admins skip the profile-setup wall entirely and land in the
-  // founder dashboard. They typically don't need a display_name to
-  // operate the admin tooling.
-  if (profile?.is_admin) redirect('/admin')
-
-  if (!profile?.display_name) redirect('/profile/setup')
+  // Admins are exempt from the profile-setup wall — they typically
+  // don't need a display_name to operate the founder dashboard.
+  // They still land on /home normally; the Admin link in the header
+  // is how they navigate to /admin.
+  const isAdmin = profile?.is_admin === true
+  if (!isAdmin && !profile?.display_name) redirect('/profile/setup')
 
   const { count: interestsCount } = await supabase
     .from('profile_interests')
@@ -94,7 +94,9 @@ export default async function HomePage() {
     activeBulletin = data ?? null
   }
 
-  const firstName = profile.display_name.split(/\s+/)[0] ?? ''
+  const greetingName = profile.display_name ?? profile.username
+  const firstName =
+    (profile.display_name ?? '').split(/\s+/)[0] || profile.username
 
   return (
     <div className="space-y-7">
@@ -119,7 +121,7 @@ export default async function HomePage() {
       <header className="space-y-2">
         <Eyebrow>@{profile.username}</Eyebrow>
         <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream leading-[1.05]">
-          Hey, {profile.display_name}.
+          Hey, {greetingName}.
         </h1>
         <div className="space-y-1 pt-1">
           <p className="font-serif italic text-flame text-xl sm:text-2xl leading-snug">
