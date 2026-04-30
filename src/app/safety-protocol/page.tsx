@@ -62,10 +62,10 @@ export default function SafetyProtocolPage() {
               The in-app <strong className="text-cream">Report</strong> button
               and{' '}
               <a
-                href="mailto:hello@getroadwave.com"
+                href="mailto:safety@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
               >
-                hello@getroadwave.com
+                safety@getroadwave.com
               </a>{' '}
               are the right channels for:
             </p>
@@ -160,10 +160,10 @@ export default function SafetyProtocolPage() {
             <p>
               For trust and safety matters, email{' '}
               <a
-                href="mailto:hello@getroadwave.com"
+                href="mailto:safety@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
               >
-                hello@getroadwave.com
+                safety@getroadwave.com
               </a>{' '}
               with &ldquo;Trust &amp; Safety&rdquo; in the subject line. Real
               human, real reply.

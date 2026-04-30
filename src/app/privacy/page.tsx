@@ -42,8 +42,8 @@ export default function PrivacyPolicyPage() {
             <p>
               We collect the minimum we need to make a wave work. We never sell
               your data. We never share your exact location with other campers.
-              You can delete your account and everything tied to it whenever you
-              want.
+              You can ask us to delete your account and everything tied to
+              it at any time — see &ldquo;Deleting your data&rdquo; below.
             </p>
           </Section>
 
@@ -105,27 +105,25 @@ export default function PrivacyPolicyPage() {
             <p>
               Check-ins automatically expire 24 hours after you scan in. Wave
               history and crossed paths persist as long as your account does —
-              that&apos;s the whole point of remembering people you met. Delete
-              your account and we delete everything within 30 days.
+              that&apos;s the whole point of remembering people you met. See
+              &ldquo;Deleting your data&rdquo; below for how to remove your
+              account.
             </p>
           </Section>
 
           <Section title="Deleting your data">
             <p>
-              Email{' '}
+              To delete your RoadWave account and data, email{' '}
               <a
                 href="mailto:hello@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
               >
                 hello@getroadwave.com
               </a>{' '}
-              from the address tied to your account and ask. We&apos;ll
-              confirm and delete within 30 days. We&apos;re a small team
-              — we read every email.
-            </p>
-            <p>
-              An in-app delete button is on the roadmap. In the meantime, email
-              is the fastest path.
+              from the email address tied to your account and request
+              deletion. We&apos;ll confirm the request and delete your
+              account data within 7 business days. An in-app delete button
+              is planned.
             </p>
           </Section>
 
@@ -158,14 +156,22 @@ export default function PrivacyPolicyPage() {
 
           <Section title="Get in touch">
             <p>
-              Anything unclear? Concerned about something specific? Email{' '}
+              For privacy concerns, suspected data misuse, or anything
+              safety- or legal-related, email{' '}
+              <a
+                href="mailto:safety@getroadwave.com"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                safety@getroadwave.com
+              </a>
+              . For general questions about this policy, email{' '}
               <a
                 href="mailto:hello@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
               >
                 hello@getroadwave.com
               </a>
-              . Real human, real reply.
+              . Real human, real reply either way.
             </p>
           </Section>
         </article>

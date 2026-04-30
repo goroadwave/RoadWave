@@ -151,12 +151,23 @@ export default function PartnerTermsPage() {
 
           <Section title="Contact">
             <p>
-              Questions, concerns, or to report a partner issue, email{' '}
+              General questions about these Partner Terms — email{' '}
               <a
                 href="mailto:hello@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
               >
                 hello@getroadwave.com
+              </a>
+              .
+            </p>
+            <p>
+              To report a partner issue, suspected misuse, or anything
+              safety- or legal-related, email{' '}
+              <a
+                href="mailto:safety@getroadwave.com"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                safety@getroadwave.com
               </a>
               . A real person reads every message.
             </p>

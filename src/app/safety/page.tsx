@@ -52,10 +52,10 @@ export default function SafetyPage() {
               to use RoadWave. We do not knowingly allow anyone under 18 on the
               platform. If you believe a minor has signed up, email{' '}
               <a
-                href="mailto:hello@getroadwave.com"
+                href="mailto:safety@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
               >
-                hello@getroadwave.com
+                safety@getroadwave.com
               </a>{' '}
               and we&apos;ll remove the account.
             </p>
@@ -142,39 +142,29 @@ export default function SafetyPage() {
 
           <Section title="Data deletion request">
             <p>
-              You can permanently delete your account and every piece of data
-              tied to it from{' '}
-              <Link
-                href="/settings/delete-account"
-                className="text-flame underline-offset-2 hover:underline"
-              >
-                Settings → Delete my account
-              </Link>
-              . You&apos;ll get an email receipt and the deletion is logged
-              for compliance.
-            </p>
-            <p>
-              Prefer a manual request, can&apos;t sign in, or need help with
-              someone else&apos;s account (a deceased family member, a
-              suspected impersonator, etc.)? Email{' '}
-              <a
-                href="mailto:safety@getroadwave.com"
-                className="text-flame underline-offset-2 hover:underline"
-              >
-                safety@getroadwave.com
-              </a>{' '}
-              with the details and we&apos;ll handle it.
-            </p>
-          </Section>
-
-          <Section title="Questions or concerns">
-            <p>
-              Email{' '}
+              To delete your RoadWave account and data, email{' '}
               <a
                 href="mailto:hello@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
               >
                 hello@getroadwave.com
+              </a>{' '}
+              from the email address tied to your account and request
+              deletion. We&apos;ll confirm the request and delete your
+              account data within 7 business days. An in-app delete button
+              is planned.
+            </p>
+          </Section>
+
+          <Section title="Questions or concerns">
+            <p>
+              Safety reports, legal requests, account issues, or urgent
+              concerns:{' '}
+              <a
+                href="mailto:safety@getroadwave.com"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                safety@getroadwave.com
               </a>
               . A real person reads every message.
             </p>

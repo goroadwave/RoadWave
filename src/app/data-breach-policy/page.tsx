@@ -53,7 +53,7 @@ export default function DataBreachPolicyPage() {
             <Ordered
               items={[
                 'Anyone at RoadWave (or a vendor, researcher, or user) who suspects a security incident reports it to safety@getroadwave.com or directly to the founder.',
-                'As soon as reasonably practicable after receipt, the incident is logged with a severity level — Low, Medium, High, or Critical — based on what data may be affected and whether the issue is ongoing.',
+                'We aim to acknowledge and triage security reports as soon as reasonably practical during working hours. For serious incidents, we begin containment as quickly as possible once discovered. The incident is logged with a severity level — Low, Medium, High, or Critical — based on what data may be affected and whether the issue is ongoing.',
                 'If the report is Medium or above, the incident is treated as Active until ruled out. We do not wait for confirmation to start containment.',
               ]}
             />
@@ -139,7 +139,7 @@ export default function DataBreachPolicyPage() {
             <p>Concretely:</p>
             <Bullets
               items={[
-                'Notification is sent to the email address on file for each affected user, from hello@getroadwave.com.',
+                'Notification is sent to the email address on file for each affected user, from safety@getroadwave.com.',
                 'The notification describes — in plain English — what data was involved, when the incident happened, what we believe the cause was, what we have done to remediate, and what (if anything) the user should do.',
                 'Where required by law, regulators are notified within statutory timelines (e.g. GDPR Article 33 — within 72 hours of becoming aware where the incident is likely to result in a risk to rights and freedoms).',
                 'Public disclosure is made on the RoadWave site for incidents affecting a significant portion of the user base, and where doing so does not interfere with an ongoing law enforcement investigation.',
@@ -173,8 +173,10 @@ export default function DataBreachPolicyPage() {
               >
                 safety@getroadwave.com
               </a>{' '}
-              with as much detail as you can share. We acknowledge receipt
-              and triage as soon as reasonably practicable.
+              with as much detail as you can share. We aim to acknowledge
+              and triage security reports as soon as reasonably practical
+              during working hours. For serious incidents, we begin
+              containment as quickly as possible once discovered.
             </p>
             <p className="text-xs text-mist/70 pt-2">
               See also: our{' '}

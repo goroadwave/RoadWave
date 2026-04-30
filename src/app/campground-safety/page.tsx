@@ -130,7 +130,7 @@ export default function CampgroundSafetyPage() {
               items={[
                 'Emergencies on site — 911, then your campground staff.',
                 "Guest disputes that don't involve RoadWave use — your existing process.",
-                "A guest's RoadWave account behavior — the in-app report button or hello@getroadwave.com.",
+                "A guest's RoadWave account behavior — the in-app report button or safety@getroadwave.com.",
                 'Anything else (questions, concerns, partnership ideas) — hello@getroadwave.com.',
               ]}
             />

@@ -28,12 +28,12 @@ export default function GoodbyePage() {
           emailed a receipt to the address you had on file.
         </p>
         <p className="text-sm text-mist leading-relaxed">
-          Questions or concerns? Write to{' '}
+          Concerns about this deletion, or didn&apos;t request it? Write to{' '}
           <a
-            href="mailto:hello@getroadwave.com"
+            href="mailto:safety@getroadwave.com"
             className="text-flame underline-offset-2 hover:underline"
           >
-            hello@getroadwave.com
+            safety@getroadwave.com
           </a>
           .
         </p>

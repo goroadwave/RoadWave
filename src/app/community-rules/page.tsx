@@ -102,10 +102,10 @@ export default function CommunityRulesPage() {
               Use the in-app <strong className="text-cream">Report</strong>{' '}
               button on a profile or message, or email{' '}
               <a
-                href="mailto:hello@getroadwave.com"
+                href="mailto:safety@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
               >
-                hello@getroadwave.com
+                safety@getroadwave.com
               </a>
               . Reports are reviewed as part of RoadWave&apos;s trust and safety
               process — see our{' '}
