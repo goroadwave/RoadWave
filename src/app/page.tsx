@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { CampgroundRequestForm } from '@/components/campgrounds/request-form'
+import { HomePhonePreview } from '@/components/home/home-phone-preview'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Logo } from '@/components/ui/logo'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -86,61 +87,100 @@ export default async function RootPage() {
       </header>
 
       <main>
-        {/* Hero */}
-        <section className="px-4 pt-4 pb-3 sm:pt-16 sm:pb-10">
-          <div className="mx-auto max-w-2xl text-center space-y-3 sm:space-y-5">
-            <Eyebrow>Private campground check-ins for RVers</Eyebrow>
-            <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
-              Meet friendly campers at your campground without making it weird.
-            </h1>
-            <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-              RoadWave helps campers connect around shared interests through
-              private, temporary campground check-ins.
-            </p>
-            <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-flame font-semibold">
-              No exact site numbers. No public group chats. No pressure.
+        {/* Hero — single dominant CTA + secondary, with phone preview
+            above the fold. The previous two-path cards are gone since
+            their CTAs would compete with the hero buttons. */}
+        <section className="px-4 pt-6 pb-10 sm:pt-16 sm:pb-14">
+          <div className="mx-auto max-w-5xl grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:gap-12 items-center">
+            <div className="space-y-4 sm:space-y-5 text-center lg:text-left">
+              <Eyebrow>Private campground check-ins for RVers</Eyebrow>
+              <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
+                Meet friendly campers at your campground without making it weird.
+              </h1>
+              <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0">
+                RoadWave helps campers connect around shared interests through
+                private, temporary campground check-ins.
+              </p>
+              <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-flame font-semibold">
+                No exact site numbers. No public group chats. No pressure.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-center lg:justify-start">
+                <Link
+                  href="/demo"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 text-base font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
+                >
+                  Try the Demo <span aria-hidden>👋</span>
+                </Link>
+                <Link
+                  href="/campgrounds"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-cream px-6 py-3 text-base font-medium hover:bg-white/10 hover:border-flame/40 transition-colors"
+                >
+                  I Run a Campground
+                </Link>
+              </div>
+            </div>
+            <div className="lg:pl-4">
+              <HomePhonePreview />
+            </div>
+          </div>
+        </section>
+
+        {/* What makes RoadWave different — Facebook differentiator. */}
+        <section className="px-4 pb-10 sm:pb-12 border-t border-white/5 pt-8 sm:pt-10">
+          <div className="mx-auto max-w-3xl">
+            <p className="rounded-2xl border border-flame/30 bg-flame/[0.05] px-5 py-4 sm:px-6 sm:py-5 text-center text-cream text-base sm:text-lg leading-relaxed">
+              Unlike Facebook groups or campground-wide chats, RoadWave is
+              temporary, campground-specific, privacy-controlled, and built
+              around mutual interest before messaging.
             </p>
           </div>
         </section>
 
-        {/* Two path cards */}
+        {/* Quieter secondary entry-point row — small audience cards, lower
+            visual weight than the hero CTAs. Both link to the same destinations
+            as the hero buttons; this gives a second take-action moment for
+            people who scrolled past the hero without clicking. */}
         <section className="px-4 pb-10 sm:pb-14">
-          <div className="mx-auto max-w-4xl grid gap-4 sm:grid-cols-2">
-            <article className="flex flex-col rounded-2xl border border-white/5 bg-card p-5 sm:p-7 shadow-lg shadow-black/20">
-              <div className="text-5xl mb-3" aria-hidden>
+          <div className="mx-auto max-w-3xl grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/demo"
+              className="group flex items-start gap-3 rounded-xl border border-white/10 bg-card px-4 py-3 hover:border-flame/40 hover:bg-card/80 transition-colors"
+            >
+              <span className="text-2xl shrink-0" aria-hidden>
                 🚐
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-cream leading-tight">
+                  I&apos;m an RVer
+                </p>
+                <p className="text-xs text-mist leading-snug mt-0.5">
+                  Find nearby campers open to a wave or a quick hello.
+                </p>
+                <p className="mt-1.5 text-[11px] font-semibold text-flame">
+                  Try the demo →
+                </p>
               </div>
-              <h2 className="font-display text-2xl font-extrabold text-cream leading-tight mb-2">
-                I&apos;m an RVer
-              </h2>
-              <p className="text-mist text-sm leading-relaxed flex-1">
-                Find nearby campers open to a wave, activity, or quick hello.
-              </p>
-              <Link
-                href="/demo"
-                className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
-              >
-                Try the RVer Demo <span aria-hidden>👋</span>
-              </Link>
-            </article>
-
-            <article className="flex flex-col rounded-2xl border border-white/5 bg-card p-5 sm:p-7 shadow-lg shadow-black/20">
-              <div className="text-5xl mb-3" aria-hidden>
+            </Link>
+            <Link
+              href="/campgrounds"
+              className="group flex items-start gap-3 rounded-xl border border-white/10 bg-card px-4 py-3 hover:border-flame/40 hover:bg-card/80 transition-colors"
+            >
+              <span className="text-2xl shrink-0" aria-hidden>
                 🏕️
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-cream leading-tight">
+                  I run a campground
+                </p>
+                <p className="text-xs text-mist leading-snug mt-0.5">
+                  Offer guests a private QR-code amenity that helps them
+                  connect safely.
+                </p>
+                <p className="mt-1.5 text-[11px] font-semibold text-flame">
+                  See how it works →
+                </p>
               </div>
-              <h2 className="font-display text-2xl font-extrabold text-cream leading-tight mb-2">
-                I run a campground
-              </h2>
-              <p className="text-mist text-sm leading-relaxed flex-1">
-                Offer guests a private QR-code amenity that helps them connect safely.
-              </p>
-              <Link
-                href="/campgrounds"
-                className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-cream px-4 py-2.5 text-sm font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors"
-              >
-                See Campground Demo →
-              </Link>
-            </article>
+            </Link>
           </div>
         </section>
 
@@ -244,9 +284,9 @@ export default async function RootPage() {
         <section className="px-4 py-14 border-t border-white/5">
           <div className="mx-auto max-w-4xl">
             <div className="text-center mb-8 space-y-2">
-              <Eyebrow>RoadWave Friendly</Eyebrow>
+              <Eyebrow>Example RoadWave-Friendly Campground Setup</Eyebrow>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                Example RoadWave-friendly campgrounds.
+                Example RoadWave-Friendly Campground Setup.
               </h2>
               <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
                 See how participating campgrounds could appear once RoadWave is live.

@@ -511,3 +511,111 @@ test.describe('Demo mobile nav interactivity', () => {
     await expect(nearby).toHaveClass(/bg-flame\/15/)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Homepage spec — hero CTAs, phone preview, FB differentiator, label,
+// signup reassurance
+// ---------------------------------------------------------------------------
+
+test.describe('Homepage spec', () => {
+  test('hero shows Try the Demo as the dominant primary + I Run a Campground secondary', async ({
+    page,
+  }) => {
+    await page.goto('/')
+
+    // Both buttons exist + link to the right routes. .first() targets
+    // the hero CTAs specifically — there's also a quieter secondary
+    // row of audience cards lower on the page that uses similar copy.
+    const tryDemo = page.getByRole('link', { name: /Try the Demo/i }).first()
+    const iRun = page
+      .getByRole('link', { name: /I Run a Campground/i })
+      .first()
+    await expect(tryDemo).toBeVisible()
+    await expect(iRun).toBeVisible()
+    await expect(tryDemo).toHaveAttribute('href', '/demo')
+    await expect(iRun).toHaveAttribute('href', '/campgrounds')
+
+    // The Try the Demo button is the flame-bg primary; secondary uses
+    // the bordered transparent style. Verifies visual hierarchy via
+    // class-name presence so a future refactor can't silently flip them.
+    await expect(tryDemo).toHaveClass(/bg-flame/)
+    await expect(iRun).not.toHaveClass(/bg-flame /)
+    await expect(iRun).toHaveClass(/border-white/)
+  })
+
+  test('quieter secondary audience cards exist below the hero', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    // Audience cards link to the same destinations as the hero CTAs.
+    // Use .last() to target the secondary card (the hero CTA matches
+    // first by DOM order). Both audience cards must be reachable links.
+    const rverCard = page.getByRole('link', { name: /I'm an RVer/i }).last()
+    const ownerCard = page
+      .getByRole('link', { name: /I run a campground/i })
+      .last()
+    await expect(rverCard).toBeVisible()
+    await expect(rverCard).toHaveAttribute('href', '/demo')
+    await expect(ownerCard).toBeVisible()
+    await expect(ownerCard).toHaveAttribute('href', '/campgrounds')
+
+    // Visual quietness assertion — the cards must NOT use the flame
+    // background that the hero CTA uses, so they read as secondary.
+    await expect(rverCard).not.toHaveClass(/bg-flame /)
+    await expect(ownerCard).not.toHaveClass(/bg-flame /)
+  })
+
+  test('homepage phone preview is above the fold with the spec content', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    // Hardcoded values per the spec.
+    await expect(page.getByText('Riverbend RV Park').first()).toBeVisible()
+    await expect(page.getByText(/Checked in today/i).first()).toBeVisible()
+    await expect(page.getByText(/12/).first()).toBeVisible()
+    await expect(page.getByText(/Visible as/i).first()).toBeVisible()
+    await expect(
+      page.getByText('Open to friendly hellos').first(),
+    ).toBeVisible()
+    await expect(page.getByText(/Nearby interests/i).first()).toBeVisible()
+    for (const interest of ['walking', 'cards', 'pickleball', 'campfire']) {
+      await expect(page.getByText(interest, { exact: true }).first()).toBeVisible()
+    }
+    await expect(
+      page.getByText(/^Wave 👋$/, { exact: false }).first(),
+    ).toBeVisible()
+  })
+
+  test('homepage shows the Facebook differentiator line near the top', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await expect(
+      page.getByText(
+        'Unlike Facebook groups or campground-wide chats, RoadWave is temporary, campground-specific, privacy-controlled, and built around mutual interest before messaging.',
+      ),
+    ).toBeVisible()
+  })
+
+  test('example-campground section uses the new RoadWave-Friendly label', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await expect(
+      page.getByText('Example RoadWave-Friendly Campground Setup', {
+        exact: false,
+      }).first(),
+    ).toBeVisible()
+  })
+
+  test('signup page shows the privacy reassurance line above the form', async ({
+    page,
+  }) => {
+    await page.goto('/signup')
+    await expect(
+      page.getByText(
+        'RoadWave is privacy-first. We do not require exact site numbers. Your check-in is temporary. You control visibility. RoadWave is 18+ only.',
+      ),
+    ).toBeVisible()
+  })
+})

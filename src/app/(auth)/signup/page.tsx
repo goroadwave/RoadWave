@@ -18,6 +18,11 @@ export default async function SignupPage() {
         subtitle="Connections without the surveillance."
         compact
       />
+      <p className="rounded-xl border border-flame/25 bg-flame/[0.05] px-4 py-3 text-sm text-cream/90 leading-relaxed">
+        RoadWave is privacy-first. We do not require exact site numbers.
+        Your check-in is temporary. You control visibility. RoadWave is 18+
+        only.
+      </p>
       <SignupCard />
     </div>
   )
