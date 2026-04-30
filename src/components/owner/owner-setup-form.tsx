@@ -40,21 +40,16 @@ export function OwnerSetupForm({ initialDisplayName = '', ownerEmail = '' }: Pro
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="City">
-          <input name="city" className={inputCls} placeholder="Asheville" />
-        </Field>
-        <Field label="State / region">
-          <input name="region" className={inputCls} placeholder="NC" />
-        </Field>
-      </div>
-
-      <Field label="Website" hint="Optional. Full URL.">
+      <Field label="Website" hint="Optional.">
         <input
           name="website"
-          type="url"
+          type="text"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          maxLength={300}
           className={inputCls}
-          placeholder="https://oakhollow.example"
+          placeholder="www.yourcampground.com"
         />
       </Field>
 
@@ -69,6 +64,15 @@ export function OwnerSetupForm({ initialDisplayName = '', ownerEmail = '' }: Pro
           placeholder="(407) 555-0100"
         />
       </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="City">
+          <input name="city" className={inputCls} placeholder="Asheville" />
+        </Field>
+        <Field label="State / region">
+          <input name="region" className={inputCls} placeholder="NC" />
+        </Field>
+      </div>
 
       {ownerEmail && (
         <p className="text-xs text-mist">

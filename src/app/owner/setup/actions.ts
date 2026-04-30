@@ -21,7 +21,7 @@ const schema = z.object({
   region: z.string().max(80).optional().or(z.literal('')),
   website: z
     .string()
-    .url({ message: 'Website must be a full URL (https://…)' })
+    .url({ message: 'Enter a valid website (e.g. www.yourcampground.com).' })
     .or(z.literal('')),
   phone: z.string().max(60).optional().or(z.literal('')),
   accept_partner_terms: z.boolean().refine((v) => v === true, {
@@ -61,12 +61,22 @@ export async function ownerSetupAction(
   _prev: OwnerSetupState,
   formData: FormData,
 ): Promise<OwnerSetupState> {
+  // Normalize scheme-less website input ("www.yourcampground.com") by
+  // prepending https:// before zod's .url() check. The form invites
+  // scheme-less entry, so we have to be tolerant on the server.
+  const websiteRaw = String(formData.get('website') ?? '').trim()
+  const websiteNormalized = websiteRaw
+    ? /^https?:\/\//i.test(websiteRaw)
+      ? websiteRaw
+      : `https://${websiteRaw}`
+    : ''
+
   const parsed = schema.safeParse({
     display_name: formData.get('display_name'),
     campground_name: formData.get('campground_name'),
     city: formData.get('city') ?? '',
     region: formData.get('region') ?? '',
-    website: formData.get('website') ?? '',
+    website: websiteNormalized,
     phone: formData.get('phone') ?? '',
     accept_partner_terms: formData.get('accept_partner_terms') === 'on',
     confirm_18_and_authorized:
