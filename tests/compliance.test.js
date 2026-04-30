@@ -1143,6 +1143,76 @@ test.describe('Wave 5-step flow — schema + structure', () => {
     ).toBeVisible()
   })
 
+  test('demo wires sessionStorage cleanup, bfcache reset, and inactivity timer', async () => {
+    const fs = await import('node:fs/promises')
+    const src = await fs.readFile('src/pages/demo.jsx', 'utf8')
+    // Defensive sessionStorage cleanup on mount.
+    expect(src).toContain("'roadwave:demo:'")
+    expect(src).toContain('sessionStorage.removeItem')
+    // bfcache (back button) reset listener.
+    expect(src).toContain("'pageshow'")
+    expect(src).toContain('e.persisted')
+    // 10-minute inactivity timer.
+    expect(src).toContain('10 * 60 * 1000')
+    // No localStorage usage anywhere in the demo.
+    expect(src).not.toContain('localStorage')
+  })
+
+  test('demo bfcache pageshow resets the visitor to Step 1', async ({
+    page,
+  }) => {
+    await page.goto('/demo')
+    // Drive the visitor partway through the flow: switch to Nearby and
+    // wave at the first camper.
+    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Wave$/ }).first().click()
+    await expect(
+      page.getByText(/Waved.*waiting/i).first(),
+    ).toBeVisible({ timeout: 6000 })
+    // Simulate a back-forward cache restore by firing the same event
+    // the browser dispatches on bfcache restore.
+    await page.evaluate(() => {
+      window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))
+    })
+    // After the reset, the home screen ("Welcome to Riverbend RV Park")
+    // is visible again.
+    await expect(
+      page.getByRole('heading', { name: /Welcome to Riverbend RV Park/i }),
+    ).toBeVisible({ timeout: 6000 })
+  })
+
+  test('demo Reset demo button clears interaction and returns to defaults', async ({
+    page,
+  }) => {
+    await page.goto('/demo')
+    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Wave$/ }).first().click()
+    // Tap the bottom-of-page Reset demo button.
+    await page.getByRole('button', { name: /^Reset demo$/ }).click()
+    // Default tab is Home.
+    await expect(
+      page.getByRole('heading', { name: /Welcome to Riverbend RV Park/i }),
+    ).toBeVisible({ timeout: 6000 })
+  })
+
+  test('demo lantern shows 4 unread notifications on a fresh load', async ({
+    page,
+  }) => {
+    await page.goto('/demo')
+    const lanternBtn = page.getByRole('button', {
+      name: /Your Lantern — tap to see activity/i,
+    })
+    // The button carries the unread count via a data attribute on the
+    // demo's amber-glow class. Open the panel and count unread dots.
+    await lanternBtn.click()
+    const panel = page.getByRole('menu', { name: /Demo notifications/i })
+    await expect(panel).toBeVisible()
+    // Each unread item renders a flame-colored dot (mt-1.5 h-1.5 w-1.5
+    // rounded-full bg-flame). Count them inside the panel.
+    const dots = panel.locator('span.bg-flame.rounded-full')
+    await expect(dots).toHaveCount(4)
+  })
+
   test('lantern panel stays within viewport on mobile', async ({ browser }) => {
     // iPhone SE-ish viewport: 375x667. The live lantern requires
     // auth, so this assertion targets the demo lantern, which uses

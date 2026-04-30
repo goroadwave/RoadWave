@@ -301,9 +301,65 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
   // button — and the in-app Exit/Restart action — increments it.
   const [demoKey, setDemoKey] = useState(0)
 
+  // resetDemo is invoked from four places: the manual Reset button, the
+  // in-chat Restart menu item, the bfcache `pageshow` listener (back
+  // button), and the 10-minute inactivity timer. Bumping demoKey
+  // remounts GuestApp with default React state; we also clear the
+  // bottom CTA dismissal so each fresh start looks identical.
   function resetDemo() {
     setDemoKey((k) => k + 1)
+    setBannerDismissed(false)
   }
+
+  // Defensive: wipe any sessionStorage keys we (or a previous build)
+  // might have written. Demo state lives entirely in React memory; this
+  // guarantees no stray persisted bit can carry over between visits.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const toRemove = []
+      for (let i = 0; i < window.sessionStorage.length; i++) {
+        const key = window.sessionStorage.key(i)
+        if (key && key.startsWith('roadwave:demo:')) toRemove.push(key)
+      }
+      for (const key of toRemove) window.sessionStorage.removeItem(key)
+    } catch {
+      // Storage blocked (private mode etc.) — no-op.
+    }
+  }, [])
+
+  // Back-forward cache: when the visitor leaves /demo and hits the back
+  // button, modern browsers can restore the page from bfcache with
+  // React state intact. The `pageshow` event with `persisted === true`
+  // is the bfcache-restore signal — force a reset whenever it fires so
+  // returning to /demo always lands on Step 1.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    function onPageShow(e) {
+      if (e.persisted) resetDemo()
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [])
+
+  // 10-minute inactivity timeout: any pointer/touch/key/scroll
+  // interaction resets a rolling timer. When the timer fires we silently
+  // reset the demo in place — no redirect, no alert.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const TEN_MIN = 10 * 60 * 1000
+    let timer = window.setTimeout(resetDemo, TEN_MIN)
+    function bump() {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(resetDemo, TEN_MIN)
+    }
+    const events = ['pointerdown', 'keydown', 'touchstart', 'scroll']
+    for (const ev of events) window.addEventListener(ev, bump, { passive: true })
+    return () => {
+      window.clearTimeout(timer)
+      for (const ev of events) window.removeEventListener(ev, bump)
+    }
+  }, [])
 
   return (
     <>
