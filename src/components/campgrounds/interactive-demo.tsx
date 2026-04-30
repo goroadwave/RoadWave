@@ -252,11 +252,14 @@ function InputStep({
       <Field label="Website" hint="Optional.">
         <input
           name="website"
-          type="url"
+          type="text"
           value={input.website}
           onChange={(e) => onChange({ website: e.target.value })}
           maxLength={300}
-          placeholder="https://oakhollow.example"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="www.yourcampground.com"
           className={inputCls}
         />
       </Field>

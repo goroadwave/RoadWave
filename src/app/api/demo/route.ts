@@ -32,11 +32,20 @@ export async function POST(request: NextRequest) {
   }
 
   const campgroundName = stringOrEmpty(form.get('campground_name')).trim()
-  const website = stringOrEmpty(form.get('website')).trim()
+  const websiteRaw = stringOrEmpty(form.get('website')).trim()
   const city = stringOrEmpty(form.get('city')).trim()
   const region = stringOrEmpty(form.get('region')).trim()
   const email = stringOrEmpty(form.get('email')).trim()
   const logo = form.get('logo')
+
+  // The form invites scheme-less input (e.g. "www.yourcampground.com"),
+  // so prepend https:// before validating + storing. Keeps the row
+  // normalized while letting users type the URL the way they read it.
+  const website = websiteRaw
+    ? /^https?:\/\//i.test(websiteRaw)
+      ? websiteRaw
+      : `https://${websiteRaw}`
+    : ''
 
   if (!campgroundName) {
     return new NextResponse('Campground name is required.', { status: 400 })
@@ -45,7 +54,10 @@ export async function POST(request: NextRequest) {
     return new NextResponse('Campground name is too long.', { status: 400 })
   }
   if (website && !URL_RE.test(website)) {
-    return new NextResponse('Website must be a full URL.', { status: 400 })
+    return new NextResponse(
+      'Enter a valid website (e.g. www.yourcampground.com).',
+      { status: 400 },
+    )
   }
   if (email && !EMAIL_RE.test(email)) {
     return new NextResponse('Enter a valid email.', { status: 400 })
