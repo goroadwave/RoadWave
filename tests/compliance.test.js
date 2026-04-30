@@ -332,3 +332,60 @@ test('consent form file declares all four input names', async () => {
   // Submit button is disabled until all four checked.
   expect(src).toContain('!allChecked')
 })
+
+// ---------------------------------------------------------------------------
+// Demo lantern — demo only, never in the real app
+// ---------------------------------------------------------------------------
+
+test.describe('Demo lantern', () => {
+  test('lantern button + demo-only label render on /demo', async ({ page }) => {
+    await page.goto('/demo')
+    await expect(
+      page.getByRole('button', {
+        name: /Your Lantern.*tap to see activity/i,
+      }),
+    ).toBeVisible()
+    await expect(
+      page.getByText('Your Lantern — waves, messages & meetup activity.'),
+    ).toBeVisible()
+  })
+
+  test('clicking lantern opens panel with the three hardcoded notifications', async ({
+    page,
+  }) => {
+    await page.goto('/demo')
+    await page
+      .getByRole('button', { name: /Your Lantern.*tap to see activity/i })
+      .click()
+    const panel = page.getByRole('menu', { name: /Demo notifications/i })
+    await expect(panel).toBeVisible()
+    await expect(panel.getByText(/CampingFan42 sent you a wave/)).toBeVisible()
+    await expect(
+      panel.getByText(/You matched with OutdoorMike/),
+    ).toBeVisible()
+    await expect(
+      panel.getByText(/Campfire Night at Site Loop B/),
+    ).toBeVisible()
+  })
+
+  test('real (app) and owner (authed) layouts never import the lantern', async () => {
+    const fs = await import('node:fs/promises')
+    const filesToCheck = [
+      'src/app/(app)/layout.tsx',
+      'src/app/(app)/nearby/page.tsx',
+      'src/app/(app)/waves/page.tsx',
+      'src/app/(app)/crossed-paths/page.tsx',
+      'src/app/owner/(authed)/layout.tsx',
+    ]
+    for (const f of filesToCheck) {
+      const src = await fs.readFile(f, 'utf8')
+      expect(src, `${f} must not import DemoLantern`).not.toContain(
+        'DemoLantern',
+      )
+      expect(
+        src,
+        `${f} must not render the demo-only Lantern label`,
+      ).not.toContain('Your Lantern')
+    }
+  })
+})

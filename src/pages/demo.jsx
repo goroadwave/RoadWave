@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Head from 'next/head'
 import { Logo } from '@/components/ui/logo'
+import { DemoLantern } from '@/components/demo/demo-lantern'
 
 // ----------------------------------------------------------------------------
 // Mock data
@@ -525,6 +526,7 @@ function GuestApp({ campgroundName }) {
             <ModeBadge mode={privacy} />
           </span>
         }
+        onNavigate={setScreen}
       />
 
       {screen !== 'chat' && screen !== 'matchchoice' && screen !== 'crossedchat' && (
@@ -1246,19 +1248,27 @@ function MatchCelebration({ name }) {
   )
 }
 
-function AppHeader({ right }) {
+function AppHeader({ right, onNavigate }) {
   return (
-    <header className="flex items-center justify-between px-4 pt-2 pb-3 border-b border-white/5">
-      <Logo className="text-lg" />
-      <div className="flex items-center gap-3">
-        {right}
-        <a
-          href="/"
-          className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
-        >
-          Exit
-        </a>
+    <header className="px-4 pt-2 pb-2 border-b border-white/5">
+      <div className="flex items-center justify-between">
+        <Logo className="text-lg" />
+        <div className="flex items-center gap-3">
+          {right}
+          <DemoLantern onNavigate={onNavigate} />
+          <a
+            href="/"
+            className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
+          >
+            Exit
+          </a>
+        </div>
       </div>
+      {/* DEMO-ONLY label. The real authenticated app does not render this
+          string — production nav stays clean. */}
+      <p className="mt-1 text-right text-[10px] text-mist/70 leading-snug">
+        Your Lantern — waves, messages &amp; meetup activity.
+      </p>
     </header>
   )
 }
