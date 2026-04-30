@@ -22,9 +22,14 @@ export default async function HomePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('username, display_name, privacy_mode, travel_style')
+    .select('username, display_name, privacy_mode, travel_style, is_admin')
     .eq('id', user!.id)
     .single()
+
+  // Admins skip the profile-setup wall entirely and land in the
+  // founder dashboard. They typically don't need a display_name to
+  // operate the admin tooling.
+  if (profile?.is_admin) redirect('/admin')
 
   if (!profile?.display_name) redirect('/profile/setup')
 
