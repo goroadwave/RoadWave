@@ -1,5 +1,8 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+
+export const dynamic = 'force-dynamic'
+
 import {
   ArrowRight,
   CalendarHeart,
@@ -31,6 +34,13 @@ export default async function HomePage() {
   // They still land on /home normally; the Admin link in the header
   // is how they navigate to /admin.
   const isAdmin = profile?.is_admin === true
+  // One-line diagnostic — visible in Vercel runtime logs. Confirms which
+  // values the deployed code actually sees.
+  console.log(
+    `[home] uid=${user?.id} is_admin=${profile?.is_admin} display_name=${
+      profile?.display_name === null ? 'NULL' : JSON.stringify(profile?.display_name)
+    }`,
+  )
   if (!isAdmin && !profile?.display_name) redirect('/profile/setup')
 
   const { count: interestsCount } = await supabase
