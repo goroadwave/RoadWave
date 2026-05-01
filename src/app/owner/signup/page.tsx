@@ -41,7 +41,8 @@ export default async function OwnerSignupPage({
           </h1>
           <p className="text-sm text-mist leading-relaxed">
             Two minutes to set up. We&apos;ll send your QR code, front-desk
-            script, and welcome packet to your inbox after payment.
+            script, and welcome packet to your inbox when you activate your
+            campground.
           </p>
         </div>
 
