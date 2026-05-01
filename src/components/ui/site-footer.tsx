@@ -162,8 +162,8 @@ function Column({
 function OwnerExpandable() {
   return (
     <details className="group/owner">
-      <summary className="list-none cursor-pointer flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-flame hover:text-amber-300 transition-colors [&::-webkit-details-marker]:hidden">
-        <span>Campground Owners</span>
+      <summary className="list-none cursor-pointer flex items-center justify-between gap-2 text-sm font-semibold text-flame hover:text-amber-300 transition-colors [&::-webkit-details-marker]:hidden">
+        <span>Are you a campground owner?</span>
         <span
           className="text-flame text-base font-bold leading-none transition-transform group-open/owner:rotate-45"
           aria-hidden
