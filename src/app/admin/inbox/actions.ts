@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/admin/guard'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
 const ALLOWED_STATUSES = ['new', 'read', 'replied', 'flagged'] as const
 type Status = (typeof ALLOWED_STATUSES)[number]
@@ -81,6 +82,59 @@ export async function updateRequestStatusAction(
     return { ok: false, error: 'No request updated.' }
   }
   await logAudit('request.status_updated', 'campground_requests', id, prior, { status })
+  revalidatePath('/admin/inbox')
+  return { ok: true, error: null }
+}
+
+const SUBMISSION_STATUSES = [
+  'new',
+  'paid',
+  'abandoned',
+  'provisioned',
+] as const
+type SubmissionStatus = (typeof SUBMISSION_STATUSES)[number]
+function isSubmissionStatus(s: unknown): s is SubmissionStatus {
+  return (
+    typeof s === 'string' &&
+    (SUBMISSION_STATUSES as readonly string[]).includes(s)
+  )
+}
+
+export async function updateOwnerSubmissionStatusAction(
+  id: string,
+  status: string,
+): Promise<AdminMutationResult> {
+  if (!isSubmissionStatus(status)) {
+    return { ok: false, error: 'Invalid status.' }
+  }
+  // Gate via the user-context admin guard (requireAdmin verifies
+  // is_admin), then write through the service-role client because
+  // owner_signup_submissions has no client-facing UPDATE policy by
+  // design — admins read, the system writes.
+  const { user } = await requireAdmin()
+  const admin = createSupabaseAdminClient()
+  const { data: prior } = await admin
+    .from('owner_signup_submissions')
+    .select('status')
+    .eq('id', id)
+    .maybeSingle()
+  const { data: updated, error } = await admin
+    .from('owner_signup_submissions')
+    .update({ status })
+    .eq('id', id)
+    .select('id')
+  if (error) return { ok: false, error: error.message }
+  if (!updated || updated.length === 0) {
+    return { ok: false, error: 'No submission updated.' }
+  }
+  await admin.from('admin_audit_log').insert({
+    admin_id: user.id,
+    action: 'owner_submission.status_updated',
+    target_table: 'owner_signup_submissions',
+    target_id: id,
+    before: prior,
+    after: { status },
+  })
   revalidatePath('/admin/inbox')
   return { ok: true, error: null }
 }

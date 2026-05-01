@@ -1,8 +1,13 @@
 import { requireAdmin } from '@/lib/admin/guard'
 import { EmptyState } from '@/components/admin/empty-state'
-import { LeadRow, RequestRow } from '@/components/admin/inbox-row'
+import {
+  LeadRow,
+  OwnerSubmissionRow,
+  RequestRow,
+} from '@/components/admin/inbox-row'
 
 type LeadStatus = 'new' | 'read' | 'replied' | 'flagged'
+type SubmissionStatus = 'new' | 'paid' | 'abandoned' | 'provisioned'
 
 type Lead = {
   id: string
@@ -21,20 +26,46 @@ type Request = {
   created_at: string
 }
 
+type Submission = {
+  id: string
+  campground_name: string
+  owner_name: string
+  email: string
+  phone: string | null
+  city: string | null
+  state: string | null
+  num_sites: number | null
+  campground_type: string | null
+  hosts_events: boolean
+  target_guests: string | null
+  wants_setup_call: boolean
+  status: SubmissionStatus
+  created_at: string
+  campground_id: string | null
+}
+
 export default async function InboxPage() {
   const { supabase } = await requireAdmin()
-  const [{ data: leads }, { data: requests }] = await Promise.all([
-    supabase
-      .from('campground_leads')
-      .select('id, name, email, campground_name, status, created_at')
-      .order('created_at', { ascending: false })
-      .limit(50),
-    supabase
-      .from('campground_requests')
-      .select('id, email, campground_name, status, created_at')
-      .order('created_at', { ascending: false })
-      .limit(50),
-  ])
+  const [{ data: leads }, { data: requests }, { data: submissions }] =
+    await Promise.all([
+      supabase
+        .from('campground_leads')
+        .select('id, name, email, campground_name, status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('campground_requests')
+        .select('id, email, campground_name, status, created_at')
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('owner_signup_submissions')
+        .select(
+          'id, campground_name, owner_name, email, phone, city, state, num_sites, campground_type, hosts_events, target_guests, wants_setup_call, status, created_at, campground_id',
+        )
+        .order('created_at', { ascending: false })
+        .limit(50),
+    ])
 
   return (
     <div className="space-y-6">
@@ -49,12 +80,32 @@ export default async function InboxPage() {
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-cream">
+          Self-serve owner signups ({(submissions ?? []).length})
+        </h2>
+        {(submissions ?? []).length === 0 ? (
+          <EmptyState
+            title="No self-serve signups yet"
+            body="Submissions from /owner/signup (the funnel reachable via /start) land here. New rows will appear before payment; the status flips to 'provisioned' after Stripe Checkout completes."
+          />
+        ) : (
+          <ul className="space-y-2">
+            {(submissions as Submission[]).map((row) => (
+              <li key={row.id}>
+                <OwnerSubmissionRow row={row} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-cream">
           Campground demo leads ({(leads ?? []).length})
         </h2>
         {(leads ?? []).length === 0 ? (
           <EmptyState
             title="No demo leads yet"
-            body="Submissions from /campgrounds#request-demo will land here."
+            body="Submissions from /owners#request-demo will land here."
           />
         ) : (
           <ul className="space-y-2">

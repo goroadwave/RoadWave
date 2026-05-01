@@ -196,6 +196,34 @@ test.describe('Owner funnel — structural wiring', () => {
     expect(src).toContain('TrialBanner')
   })
 
+  test('admin inbox surfaces owner_signup_submissions rows', async () => {
+    const fs = await import('node:fs/promises')
+    const page = await fs.readFile('src/app/admin/inbox/page.tsx', 'utf8')
+    expect(page).toContain("from('owner_signup_submissions')")
+    expect(page).toContain('Self-serve owner signups')
+    expect(page).toContain('OwnerSubmissionRow')
+
+    const row = await fs.readFile(
+      'src/components/admin/inbox-row.tsx',
+      'utf8',
+    )
+    expect(row).toContain('OwnerSubmissionRow')
+    expect(row).toContain('updateOwnerSubmissionStatusAction')
+    // Status options match the migration's check constraint.
+    for (const s of ['new', 'paid', 'abandoned', 'provisioned']) {
+      expect(row).toContain(`'${s}'`)
+    }
+
+    const actions = await fs.readFile(
+      'src/app/admin/inbox/actions.ts',
+      'utf8',
+    )
+    expect(actions).toContain('updateOwnerSubmissionStatusAction')
+    expect(actions).toContain("from('owner_signup_submissions')")
+    expect(actions).toContain('createSupabaseAdminClient')
+    expect(actions).toContain('owner_submission.status_updated')
+  })
+
   test('admin campgrounds page surfaces subscription status + extend buttons', async () => {
     const fs = await import('node:fs/promises')
     const page = await fs.readFile(
