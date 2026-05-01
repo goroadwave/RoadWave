@@ -10,8 +10,17 @@ import {
   EyeOff,
   Ghost,
   HandHeart,
+  MapPin,
   Users,
 } from 'lucide-react'
+import type { PrivacyMode } from '@/lib/types/db'
+
+const PRIVACY_LABEL: Record<PrivacyMode, string> = {
+  visible: 'Visible',
+  quiet: 'Quiet',
+  invisible: 'Invisible',
+  campground_updates_only: 'Campground Updates Only',
+}
 import { BulletinBanner } from '@/components/bulletins/bulletin-banner'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { WelcomeModal } from '@/components/onboarding/welcome-modal'
@@ -160,7 +169,7 @@ export default async function HomePage() {
         <ModeIcon mode={profile.privacy_mode} />
         <div className="flex-1 min-w-0">
           <p className="text-xs uppercase tracking-wide text-mist">Privacy mode</p>
-          <p className="font-semibold text-cream capitalize">{profile.privacy_mode}</p>
+          <p className="font-semibold text-cream">{PRIVACY_LABEL[profile.privacy_mode as PrivacyMode] ?? profile.privacy_mode}</p>
         </div>
         <Link
           href="/settings/privacy"
@@ -228,8 +237,15 @@ function Tile({
   )
 }
 
-function ModeIcon({ mode }: { mode: 'visible' | 'quiet' | 'invisible' }) {
-  const Icon = mode === 'visible' ? Eye : mode === 'quiet' ? EyeOff : Ghost
+function ModeIcon({ mode }: { mode: PrivacyMode }) {
+  const Icon =
+    mode === 'visible'
+      ? Eye
+      : mode === 'quiet'
+        ? EyeOff
+        : mode === 'campground_updates_only'
+          ? MapPin
+          : Ghost
   return (
     <span className="grid h-9 w-9 place-items-center rounded-xl bg-flame/10 text-flame">
       <Icon className="h-5 w-5" aria-hidden />

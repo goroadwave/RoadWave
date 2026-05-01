@@ -435,7 +435,7 @@ function NearbyTab() {
           Campers Checked In Here
         </h2>
         <p className="text-xs text-mist">
-          Wave when the vibe feels right.
+          Who&apos;s here, what they&apos;re into.
         </p>
       </header>
       <div className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-6 text-center text-sm text-mist">

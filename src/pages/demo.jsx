@@ -617,17 +617,21 @@ function GuestApp({ campgroundName, onReset }) {
 
   return (
     <div className="relative flex h-full flex-col">
-      <AppHeader
-        right={
-          <span data-tour="privacy-badge" className="inline-flex">
-            <ModeBadge mode={privacy} />
-          </span>
-        }
-        onNavigate={setScreen}
-      />
+      <AppHeader onNavigate={setScreen} />
+
+      {/* Status bar: privacy mode rendered as its own centered row below
+          the header. Used to live in AppHeader's right slot, but the
+          Campground Updates Only label is long enough to wrap onto a
+          second line on phone widths and crowd the lantern + Sign out
+          controls. */}
+      <div className="border-b border-white/5 px-3 py-1.5 flex justify-center">
+        <span data-tour="privacy-badge" className="inline-flex">
+          <ModeBadge mode={privacy} />
+        </span>
+      </div>
 
       {screen !== 'chat' && screen !== 'matchchoice' && screen !== 'crossedchat' && (
-        <nav className="grid grid-cols-4 gap-1 px-3 pb-2 text-[11px]">
+        <nav className="grid grid-cols-4 gap-1 px-3 pb-2 pt-2 text-[11px]">
           {[
             ['home', 'Home'],
             ['checkin', 'Check in'],
@@ -1400,13 +1404,12 @@ function MatchCelebration({ name }) {
   )
 }
 
-function AppHeader({ right, onNavigate }) {
+function AppHeader({ onNavigate }) {
   return (
     <header className="px-4 pt-2 pb-2 border-b border-white/5">
       <div className="flex items-center justify-between">
         <Logo className="text-lg" />
         <div className="flex items-center gap-3">
-          {right}
           <DemoLantern onNavigate={onNavigate} />
           <a
             href="/"
@@ -1699,7 +1702,7 @@ function NearbyScreen({
             Campers Checked In Here
           </h1>
           <p className="font-serif italic text-flame text-sm leading-snug">
-            Wave when the vibe feels right.
+            Who&apos;s here, what they&apos;re into.
           </p>
         </header>
         <div className="rounded-2xl border border-flame/30 bg-flame/[0.06] p-4 space-y-2">

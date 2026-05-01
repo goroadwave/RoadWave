@@ -82,7 +82,7 @@ export default async function NearbyPage() {
         <PageHeading
           eyebrow={`Currently at ${campground?.name ?? 'your campground'}`}
           title="Campers Checked In Here"
-          subtitle="Wave when the vibe feels right."
+          subtitle="Who's here, what they're into."
         />
         <div className="rounded-2xl border border-flame/30 bg-flame/[0.06] p-5 space-y-2">
           <p className="text-sm text-cream leading-relaxed">
@@ -141,7 +141,7 @@ export default async function NearbyPage() {
 
       {error ? (
         <p className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
-          Couldn&apos;t load nearby campers: {error.message}
+          Couldn&apos;t load campers checked in here: {error.message}
         </p>
       ) : (
         <NearbyList

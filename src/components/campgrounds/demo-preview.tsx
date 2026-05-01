@@ -444,7 +444,7 @@ function NearbyPanel({ campgroundName }: { campgroundName: string }) {
         <h2 className="mt-0.5 font-display text-xl font-extrabold text-cream">
           Campers Checked In Here
         </h2>
-        <p className="text-xs text-mist">Wave when the vibe feels right.</p>
+        <p className="text-xs text-mist">Who&apos;s here, what they&apos;re into.</p>
       </div>
       <ul className="grid gap-3 sm:grid-cols-2">
         {NEARBY_MOCK.map((c) => (

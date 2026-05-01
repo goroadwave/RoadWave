@@ -55,7 +55,7 @@ export default async function CrossedPathsPage() {
           href="/nearby"
           className="inline-flex items-center gap-2 rounded-lg bg-flame px-4 py-2 text-sm font-semibold text-night shadow-lg shadow-flame/10 hover:bg-amber-400"
         >
-          See nearby campers
+          See campers here
           <span aria-hidden>👋</span>
         </Link>
       </div>

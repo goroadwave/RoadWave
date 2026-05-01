@@ -15,7 +15,7 @@ const MIST: [number, number, number] = [148, 163, 184] // #94a3b8
 
 // Verbatim safety paragraph required on every printed sign.
 const SAFETY_TEXT =
-  'Meet nearby campers — only if you want to. RoadWave is an optional 18+ guest connection tool. Exact campsite numbers are not shown. Meet in public campground areas. For emergencies call 911 and notify campground staff.'
+  'See campground updates and meet other campers — only if you want to. RoadWave is an optional 18+ guest connection tool. Exact campsite numbers are not shown. Meet in public campground areas. For emergencies call 911 and notify campground staff.'
 
 type SignFormat = 'letter' | '5x7'
 

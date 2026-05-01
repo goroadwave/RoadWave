@@ -13,7 +13,7 @@ const TABS: { href: string; label: string; matchPrefix?: string }[] = [
   { href: '/meetups', label: 'Meetups' },
   { href: '/waves', label: 'Waves' },
   { href: '/settings/privacy', label: 'Privacy', matchPrefix: '/settings/privacy' },
-  { href: '/crossed-paths', label: 'Crossed' },
+  { href: '/crossed-paths', label: 'Past Waves' },
 ]
 
 export function AppNav() {
