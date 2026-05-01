@@ -256,7 +256,7 @@ function CuoQuickSwitch({ mode }: { mode: PrivacyMode }) {
           Switch to Campground Updates Only
         </p>
         <p className="text-[11px] text-mist leading-snug">
-          See bulletins and meetups, hidden from other campers.
+          Only get direct communication from your campground host.
         </p>
       </button>
     </form>
