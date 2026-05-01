@@ -142,12 +142,18 @@ export default async function RootPage() {
                 invisible anytime — or just keep an eye on campground
                 updates.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-center lg:justify-start">
+              <div className="flex flex-col gap-3 pt-2 items-center lg:items-start">
                 <Link
                   href="/demo"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 text-base font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
                 >
                   Try the Demo <span aria-hidden>👋</span>
+                </Link>
+                <Link
+                  href="/start"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-white/5 text-cream px-6 py-3 text-base font-medium hover:bg-flame/10 hover:border-flame/60 transition-colors"
+                >
+                  Get Started — I Run a Campground
                 </Link>
               </div>
               <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] text-flame/90 font-semibold pt-2">
