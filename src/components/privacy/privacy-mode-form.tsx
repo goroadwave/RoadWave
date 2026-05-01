@@ -55,7 +55,6 @@ const OPTIONS: {
     bullets: [
       'You stay out of the nearby list and can’t send or receive waves.',
       'You still see campground bulletins and meetups (toggle each below).',
-      'You count for owner activity stats so RSVPs reflect you.',
     ],
   },
 ]
