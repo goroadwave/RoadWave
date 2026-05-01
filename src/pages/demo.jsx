@@ -1404,6 +1404,18 @@ function AppHeader({ right, onNavigate }) {
           >
             Exit
           </a>
+          {/* Sign out is rendered for everyone here. Anonymous viewers
+              just bounce to / (same as Exit); signed-in users get an
+              actual Supabase signOut + redirect. Cheaper than wiring
+              the demo into the Supabase session check. */}
+          <form action="/auth/sign-out?next=/" method="post">
+            <button
+              type="submit"
+              className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
+            >
+              Sign out
+            </button>
+          </form>
         </div>
       </div>
       {/* DEMO-ONLY label. The real authenticated app does not render this
