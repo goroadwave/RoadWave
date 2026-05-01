@@ -150,10 +150,10 @@ export default async function RootPage() {
                   Try the Demo <span aria-hidden>👋</span>
                 </Link>
                 <Link
-                  href="/start"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-white/5 text-cream px-6 py-3 text-base font-medium hover:bg-flame/10 hover:border-flame/60 transition-colors"
+                  href="/signup"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4caf82] text-night px-6 py-3 text-base font-semibold shadow-lg shadow-[#4caf82]/20 hover:bg-[#3f9d72] transition-colors"
                 >
-                  Get Started — I Run a Campground
+                  Get Started
                 </Link>
               </div>
               <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] text-flame/90 font-semibold pt-2">
