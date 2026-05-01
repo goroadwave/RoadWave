@@ -170,6 +170,17 @@ export function OwnerInfoModal() {
                     </li>
                   ))}
                 </ul>
+                {/* Try-before-you-buy: secondary path for owners who
+                    want to feel the product before opening the wallet.
+                    Sits between the pitch bullets and the price/Get
+                    Started CTA. */}
+                <Link
+                  href="/demo"
+                  onClick={() => setOpen(false)}
+                  className="block w-full text-center rounded-xl border border-flame/40 bg-white/5 text-cream px-5 py-3 text-sm font-semibold hover:bg-flame/10 hover:border-flame/60 transition-colors"
+                >
+                  Try the Demo first <span aria-hidden>👋</span>
+                </Link>
                 <div className="rounded-xl border border-flame/30 bg-flame/[0.06] p-4 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">

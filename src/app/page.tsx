@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { CampgroundRequestForm } from '@/components/campgrounds/request-form'
 import { HomePhonePreview } from '@/components/home/home-phone-preview'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Logo } from '@/components/ui/logo'
@@ -308,36 +307,6 @@ export default async function RootPage() {
             </ul>
           </div>
         </section>
-
-        {/* Final CTA — spec §12 */}
-        <section className="px-4 py-16 border-t border-flame/30 bg-flame/[0.06]">
-          <div className="mx-auto max-w-xl text-center space-y-5">
-            <Eyebrow>Try it</Eyebrow>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              Want to see how it feels?
-            </h2>
-            <p className="text-mist text-base sm:text-lg leading-relaxed">
-              Try RoadWave with sample campground data. No account needed.
-              No download required.
-            </p>
-            <div className="flex justify-center pt-2">
-              <Link
-                href="/demo"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
-              >
-                Try the Demo <span aria-hidden>👋</span>
-              </Link>
-            </div>
-
-            <div className="pt-6 border-t border-white/10 mt-6 max-w-md mx-auto">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-mist/80 font-semibold mb-3">
-                Don&apos;t see your campground?
-              </p>
-              <CampgroundRequestForm />
-            </div>
-          </div>
-        </section>
-
 
       </main>
     </>
