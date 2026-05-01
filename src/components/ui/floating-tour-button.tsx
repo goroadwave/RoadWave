@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { rileyPopupCtaForPath } from '@/lib/ui/riley-popup-cta'
 
 // Per-page Riley narration. Anything not in this map falls through to the
 // default. Pathnames are matched exactly; no wildcards.
@@ -135,10 +136,7 @@ export function FloatingTourButton() {
     }
   }
 
-  function dismissGotIt() {
-    setShowPopup(false)
-    stopAudio()
-  }
+  const cta = rileyPopupCtaForPath(pathname)
 
   return (
     <div
@@ -163,13 +161,16 @@ export function FloatingTourButton() {
             >
               Take the Tour <span aria-hidden>👋</span>
             </Link>
-            <button
-              type="button"
-              onClick={dismissGotIt}
+            <Link
+              href={cta.href}
+              onClick={() => {
+                setShowPopup(false)
+                stopAudio()
+              }}
               className="block w-full rounded-lg border border-white/15 bg-white/5 text-cream text-center px-3 py-2 text-sm font-medium hover:bg-white/10 hover:border-flame/40 transition-colors"
             >
-              Got it!
-            </button>
+              {cta.label}
+            </Link>
           </div>
         </div>
       )}

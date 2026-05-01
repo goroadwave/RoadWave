@@ -196,6 +196,36 @@ test.describe('Owner funnel — structural wiring', () => {
     expect(src).toContain('TrialBanner')
   })
 
+  test('Riley popup CTA is context-aware (camper vs owner pages)', async () => {
+    const fs = await import('node:fs/promises')
+    const helper = await fs.readFile(
+      'src/lib/ui/riley-popup-cta.ts',
+      'utf8',
+    )
+    expect(helper).toContain("'/owners'")
+    expect(helper).toContain("'/campgrounds'")
+    expect(helper).toContain("'/start'")
+    expect(helper).toContain('Start My Campground Pilot')
+    expect(helper).toContain('Try the Demo')
+
+    // Both Riley popups consume the helper.
+    const floating = await fs.readFile(
+      'src/components/ui/floating-tour-button.tsx',
+      'utf8',
+    )
+    expect(floating).toContain('rileyPopupCtaForPath')
+    // Old "Got it!" button is replaced.
+    expect(floating).not.toContain('>Got it!<')
+
+    const cgRiley = await fs.readFile(
+      'src/components/campgrounds/riley-campground-button.tsx',
+      'utf8',
+    )
+    expect(cgRiley).toContain('rileyPopupCtaForPath')
+    // Old "Request a Demo" button is replaced.
+    expect(cgRiley).not.toContain('Request a Demo')
+  })
+
   test('admin inbox surfaces owner_signup_submissions rows', async () => {
     const fs = await import('node:fs/promises')
     const page = await fs.readFile('src/app/admin/inbox/page.tsx', 'utf8')

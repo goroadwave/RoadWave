@@ -241,7 +241,7 @@ export default function OwnersPage() {
             <div className="text-center mb-10 space-y-2">
               <Eyebrow>How it works</Eyebrow>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                Four taps from check-in to campfire.
+                From QR code to friendly hello in a few taps.
               </h2>
             </div>
             <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

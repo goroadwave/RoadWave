@@ -1,15 +1,19 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { rileyPopupCtaForPath } from '@/lib/ui/riley-popup-cta'
 
 const SPEECH =
   "Welcome! I am Riley, your RoadWave campground host. I help your guests feel welcome, find their people, and have the kind of camping experience that brings them back year after year. Want to see how I would work at your campground?"
 
 // Campground-page-specific Riley button. Same visual language as the global
-// FloatingTourButton but with the host pitch + a "Request a Demo" popup
-// option that scrolls to the in-page CTA form.
+// FloatingTourButton but with the host pitch. The secondary popup CTA is
+// context-aware via rileyPopupCtaForPath: this component renders on owner-
+// facing routes today, so the CTA reads "Start My Campground Pilot" → /start.
 export function CampgroundRileyButton() {
+  const pathname = usePathname()
   const [imgError, setImgError] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [showPopup, setShowPopup] = useState(false)
@@ -87,12 +91,7 @@ export function CampgroundRileyButton() {
     }
   }
 
-  function scrollToForm() {
-    setShowPopup(false)
-    stopAudio()
-    const el = document.getElementById('request-demo')
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  const cta = rileyPopupCtaForPath(pathname)
 
   return (
     <div
@@ -116,13 +115,16 @@ export function CampgroundRileyButton() {
             >
               Take the Tour <span aria-hidden>👋</span>
             </Link>
-            <button
-              type="button"
-              onClick={scrollToForm}
+            <Link
+              href={cta.href}
+              onClick={() => {
+                setShowPopup(false)
+                stopAudio()
+              }}
               className="block w-full rounded-lg border border-white/15 bg-white/5 text-cream text-center px-3 py-2 text-sm font-medium hover:bg-white/10 hover:border-flame/40 transition-colors"
             >
-              Request a Demo
-            </button>
+              {cta.label}
+            </Link>
           </div>
         </div>
       )}

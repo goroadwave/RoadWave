@@ -14,7 +14,7 @@ const GUEST_LINKS: { label: string; href: string }[] = [
 const OWNER_LINKS: { label: string; href: string }[] = [
   { label: 'Campground Safety Overview', href: '/campground-safety' },
   { label: 'Partner Terms', href: '/campground-partner-terms' },
-  { label: 'Get a Demo', href: '/owners' },
+  { label: 'Start My Campground Pilot', href: '/start' },
 ]
 
 const LEGAL_LINKS: { label: string; href: string }[] = [
