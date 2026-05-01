@@ -21,6 +21,10 @@ const PRIVACY_LABEL: Record<PrivacyMode, string> = {
   invisible: 'Invisible',
   campground_updates_only: 'Campground Updates Only',
 }
+import {
+  enterCampgroundUpdatesOnlyAction,
+  exitCampgroundUpdatesOnlyAction,
+} from '@/app/(app)/settings/privacy/actions'
 import { BulletinBanner } from '@/components/bulletins/bulletin-banner'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { WelcomeModal } from '@/components/onboarding/welcome-modal'
@@ -202,7 +206,60 @@ export default async function HomePage() {
           />
         </div>
       </section>
+
+      <CuoQuickSwitch mode={profile.privacy_mode as PrivacyMode} />
     </div>
+  )
+}
+
+// One-tap shortcut to Campground Updates Only mode. Lives below the
+// "Where the action is" tile grid so a guest who just wants the
+// campground updates can flip into CUO without hunting through the
+// Privacy tab. When already in CUO, swap the button for a confirmation
+// card with an undo link so the state is visible at a glance.
+function CuoQuickSwitch({ mode }: { mode: PrivacyMode }) {
+  if (mode === 'campground_updates_only') {
+    return (
+      <div
+        role="status"
+        className="rounded-2xl border border-flame/40 bg-flame/[0.08] p-4 space-y-2"
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-flame">
+          Campground Updates Only
+        </p>
+        <p className="text-sm text-cream leading-relaxed">
+          You are now in Campground Updates Only mode — you can see
+          campground updates and meetups but are invisible to other
+          campers.
+        </p>
+        <form action={exitCampgroundUpdatesOnlyAction}>
+          <button
+            type="submit"
+            className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
+          >
+            Switch back to Visible →
+          </button>
+        </form>
+      </div>
+    )
+  }
+  return (
+    <form action={enterCampgroundUpdatesOnlyAction}>
+      <button
+        type="submit"
+        className="w-full text-left rounded-2xl border border-flame/30 bg-card p-4 hover:border-flame/60 hover:bg-flame/[0.04] transition-colors"
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-flame">
+          Just here for updates?
+        </p>
+        <p className="mt-1 text-sm font-semibold text-cream">
+          Switch to Campground Updates Only
+        </p>
+        <p className="text-[11px] text-mist leading-snug">
+          See bulletins and meetups, hidden from other campers.
+        </p>
+      </button>
+    </form>
   )
 }
 

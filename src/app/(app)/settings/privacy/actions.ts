@@ -54,3 +54,44 @@ export async function savePrivacyModeAction(
   revalidatePath('/meetups')
   redirect('/home')
 }
+
+// One-tap shortcut used by the Home-page CUO card. Flips the user into
+// Campground Updates Only without disturbing their existing bulletin /
+// meetup mute toggles, then revalidates the surfaces those toggles
+// gate so the home screen reflects the new mode immediately.
+export async function enterCampgroundUpdatesOnlyAction(): Promise<void> {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return
+
+  await supabase
+    .from('profiles')
+    .update({ privacy_mode: 'campground_updates_only' })
+    .eq('id', user.id)
+
+  revalidatePath('/home')
+  revalidatePath('/nearby')
+  revalidatePath('/meetups')
+}
+
+// Companion to the above — used by the "Switch back to Visible" link
+// inside the confirmation card so a guest who flipped into CUO can
+// undo it from the same surface.
+export async function exitCampgroundUpdatesOnlyAction(): Promise<void> {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return
+
+  await supabase
+    .from('profiles')
+    .update({ privacy_mode: 'visible' })
+    .eq('id', user.id)
+
+  revalidatePath('/home')
+  revalidatePath('/nearby')
+  revalidatePath('/meetups')
+}

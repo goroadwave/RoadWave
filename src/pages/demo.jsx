@@ -670,6 +670,7 @@ function GuestApp({ campgroundName, onReset }) {
           <HomeScreen
             privacyMode={privacy}
             onScreen={setScreen}
+            onSetPrivacy={setPrivacy}
             campgroundName={campgroundName}
           />
         )}
@@ -1406,14 +1407,14 @@ function MatchCelebration({ name }) {
 
 function AppHeader({ onNavigate }) {
   return (
-    <header className="px-4 pt-2 pb-2 border-b border-white/5">
+    <header className="px-4 py-3 border-b border-white/5">
       <div className="flex items-center justify-between">
         <Logo className="text-lg" />
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <DemoLantern onNavigate={onNavigate} />
           <a
             href="/"
-            className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
+            className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline leading-none"
           >
             Exit
           </a>
@@ -1421,26 +1422,22 @@ function AppHeader({ onNavigate }) {
               just bounce to / (same as Exit); signed-in users get an
               actual Supabase signOut + redirect. Cheaper than wiring
               the demo into the Supabase session check. */}
-          <form action="/auth/sign-out?next=/" method="post">
+          <form action="/auth/sign-out?next=/" method="post" className="leading-none">
             <button
               type="submit"
-              className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
+              className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline leading-none"
             >
               Sign out
             </button>
           </form>
         </div>
       </div>
-      {/* DEMO-ONLY label. The real authenticated app does not render this
-          string — production nav stays clean. */}
-      <p className="mt-1 text-right text-[10px] text-mist/70 leading-snug">
-        Your Lantern — waves, private hellos &amp; meetup activity.
-      </p>
     </header>
   )
 }
 
-function HomeScreen({ privacyMode, onScreen, campgroundName }) {
+function HomeScreen({ privacyMode, onScreen, onSetPrivacy, campgroundName }) {
+  const inCuo = privacyMode === 'campground_updates_only'
   return (
     <div className="space-y-5 py-3">
       <header className="space-y-2">
@@ -1479,6 +1476,50 @@ function HomeScreen({ privacyMode, onScreen, campgroundName }) {
         <Tile title="Meetup spots" description="Activities posted by your campground." onClick={() => onScreen('meetups')} />
         <Tile title="Crossed paths" description="Mutual waves you've made." onClick={() => onScreen('paths')} />
       </div>
+
+      {/* One-tap shortcut to Campground Updates Only mode. Sits below
+          the action tiles so a guest who just wants the campground
+          updates can flip into CUO without hunting through the Privacy
+          tab. When already in CUO, swap the button for a confirmation
+          card so the state is visible. */}
+      {inCuo ? (
+        <div
+          role="status"
+          className="rounded-2xl border border-flame/40 bg-flame/[0.08] p-4 space-y-2"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-flame">
+            Campground Updates Only
+          </p>
+          <p className="text-sm text-cream leading-relaxed">
+            You are now in Campground Updates Only mode — you can see
+            campground updates and meetups but are invisible to other
+            campers.
+          </p>
+          <button
+            type="button"
+            onClick={() => onSetPrivacy('visible')}
+            className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
+          >
+            Switch back to Visible →
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onSetPrivacy('campground_updates_only')}
+          className="w-full text-left rounded-2xl border border-flame/30 bg-card p-4 hover:border-flame/60 hover:bg-flame/[0.04] transition-colors"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-flame">
+            Just here for updates?
+          </p>
+          <p className="mt-1 text-sm font-semibold text-cream">
+            Switch to Campground Updates Only
+          </p>
+          <p className="text-[11px] text-mist leading-snug">
+            See bulletins and meetups, hidden from other campers.
+          </p>
+        </button>
+      )}
 
       {/* Prominent next-action CTA. The Nearby tab is the heart of the
           product, so we surface a big amber button right under the tile

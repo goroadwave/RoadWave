@@ -110,7 +110,7 @@ export function CampgroundRileyButton() {
           />
           <div className="space-y-2">
             <Link
-              href="/tour"
+              href="/tour?audience=owner"
               className="block w-full rounded-lg bg-flame text-night text-center px-3 py-2 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
             >
               Take the Tour <span aria-hidden>👋</span>
