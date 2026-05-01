@@ -1408,13 +1408,16 @@ function MatchCelebration({ name }) {
 function AppHeader({ onNavigate }) {
   return (
     <header className="px-4 py-3 border-b border-white/5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <Logo className="text-lg" />
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <DemoLantern onNavigate={onNavigate} />
+          {/* Exit gets the small bordered-pill treatment so it visually
+              balances with the lantern's round 36px button rather than
+              floating as plain text next to it. */}
           <a
             href="/"
-            className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline leading-none"
+            className="inline-flex items-center rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-mist hover:text-cream hover:border-flame/40 hover:bg-white/10 leading-none transition-colors"
           >
             Exit
           </a>
