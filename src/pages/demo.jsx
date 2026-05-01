@@ -57,6 +57,7 @@ const SAMPLE_CAMPERS = [
   {
     id: 'c1',
     name: 'Sarah & Jim',
+    displayName: 'Sarah & Jim T.',
     username: 'rolling_pines',
     status: 'Coffee on the porch · come say hi',
     rig: 'Class B',
@@ -68,6 +69,7 @@ const SAMPLE_CAMPERS = [
   {
     id: 'c2',
     name: 'Alex',
+    displayName: 'Alex M.',
     username: 'wandering_alex',
     status: 'Reading by the fire',
     rig: 'Travel trailer',
@@ -79,6 +81,7 @@ const SAMPLE_CAMPERS = [
   {
     id: 'c3',
     name: 'The Browns',
+    displayName: 'The Browns',
     username: 'browns_on_road',
     status: null,
     rig: 'Class A',
@@ -90,6 +93,7 @@ const SAMPLE_CAMPERS = [
   {
     id: 'c4',
     name: 'Jordan',
+    displayName: 'Jordan K.',
     username: 'jordan_solo',
     status: 'Open to chat',
     rig: 'Sprinter van',
@@ -101,6 +105,7 @@ const SAMPLE_CAMPERS = [
   {
     id: 'c5',
     name: 'The Riveras',
+    displayName: 'The Riveras',
     username: 'rivera_family',
     status: 'Kids at the playground',
     rig: 'Fifth wheel',
@@ -112,6 +117,7 @@ const SAMPLE_CAMPERS = [
   {
     id: 'c6',
     name: 'Pat & Linda',
+    displayName: 'Pat & Linda H.',
     username: 'pat_and_linda',
     status: 'Just unpacked — exploring',
     rig: 'Travel trailer',
@@ -123,6 +129,7 @@ const SAMPLE_CAMPERS = [
   {
     id: 'c7',
     name: 'Marcus',
+    displayName: 'Marcus T.',
     username: 'marcus_camphost',
     status: 'On duty — say hi at the office!',
     rig: 'Class C',
@@ -134,6 +141,7 @@ const SAMPLE_CAMPERS = [
   {
     id: 'c8',
     name: 'Dani',
+    displayName: 'Dani R.',
     username: 'dani_works_remote',
     status: 'Done with Zoom calls — beer time',
     rig: 'Sprinter van',
@@ -145,6 +153,7 @@ const SAMPLE_CAMPERS = [
   {
     id: 'c9',
     name: 'Rob',
+    displayName: 'Rob L.',
     username: 'rob_thru_town',
     status: 'In town for a job, leaving Sunday',
     rig: 'Class B',
@@ -156,6 +165,7 @@ const SAMPLE_CAMPERS = [
   {
     id: 'c10',
     name: 'The Carters',
+    displayName: 'The Carters',
     username: 'quiet_carters',
     status: null,
     rig: 'Truck camper',
@@ -1664,22 +1674,13 @@ function NearbyScreen({
   privacy,
   onChangePrivacy,
 }) {
-  // Multi-select style + interest filters. Both use OR semantics — adding
-  // more selections *broadens* the result set. Empty set = "All".
-  const [filterStyles, setFilterStyles] = useState(() => new Set())
-  const [filterInterests, setFilterInterests] = useState(() => new Set())
-
+  // Discovery list: show up to 8 mock campers, minus anyone the viewer
+  // has blocked. The Travel Style + Interest filter chips were removed
+  // because they were visually identical to the Check In tab and
+  // confused users about which screen they were on.
   const list = useMemo(() => {
-    return SAMPLE_CAMPERS.filter((c) => {
-      if (blocked && blocked.has(c.id)) return false
-      if (filterStyles.size > 0 && !filterStyles.has(c.style)) return false
-      if (filterInterests.size > 0) {
-        const matchesAny = c.interests.some((slug) => filterInterests.has(slug))
-        if (!matchesAny) return false
-      }
-      return true
-    })
-  }, [filterStyles, filterInterests, blocked])
+    return SAMPLE_CAMPERS.filter((c) => !(blocked && blocked.has(c.id))).slice(0, 8)
+  }, [blocked])
 
   if (privacy === 'campground_updates_only') {
     return (
@@ -1718,31 +1719,6 @@ function NearbyScreen({
     )
   }
 
-  function toggleStyle(style) {
-    setFilterStyles((prev) => {
-      const next = new Set(prev)
-      if (next.has(style)) next.delete(style)
-      else next.add(style)
-      return next
-    })
-  }
-
-  function toggleInterest(slug) {
-    setFilterInterests((prev) => {
-      const next = new Set(prev)
-      if (next.has(slug)) next.delete(slug)
-      else next.add(slug)
-      return next
-    })
-  }
-
-  function resetFilters() {
-    setFilterStyles(new Set())
-    setFilterInterests(new Set())
-  }
-
-  const filtersActive = filterStyles.size > 0 || filterInterests.size > 0
-
   return (
     <div className="space-y-4 py-3">
       <p
@@ -1753,23 +1729,14 @@ function NearbyScreen({
         Meet in public campground areas, trust your instincts, and do not
         share your exact site number unless you choose to.
       </p>
-      <header className="relative">
+      <header>
         <Eyebrow>Currently at {campgroundName}</Eyebrow>
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
           Campers Checked In Here
         </h1>
         <p className="font-serif italic text-flame text-sm leading-snug">
-          Wave when the vibe feels right.
+          Who&apos;s here, what they&apos;re into.
         </p>
-        {filtersActive && (
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="absolute top-0 right-0 text-[11px] font-semibold text-flame underline-offset-2 hover:underline"
-          >
-            Reset filters
-          </button>
-        )}
       </header>
 
       {toast && (
@@ -1787,71 +1754,6 @@ function NearbyScreen({
         </div>
       )}
 
-      <div className="space-y-1.5">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-flame font-semibold">
-          Travel style
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => setFilterStyles(new Set())}
-            aria-pressed={filterStyles.size === 0}
-            className={
-              filterStyles.size === 0
-                ? 'rounded-full bg-flame px-2.5 py-1 text-[11px] font-semibold text-night'
-                : 'rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-cream'
-            }
-          >
-            All
-          </button>
-          {TRAVEL_STYLES.map((s) => {
-            const active = filterStyles.has(s)
-            return (
-              <button
-                key={s}
-                type="button"
-                onClick={() => toggleStyle(s)}
-                aria-pressed={active}
-                className={
-                  active
-                    ? 'rounded-full bg-flame px-2.5 py-1 text-[11px] font-semibold text-night'
-                    : 'rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-cream'
-                }
-              >
-                {s}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-flame font-semibold">
-          Interest
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {INTERESTS.map((i) => {
-            const active = filterInterests.has(i.slug)
-            return (
-              <button
-                key={i.slug}
-                type="button"
-                onClick={() => toggleInterest(i.slug)}
-                aria-pressed={active}
-                className={
-                  active
-                    ? 'inline-flex items-center gap-1 rounded-full bg-flame px-2.5 py-1 text-[11px] font-semibold text-night'
-                    : 'inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-cream'
-                }
-              >
-                <span aria-hidden>{i.emoji}</span>
-                {i.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
       <ul className="space-y-2.5">
         {list.map((c) => (
           <li key={c.id}>
@@ -1865,15 +1767,7 @@ function NearbyScreen({
         ))}
         {list.length === 0 && (
           <li className="rounded-xl border border-dashed border-white/10 bg-card/40 p-4 text-center text-xs text-mist">
-            No campers match those filters.
-            {filterStyles.size > 0 && (
-              <>
-                {' '}
-                <span className="text-cream">
-                  (filtering for: {Array.from(filterStyles).join(', ')})
-                </span>
-              </>
-            )}
+            No campers checked in here right now.
           </li>
         )}
       </ul>
@@ -1882,47 +1776,51 @@ function NearbyScreen({
 }
 
 function CamperCard({ camper, state, viewerInterests, onWave }) {
-  // Privacy rule: pre-connection cards reveal NO identifying data —
-  // only the rig type and the shared-interest overlap with the viewer.
-  // Names + per-camper details appear only after Step 5 (Connected).
+  // Discovery list: lead with first-name-and-initial + travel style + up
+  // to three interest tags. Shared interests (overlap with the viewer's
+  // own picks from Check In) get a flame-tinted highlight; the rest fall
+  // back to the camper's first three interests so the card always reads
+  // like a real profile, even on a fresh demo session with no viewer
+  // interests selected. Exact site numbers and locations are never shown.
   const viewerSet = new Set(viewerInterests ?? [])
-  const shared = (camper.interests ?? []).filter((slug) => viewerSet.has(slug))
+  const allInterests = camper.interests ?? []
+  const shared = allInterests.filter((slug) => viewerSet.has(slug))
+  const visibleInterests = (shared.length > 0 ? shared : allInterests).slice(0, 3)
   const justWaved = state === 'waved' || state === 'consent'
 
   return (
     <article className="rounded-2xl border border-white/5 bg-card p-3 shadow-lg shadow-black/20 space-y-2">
       <header className="space-y-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-mist/70">
-          A nearby camper
+        <p className="text-sm font-semibold text-cream leading-tight">
+          {camper.displayName ?? camper.name}
         </p>
-        {camper.rig && (
-          <p className="text-xs text-cream">
-            <span className="text-mist">Rig · </span>
-            <span className="font-semibold">{camper.rig}</span>
-          </p>
-        )}
+        <p>
+          <span className="inline-flex items-center rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[10px] font-semibold text-flame">
+            {camper.style}
+          </span>
+        </p>
       </header>
 
-      {shared.length > 0 ? (
-        <div className="space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-flame/80">
-            Shared interests
-          </p>
-          <ul className="flex flex-wrap gap-1">
-            {shared.map((slug) => (
+      {visibleInterests.length > 0 ? (
+        <ul className="flex flex-wrap gap-1">
+          {visibleInterests.map((slug) => {
+            const isShared = viewerSet.has(slug)
+            return (
               <li
                 key={slug}
-                className="inline-flex items-center gap-1 rounded-full border border-flame/30 bg-flame/10 px-2 py-0.5 text-[10px] text-cream"
+                className={
+                  isShared
+                    ? 'inline-flex items-center gap-1 rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[10px] text-cream'
+                    : 'inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-cream'
+                }
               >
                 <span aria-hidden>{INTEREST_EMOJI[slug]}</span>
                 {INTEREST_LABEL[slug]}
               </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <p className="text-[11px] text-mist italic">No shared interests yet.</p>
-      )}
+            )
+          })}
+        </ul>
+      ) : null}
 
       <div className="pt-1.5 border-t border-white/5 space-y-1.5">
         {state === 'connected' ? (
