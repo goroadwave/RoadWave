@@ -610,7 +610,7 @@ test.describe('Homepage spec', () => {
     await expect(tryDemo).toBeVisible()
     await expect(iRun).toBeVisible()
     await expect(tryDemo).toHaveAttribute('href', '/demo')
-    await expect(iRun).toHaveAttribute('href', '/campgrounds')
+    await expect(iRun).toHaveAttribute('href', '/owners')
 
     // The Try the Demo button is the flame-bg primary; secondary uses
     // the bordered transparent style. Verifies visual hierarchy via
@@ -620,26 +620,21 @@ test.describe('Homepage spec', () => {
     await expect(iRun).toHaveClass(/border-white/)
   })
 
-  test('quieter secondary audience cards exist below the hero', async ({
+  test('homepage Who It\'s For section lists the spec audience cards', async ({
     page,
   }) => {
     await page.goto('/')
-    // Audience cards link to the same destinations as the hero CTAs.
-    // Use .last() to target the secondary card (the hero CTA matches
-    // first by DOM order). Both audience cards must be reachable links.
-    const rverCard = page.getByRole('link', { name: /I'm an RVer/i }).last()
-    const ownerCard = page
-      .getByRole('link', { name: /I run a campground/i })
-      .last()
-    await expect(rverCard).toBeVisible()
-    await expect(rverCard).toHaveAttribute('href', '/demo')
-    await expect(ownerCard).toBeVisible()
-    await expect(ownerCard).toHaveAttribute('href', '/campgrounds')
-
-    // Visual quietness assertion — the cards must NOT use the flame
-    // background that the hero CTA uses, so they read as secondary.
-    await expect(rverCard).not.toHaveClass(/bg-flame /)
-    await expect(ownerCard).not.toHaveClass(/bg-flame /)
+    await expect(
+      page.getByRole('heading', {
+        name: /For campers who want the option — not the obligation/i,
+      }),
+    ).toBeVisible()
+    // A few of the spec cards verify the section is populated.
+    await expect(page.getByText(/Solo travelers/i).first()).toBeVisible()
+    await expect(page.getByText(/Families/i).first()).toBeVisible()
+    await expect(
+      page.getByText(/Snowbirds/i).first(),
+    ).toBeVisible()
   })
 
   test('homepage phone preview is above the fold with the spec content', async ({
@@ -663,29 +658,17 @@ test.describe('Homepage spec', () => {
     ).toBeVisible()
   })
 
-  test('homepage shows the Facebook differentiator line near the top', async ({
+  test('homepage Better-Than-Facebook section uses the spec heading + body', async ({
     page,
   }) => {
     await page.goto('/')
     await expect(
-      page.getByText(
-        'Unlike Facebook groups or campground-wide chats, RoadWave is temporary, campground-specific, privacy-controlled, and built around mutual interest before messaging.',
-      ),
-    ).toBeVisible()
-  })
-
-  test('example-campground section uses the new RoadWave-Friendly label', async ({
-    page,
-  }) => {
-    await page.goto('/')
-    await expect(
-      page.getByText('Sample RoadWave-Friendly Campground Experience', {
-        exact: false,
-      }).first(),
+      page.getByRole('heading', { name: /Not another noisy group chat/i }),
     ).toBeVisible()
     await expect(
       page.getByText(
-        "Here's how participating campgrounds could appear inside RoadWave once they activate their guest page.",
+        'Unlike Facebook groups or open campground chats, RoadWave is only for the campground you',
+        { exact: false },
       ),
     ).toBeVisible()
   })
