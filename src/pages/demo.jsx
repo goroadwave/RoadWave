@@ -621,7 +621,7 @@ function GuestApp({ campgroundName, onReset }) {
           {[
             ['home', 'Home'],
             ['checkin', 'Check in'],
-            ['nearby', 'Checked In'],
+            ['nearby', 'Campers Here'],
             ['meetups', 'Meetups'],
             ['waves', 'Waves'],
             ['privacy', 'Privacy'],
@@ -2014,7 +2014,7 @@ function WavesScreen({ waved, onMessage, onRemove, blocked }) {
 
       {entries.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-6 text-center text-sm text-mist">
-          No waves yet. Head to <span className="text-cream">Checked In</span> and
+          No waves yet. Head to <span className="text-cream">Campers Here</span> and
           say hi to your neighbors.
         </div>
       ) : (
@@ -2280,7 +2280,7 @@ function CrossedPathsScreen({ waved, campgroundName, onOpen }) {
 
       {all.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-4 text-center text-xs text-mist">
-          Try waving at someone in the Checked In tab. Sarah & Jim wave back.
+          Try waving at someone in the Campers Here tab. Sarah & Jim wave back.
         </p>
       ) : (
         <ul className="space-y-2">

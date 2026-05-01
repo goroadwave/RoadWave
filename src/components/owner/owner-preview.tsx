@@ -20,7 +20,7 @@ const AMENITY_LABEL: Record<string, string> = {
 const TABS = [
   { id: 'home', label: 'Home' },
   { id: 'checkin', label: 'Check in' },
-  { id: 'nearby', label: 'Checked In' },
+  { id: 'nearby', label: 'Campers Here' },
   { id: 'meetups', label: 'Meetups' },
   { id: 'waves', label: 'Waves' },
   { id: 'privacy', label: 'Privacy' },

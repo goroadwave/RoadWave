@@ -44,7 +44,7 @@ export default async function WavesPage() {
             href="/nearby"
             className="text-cream font-semibold underline-offset-2 hover:underline"
           >
-            Checked In
+            Campers Here
           </Link>{' '}
           and say hi to a camper who shares your interests.
         </div>

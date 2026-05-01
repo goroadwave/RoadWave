@@ -314,7 +314,7 @@ function GuestTabs({
             Check In
           </TabButton>
           <TabButton active={tab === 'nearby'} onClick={() => setTab('nearby')}>
-            Checked In
+            Campers Here
           </TabButton>
           <TabButton active={tab === 'meetups'} onClick={() => setTab('meetups')}>
             Meetups
