@@ -1,7 +1,7 @@
 'use client'
 
-import { useActionState } from 'react'
-import { Eye, EyeOff, Ghost } from 'lucide-react'
+import { useActionState, useState } from 'react'
+import { Eye, EyeOff, Ghost, MapPin } from 'lucide-react'
 import { savePrivacyModeAction, type PrivacyState } from '@/app/(app)/settings/privacy/actions'
 import type { PrivacyMode } from '@/lib/types/db'
 
@@ -47,10 +47,34 @@ const OPTIONS: {
       'A pure observer mode for when you want privacy.',
     ],
   },
+  {
+    value: 'campground_only',
+    label: 'Campground Only',
+    Icon: MapPin,
+    blurb: 'See campground bulletins and meetups — and nothing else.',
+    bullets: [
+      'You stay out of the nearby list and can’t send or receive waves.',
+      'You still see campground bulletins and meetups (toggle each below).',
+      'You count for owner activity stats so RSVPs reflect you.',
+    ],
+  },
 ]
 
-export function PrivacyModeForm({ currentMode }: { currentMode: PrivacyMode }) {
+type Props = {
+  currentMode: PrivacyMode
+  shareBulletins: boolean
+  shareMeetups: boolean
+}
+
+export function PrivacyModeForm({
+  currentMode,
+  shareBulletins,
+  shareMeetups,
+}: Props) {
   const [state, formAction, pending] = useActionState(savePrivacyModeAction, initialState)
+  const [mode, setMode] = useState<PrivacyMode>(currentMode)
+  const [bulletins, setBulletins] = useState(shareBulletins)
+  const [meetups, setMeetups] = useState(shareMeetups)
 
   return (
     <form action={formAction} className="space-y-4">
@@ -66,7 +90,8 @@ export function PrivacyModeForm({ currentMode }: { currentMode: PrivacyMode }) {
                 type="radio"
                 name="privacy_mode"
                 value={opt.value}
-                defaultChecked={currentMode === opt.value}
+                checked={mode === opt.value}
+                onChange={() => setMode(opt.value)}
                 className="mt-1 h-4 w-4 accent-flame"
               />
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-flame/10 text-flame">
@@ -82,11 +107,44 @@ export function PrivacyModeForm({ currentMode }: { currentMode: PrivacyMode }) {
                     <li key={b}>{b}</li>
                   ))}
                 </ul>
+                {opt.value === 'campground_only' && mode === 'campground_only' && (
+                  <fieldset className="mt-3 rounded-xl border border-flame/30 bg-flame/[0.06] p-3 space-y-2">
+                    <legend className="px-1 text-[11px] uppercase tracking-[0.18em] text-flame font-semibold">
+                      What you still see
+                    </legend>
+                    <Toggle
+                      label="Campground Bulletins"
+                      sub="Announcements + notices from the campground."
+                      checked={bulletins}
+                      onChange={setBulletins}
+                    />
+                    <Toggle
+                      label="Meetups & Activities"
+                      sub="Hosted meetups + RSVP."
+                      checked={meetups}
+                      onChange={setMeetups}
+                    />
+                  </fieldset>
+                )}
               </div>
             </label>
           )
         })}
       </div>
+
+      {/* Submit the toggles regardless of selected mode so a user can
+          pre-set their preference and have it stick when they flip
+          into campground_only later. */}
+      <input
+        type="hidden"
+        name="share_bulletins"
+        value={bulletins ? 'on' : ''}
+      />
+      <input
+        type="hidden"
+        name="share_meetups"
+        value={meetups ? 'on' : ''}
+      />
 
       {state.error && (
         <p className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-300">
@@ -102,5 +160,32 @@ export function PrivacyModeForm({ currentMode }: { currentMode: PrivacyMode }) {
         {pending ? 'Saving…' : 'Save privacy mode'}
       </button>
     </form>
+  )
+}
+
+function Toggle({
+  label,
+  sub,
+  checked,
+  onChange,
+}: {
+  label: string
+  sub: string
+  checked: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <label className="flex items-start gap-2 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 accent-flame"
+      />
+      <span className="flex-1">
+        <span className="block text-sm font-semibold text-cream">{label}</span>
+        <span className="block text-[11px] text-mist leading-snug">{sub}</span>
+      </span>
+    </label>
   )
 }

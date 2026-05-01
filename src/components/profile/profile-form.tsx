@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import { Eye, EyeOff, Ghost } from 'lucide-react'
+import { Eye, EyeOff, Ghost, MapPin } from 'lucide-react'
 import {
   saveProfileAction,
   type ProfileSaveState,
@@ -401,6 +401,13 @@ function PrivacyModeRadio({ defaultValue }: { defaultValue: PrivacyMode }) {
       label: 'Invisible',
       Icon: Ghost,
       description: 'Just here to look around.',
+    },
+    {
+      value: 'campground_only',
+      label: 'Campground Only',
+      Icon: MapPin,
+      description:
+        'See bulletins + meetups, completely invisible to other campers.',
     },
   ]
   return (

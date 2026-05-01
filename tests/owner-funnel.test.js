@@ -196,6 +196,91 @@ test.describe('Owner funnel — structural wiring', () => {
     expect(src).toContain('TrialBanner')
   })
 
+  test('Campground Only privacy mode is wired across the stack', async () => {
+    const fs = await import('node:fs/promises')
+
+    // 1. Migrations declare the enum value (0032) + the columns,
+    //    RLS update, and RPCs that depend on it (0033). They're
+    //    split across two files because Postgres requires
+    //    `ALTER TYPE … ADD VALUE` to commit before any later
+    //    statement can reference the new value — the Supabase SQL
+    //    Editor would reject a single-script run otherwise.
+    const sql32 = await fs.readFile(
+      'supabase/migrations/0032_campground_only_visibility.sql',
+      'utf8',
+    )
+    expect(sql32).toContain("add value if not exists 'campground_only'")
+    const sql33 = await fs.readFile(
+      'supabase/migrations/0033_campground_only_part2.sql',
+      'utf8',
+    )
+    expect(sql33).toContain('share_bulletins boolean')
+    expect(sql33).toContain('share_meetups boolean')
+    expect(sql33).toContain('waves_insert_targeted')
+    expect(sql33).toContain("in ('visible', 'quiet')")
+    expect(sql33).toContain('public.owner_visibility_breakdown(')
+    expect(sql33).toContain('campground_only_count int')
+    expect(sql33).toContain('active_campground_only int')
+
+    // 2. PrivacyMode type carries the new value + the two toggles.
+    const types = await fs.readFile('src/lib/types/db.ts', 'utf8')
+    expect(types).toContain("'campground_only'")
+    expect(types).toContain('share_bulletins')
+    expect(types).toContain('share_meetups')
+
+    // 3. Validators accept the new mode + toggles.
+    const validator = await fs.readFile(
+      'src/lib/validators/profile.ts',
+      'utf8',
+    )
+    expect(validator).toContain("'campground_only'")
+    expect(validator).toContain('share_bulletins')
+    expect(validator).toContain('share_meetups')
+
+    // 4. Privacy form renders the 4th option + sub-toggles.
+    const form = await fs.readFile(
+      'src/components/privacy/privacy-mode-form.tsx',
+      'utf8',
+    )
+    expect(form).toContain("'campground_only'")
+    expect(form).toContain('Campground Only')
+    expect(form).toContain('Campground Bulletins')
+    expect(form).toContain('Meetups & Activities')
+
+    // 5. /home + /meetups self-mute on the new toggles.
+    const home = await fs.readFile('src/app/(app)/home/page.tsx', 'utf8')
+    expect(home).toContain('share_bulletins')
+    const meetups = await fs.readFile(
+      'src/app/(app)/meetups/page.tsx',
+      'utf8',
+    )
+    expect(meetups).toContain('share_meetups')
+
+    // 6. Owner dashboard wires the visibility breakdown.
+    const dash = await fs.readFile(
+      'src/app/owner/(authed)/dashboard/page.tsx',
+      'utf8',
+    )
+    expect(dash).toContain('VisibilityBreakdown')
+    expect(dash).toContain('owner_visibility_breakdown')
+
+    // 7. Admin activity page surfaces the campground_only count.
+    const adminAct = await fs.readFile(
+      'src/app/admin/activity/page.tsx',
+      'utf8',
+    )
+    expect(adminAct).toContain('active_campground_only')
+    expect(adminAct).toContain('Campground Only')
+
+    // 8. Demo PrivacyScreen and Riley tour Step 6 mention the new
+    //    mode + sub-toggles.
+    const demo = await fs.readFile('src/pages/demo.jsx', 'utf8')
+    expect(demo).toContain("'campground_only'")
+    expect(demo).toContain('Campground Bulletins')
+    const tour = await fs.readFile('src/app/tour/page.jsx', 'utf8')
+    expect(tour).toContain('Campground Only')
+  })
+
   test('Riley popup CTA is context-aware (camper vs owner pages)', async () => {
     const fs = await import('node:fs/promises')
     const helper = await fs.readFile(

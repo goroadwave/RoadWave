@@ -10,6 +10,10 @@ type ActivityRow = {
   waves_declined: number
   new_connections_today: number
   bulletins_today: number
+  active_visible: number
+  active_quiet: number
+  active_invisible: number
+  active_campground_only: number
 }
 
 export default async function ActivityPage() {
@@ -20,6 +24,10 @@ export default async function ActivityPage() {
 
   const cards: { label: string; value: number; tone?: 'flame' | 'leaf' }[] = [
     { label: 'Active check-ins', value: data?.active_checkins ?? 0, tone: 'flame' },
+    { label: 'Visible', value: data?.active_visible ?? 0, tone: 'leaf' },
+    { label: 'Quiet', value: data?.active_quiet ?? 0 },
+    { label: 'Invisible', value: data?.active_invisible ?? 0 },
+    { label: 'Campground Only', value: data?.active_campground_only ?? 0, tone: 'flame' },
     { label: 'Waves · pending', value: data?.waves_pending ?? 0 },
     { label: 'Waves · matched', value: data?.waves_matched ?? 0 },
     { label: 'Waves · connected', value: data?.waves_connected ?? 0, tone: 'leaf' },

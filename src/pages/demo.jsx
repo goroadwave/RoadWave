@@ -42,6 +42,11 @@ const PRIVACY_MODES = [
   { slug: 'visible', label: 'Visible', desc: 'In the list. Open to waves.' },
   { slug: 'quiet', label: 'Quiet', desc: 'Hidden, but you can wave first.' },
   { slug: 'invisible', label: 'Invisible', desc: 'Just here to look around.' },
+  {
+    slug: 'campground_only',
+    label: 'Campground Only',
+    desc: 'See bulletins + meetups, completely invisible to other campers.',
+  },
 ]
 
 const SAMPLE_CAMPERS = [
@@ -2146,6 +2151,18 @@ function VerifiedBadge({ title, small }) {
 // ----------------------------------------------------------------------------
 
 function PrivacyScreen({ mode, onChange }) {
+  // Sub-toggle state for the campground_only mode. Defaults match the
+  // live app: both sub-toggles on by default.
+  const [shareBulletins, setShareBulletins] = useState(true)
+  const [shareMeetups, setShareMeetups] = useState(true)
+
+  const iconFor = (slug) => {
+    if (slug === 'visible') return '👁'
+    if (slug === 'quiet') return '🤫'
+    if (slug === 'invisible') return '👻'
+    return '📍'
+  }
+
   return (
     <div className="space-y-4 py-3">
       <header>
@@ -2154,7 +2171,7 @@ function PrivacyScreen({ mode, onChange }) {
           How visible are you?
         </h1>
         <p className="font-serif italic text-flame text-sm leading-snug">
-          Three settings. You&apos;re always in control.
+          Four settings. You&apos;re always in control.
         </p>
       </header>
 
@@ -2162,26 +2179,68 @@ function PrivacyScreen({ mode, onChange }) {
         {PRIVACY_MODES.map((m) => {
           const active = mode === m.slug
           return (
-            <button
-              key={m.slug}
-              type="button"
-              onClick={() => onChange(m.slug)}
-              className={
-                active
-                  ? 'w-full text-left flex items-start gap-3 rounded-2xl border border-flame bg-flame/10 p-3'
-                  : 'w-full text-left flex items-start gap-3 rounded-2xl border border-white/10 bg-card p-3'
-              }
-            >
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-flame/15 text-flame text-base">
-                {m.slug === 'visible' ? '👁' : m.slug === 'quiet' ? '🤫' : '👻'}
-              </span>
-              <span>
-                <span className="block text-sm font-semibold text-cream">{m.label}</span>
-                <span className="block font-serif italic text-flame text-sm leading-snug">
-                  {m.desc}
+            <div key={m.slug}>
+              <button
+                type="button"
+                onClick={() => onChange(m.slug)}
+                className={
+                  active
+                    ? 'w-full text-left flex items-start gap-3 rounded-2xl border border-flame bg-flame/10 p-3'
+                    : 'w-full text-left flex items-start gap-3 rounded-2xl border border-white/10 bg-card p-3'
+                }
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-flame/15 text-flame text-base">
+                  {iconFor(m.slug)}
                 </span>
-              </span>
-            </button>
+                <span>
+                  <span className="block text-sm font-semibold text-cream">
+                    {m.label}
+                  </span>
+                  <span className="block font-serif italic text-flame text-sm leading-snug">
+                    {m.desc}
+                  </span>
+                </span>
+              </button>
+              {active && m.slug === 'campground_only' && (
+                <div className="mt-2 rounded-xl border border-flame/30 bg-flame/[0.06] p-3 space-y-2">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-flame font-semibold">
+                    What you still see
+                  </p>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={shareBulletins}
+                      onChange={(e) => setShareBulletins(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-flame"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-cream">
+                        Campground Bulletins
+                      </span>
+                      <span className="block text-[11px] text-mist leading-snug">
+                        Announcements + notices from the campground.
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={shareMeetups}
+                      onChange={(e) => setShareMeetups(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-flame"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-cream">
+                        Meetups & Activities
+                      </span>
+                      <span className="block text-[11px] text-mist leading-snug">
+                        Hosted meetups + RSVP.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
           )
         })}
       </div>

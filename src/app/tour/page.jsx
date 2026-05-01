@@ -48,7 +48,7 @@ const STEPS = [
   },
   {
     id: "visibility",
-    speech: "You control your visibility the whole time. Be visible when you feel social, quiet when you are just browsing, or invisible when you want privacy. RoadWave is optional from start to finish. Ready to try it? Hit the green button to start your check-in now.",
+    speech: "You control your visibility the whole time. Be visible when you feel social, quiet when you are just browsing, invisible when you want privacy, or choose Campground Only to see bulletins and meetups without appearing to other campers at all. RoadWave is optional from start to finish. Ready to try it? Hit the green button to start your check-in now.",
     screen: "privacy",
     highlight: "none",
     bubble: { text: "Visible, Quiet, or Invisible — your call.", position: "top" },
@@ -104,7 +104,7 @@ const AppScreen = ({ screen, highlight }) => {
     <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px", height: "100%", justifyContent: "center" }}>
       <div style={{ color: "#fde68a", fontSize: "10px", letterSpacing: "2px", textAlign: "center" }}>YOUR PRIVACY</div>
       <div style={{ ...hl("privacyToggle"), display: "flex", flexDirection: "column", gap: "10px" }}>
-        {[["🌍", "Open", "Everyone nearby sees you", "#22c55e", false], ["🤝", "Selective", "Matching vibes only", "#f59e0b", true], ["🥷", "Invisible", "Total ghost mode", "#6366f1", false]].map(([e, l, s, c, sel]) => (
+        {[["🌍", "Open", "Everyone nearby sees you", "#22c55e", false], ["🤝", "Selective", "Matching vibes only", "#f59e0b", true], ["🥷", "Invisible", "Total ghost mode", "#6366f1", false], ["📍", "Campground Only", "See bulletins and meetups, hidden from campers", "#10b981", false]].map(([e, l, s, c, sel]) => (
           <div key={l} style={{ background: sel ? `${c}18` : "rgba(255,255,255,0.04)", border: sel ? `1.5px solid ${c}` : "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "14px", display: "flex", alignItems: "center", gap: "12px" }}>
             <span style={{ fontSize: "24px" }}>{e}</span>
             <div style={{ flex: 1 }}><div style={{ color: "white", fontSize: "13px", fontWeight: "600" }}>{l}</div><div style={{ color: "#9ca3af", fontSize: "10px" }}>{s}</div></div>

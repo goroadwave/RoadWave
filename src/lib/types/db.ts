@@ -1,4 +1,8 @@
-export type PrivacyMode = 'visible' | 'quiet' | 'invisible'
+export type PrivacyMode =
+  | 'visible'
+  | 'quiet'
+  | 'invisible'
+  | 'campground_only'
 export type CheckInStatus = 'active' | 'expired' | 'departed'
 export type CampgroundRole = 'owner' | 'host'
 export type TravelStyle =
@@ -37,6 +41,9 @@ export interface Profile {
   share_pet: boolean
   share_travel_style: boolean
   share_interests: boolean
+  // Self-mute toggles for the campground_only mode (default true).
+  share_bulletins: boolean
+  share_meetups: boolean
   email_verified_at: string | null
   created_at: string
   updated_at: string

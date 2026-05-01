@@ -13,7 +13,7 @@ export default async function PrivacyPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('privacy_mode')
+    .select('privacy_mode, share_bulletins, share_meetups')
     .eq('id', user.id)
     .single()
 
@@ -22,10 +22,12 @@ export default async function PrivacyPage() {
       <PageHeading
         eyebrow="Privacy mode"
         title="How visible are you?"
-        subtitle="Three settings. You're always in control."
+        subtitle="Four settings. You're always in control."
       />
       <PrivacyModeForm
         currentMode={(profile?.privacy_mode as PrivacyMode) ?? 'visible'}
+        shareBulletins={profile?.share_bulletins ?? true}
+        shareMeetups={profile?.share_meetups ?? true}
       />
 
       <section className="rounded-2xl border border-white/10 bg-card p-5 space-y-2">

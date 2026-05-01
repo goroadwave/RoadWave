@@ -63,6 +63,17 @@ export async function saveProfileAction(
     share_pet: formData.get('share_pet') === 'on',
     share_travel_style: formData.get('share_travel_style') === 'on',
     share_interests: formData.get('share_interests') === 'on',
+    // The setup form doesn't render the campground_only sub-toggles
+    // (those live on /settings/privacy), so default to true here.
+    // Existing values on the row are preserved by the upsert below.
+    share_bulletins:
+      formData.get('share_bulletins') === null
+        ? true
+        : formData.get('share_bulletins') === 'on',
+    share_meetups:
+      formData.get('share_meetups') === null
+        ? true
+        : formData.get('share_meetups') === 'on',
     interest_slugs: formData.getAll('interest_slugs'),
   })
   if (!parsed.success) {

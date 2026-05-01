@@ -53,6 +53,37 @@ export default async function MeetupsPage() {
     )
   }
 
+  // Self-mute: users with share_meetups=false (the campground_only
+  // sub-toggle, persisted across all modes) see a quiet placeholder
+  // instead of the meetup list.
+  const { data: meetupsPref } = await supabase
+    .from('profiles')
+    .select('share_meetups')
+    .eq('id', user!.id)
+    .maybeSingle()
+  if (meetupsPref?.share_meetups === false) {
+    return (
+      <div className="space-y-5">
+        <SafetyBanner message={MEETUPS_BANNER_MESSAGE} />
+        <PageHeading
+          eyebrow="Meetups"
+          title="Meetups muted"
+          subtitle="You turned off Meetups & Activities."
+        />
+        <p className="rounded-2xl border border-white/10 bg-card/40 p-5 text-sm text-mist">
+          To see hosted meetups and RSVPs again, flip the toggle in{' '}
+          <Link
+            href="/settings/privacy"
+            className="text-flame underline-offset-2 hover:underline"
+          >
+            Privacy settings
+          </Link>
+          .
+        </p>
+      </div>
+    )
+  }
+
   const campgroundId = latestCheckIn.campground_id
 
   const { data: campground } = await supabase

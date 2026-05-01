@@ -25,7 +25,9 @@ export default async function HomePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('username, display_name, privacy_mode, travel_style, is_admin')
+    .select(
+      'username, display_name, privacy_mode, travel_style, is_admin, share_bulletins, share_meetups',
+    )
     .eq('id', user!.id)
     .single()
 
@@ -87,12 +89,16 @@ export default async function HomePage() {
   }
 
   // Active bulletin from the campground the guest is checked into.
+  // Self-mute: users with share_bulletins=false don't see this banner
+  // (campground_only mode toggles surface this preference, but the
+  // toggle persists across all modes for predictable behavior).
   let activeBulletin: {
     id: string
     message: string
     category: string
   } | null = null
-  if (checkInCampground) {
+  const shareBulletins = profile?.share_bulletins !== false
+  if (checkInCampground && shareBulletins) {
     const { data } = await supabase
       .from('bulletins')
       .select('id, message, category')

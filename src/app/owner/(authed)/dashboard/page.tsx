@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { TrialBanner } from '@/components/owner/trial-banner'
+import { VisibilityBreakdown } from '@/components/owner/visibility-breakdown'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loadOwnerCampground } from '../_helpers'
 
@@ -28,14 +29,30 @@ export default async function OwnerDashboardPage() {
   const supabase = await createSupabaseServerClient()
   const nowIso = new Date().toISOString()
 
-  // Active opt-in check-in count via SECURITY DEFINER RPC. The function
-  // filters to privacy_mode='visible' + not suspended, so Quiet/Invisible
-  // users are excluded by design — owners only see counts of users who
-  // explicitly opted into being seen.
+  // Active opt-in check-in count via SECURITY DEFINER RPC.
   const { data: checkedInCount } = await supabase.rpc(
     'owner_active_checkin_count',
     { _campground_id: campground.id },
   )
+
+  // Per-mode visibility breakdown (added in migration 0032). Includes
+  // campground_only guests who count toward activity stats but stay
+  // invisible to other campers.
+  type BreakdownRow = {
+    visible_count: number
+    quiet_count: number
+    invisible_count: number
+    campground_only_count: number
+  }
+  const { data: breakdownRow } = await supabase
+    .rpc('owner_visibility_breakdown', { _campground_id: campground.id })
+    .maybeSingle<BreakdownRow>()
+  const breakdown = {
+    visible: breakdownRow?.visible_count ?? 0,
+    quiet: breakdownRow?.quiet_count ?? 0,
+    invisible: breakdownRow?.invisible_count ?? 0,
+    campground_only: breakdownRow?.campground_only_count ?? 0,
+  }
 
   // Active bulletin (most recent unexpired).
   const { data: activeBulletin } = await supabase
@@ -164,6 +181,8 @@ export default async function OwnerDashboardPage() {
           )}
         </div>
       </section>
+
+      <VisibilityBreakdown counts={breakdown} />
 
       {incomplete.length > 0 && (
         <section className="space-y-3">
