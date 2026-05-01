@@ -16,7 +16,7 @@ export function VisibilityBreakdown({ counts }: { counts: Counts }) {
       label: 'Visible',
       value: counts.visible,
       tone: 'text-leaf',
-      sub: 'In nearby + open to waves',
+      sub: 'In camper list + open to waves',
     },
     {
       label: 'Quiet',

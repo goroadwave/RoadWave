@@ -76,7 +76,7 @@ const WHO_ITS_FOR: { title: string; body: string }[] = [
   },
   {
     title: 'Weekend campers',
-    body: 'Weekend campers who want to find friendly people nearby.',
+    body: 'Weekend campers who want to find friendly people at the campground.',
   },
   {
     title: 'Campers who prefer quiet',

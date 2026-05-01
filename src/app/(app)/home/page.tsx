@@ -154,7 +154,7 @@ export default async function HomePage() {
         </h1>
         <div className="space-y-1 pt-1">
           <p className="font-serif italic text-flame text-xl sm:text-2xl leading-snug">
-            Meet the right neighbors without making it weird.
+            Connect privately with campers who share your interests.
           </p>
           <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
             Open when you want. Invisible when you do not.

@@ -396,7 +396,7 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
         <title>RoadWave · Demo</title>
         <meta
           name="description"
-          content="Privacy-first campground connections — interactive demo."
+          content="A private way to see campground updates, find shared interests, and say hello only when you want to. Interactive demo."
         />
       </Head>
 
@@ -2041,7 +2041,7 @@ function MeetupsScreen({ campgroundName }) {
           What&apos;s happening
         </h1>
         <p className="font-serif italic text-flame text-sm leading-snug">
-          From the campground and from neighbors. Show up if you want.
+          From the campground and from campers. Show up if you want.
         </p>
       </header>
 

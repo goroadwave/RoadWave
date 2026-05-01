@@ -52,7 +52,7 @@ export default function PrivacyPolicyPage() {
             <Bullets
               items={[
                 'Your email address — used to sign you in and send confirmations.',
-                "Your username and display name — what other campers see when you appear in a nearby list.",
+                "Your username and display name — what other campers see when you appear in a checked-in camper list.",
                 "Your travel style and interests — used to surface compatible neighbors.",
                 "Your check-in — the campground you scanned into and when. Not your GPS.",
                 'Your wave history — who you waved at, who waved back, when.',
@@ -94,9 +94,9 @@ export default function PrivacyPolicyPage() {
             </p>
             <Bullets
               items={[
-                'Visible — you appear in nearby lists at your campground.',
-                'Quiet — you are hidden from nearby lists, but you can still wave first.',
-                'Invisible — you are completely off the grid. Browse without leaving a trace.',
+                'Visible — you appear in checked-in camper lists at your campground.',
+                'Quiet — you are hidden from camper lists, but you can still wave first.',
+                'Invisible — you are completely hidden from other campers.',
                 'Campground Updates Only — you can see official campground updates and meetup prompts without appearing to other campers, sending waves, or opening private hellos.',
               ]}
             />

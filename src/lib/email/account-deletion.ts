@@ -91,7 +91,7 @@ function buildHtml({ toEmail, deletedAt }: Args): string {
               Questions? Write to <a href="mailto:hello@getroadwave.com" style="color:#f59e0b;">hello@getroadwave.com</a>.
             </p>
           </td></tr>
-          <tr><td align="center" style="padding:22px 12px 8px; color:#94a3b8; font-size:12px;">RoadWave — Privacy-first campground connections.</td></tr>
+          <tr><td align="center" style="padding:22px 12px 8px; color:#94a3b8; font-size:12px;">RoadWave — A private way to see campground updates, find shared interests, and say hello only when you want to.</td></tr>
           <tr><td align="center" style="padding:0 12px 8px; color:#64748b; font-size:11px;">Sent to ${escapeHtml(toEmail)} from hello@getroadwave.com.</td></tr>
         </table>
       </td></tr>

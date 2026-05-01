@@ -81,12 +81,14 @@ export default function AboutPage() {
                 of having to ask outright.
               </p>
               <p>
-                So I built RoadWave. The idea is simple: a private little
-                amenity, scanned from a QR code at the welcome sign, that
-                lets you see who else is parked here right now. You wave at
-                anyone who looks interesting. They wave back, or they
-                don&apos;t. If they don&apos;t, no one ever knows you waved.
-                If they do, you say hi. That&apos;s it.
+                So I built RoadWave. The idea is simple: a private
+                campground guest amenity, scanned from a QR code, that
+                helps campers see what&apos;s happening at the campground,
+                find people who share their interests, and connect only
+                when both people choose to wave. Guests can participate
+                socially, stay quiet, go invisible, or use Campground
+                Updates Only to see official campground information
+                without appearing to other campers.
               </p>
               <p>
                 The whole thing is built on the idea that connection should

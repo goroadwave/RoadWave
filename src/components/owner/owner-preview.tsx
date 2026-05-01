@@ -464,7 +464,7 @@ function MeetupsTab({
           What&apos;s happening
         </h2>
         <p className="text-xs text-mist">
-          From the campground and from neighbors.
+          From the campground and from campers.
         </p>
       </header>
 

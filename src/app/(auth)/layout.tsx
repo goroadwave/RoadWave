@@ -11,8 +11,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {children}
       </main>
       <p className="mt-6 max-w-md text-center text-xs text-mist">
-        Privacy-first campground connections. We never share your location with other
-        campers — only your check-in to a campground.
+        A private way to see campground updates, find shared interests, and
+        say hello only when you want to.
       </p>
     </div>
   )

@@ -217,7 +217,7 @@ export function ProfileForm({ userId, profile, interests, myInterestSlugs }: Pro
         )}
       </Section>
 
-      <Section eyebrow="Interests" hint="Used by the nearby filter.">
+      <Section eyebrow="Interests" hint="Used by the camper list filter.">
         <FieldRow>
           <ShareToggle
             name="share_interests"

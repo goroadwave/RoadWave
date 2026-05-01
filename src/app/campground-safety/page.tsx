@@ -63,8 +63,8 @@ export default function CampgroundSafetyPage() {
             <p>Four modes, switched in one tap:</p>
             <Bullets
               items={[
-                "Visible — appears in the campground's nearby list.",
-                'Quiet — hidden from nearby lists; can still wave first.',
+                "Visible — appears in the campground's checked-in camper list.",
+                'Quiet — hidden from camper lists; can still wave first.',
                 'Invisible — completely off the grid; no presence at all.',
                 'Campground Updates Only — you can see official campground updates and meetup prompts without appearing to other campers, sending waves, or opening private hellos.',
               ]}

@@ -29,7 +29,7 @@ const instrument = Instrument_Serif({
 
 export const metadata: Metadata = {
   title: 'RoadWave',
-  description: 'Privacy-first campground connections for RVers.',
+  description: 'A private way to see campground updates, find shared interests, and say hello only when you want to.',
 }
 
 export const viewport: Viewport = {

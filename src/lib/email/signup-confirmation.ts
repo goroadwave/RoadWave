@@ -141,7 +141,7 @@ function buildHtml({ confirmUrl, toEmail, eyebrow, headline, body }: InternalArg
             </tr>
             <tr>
               <td align="center" style="padding:22px 12px 8px; color:#94a3b8; font-size:12px; line-height:1.5;">
-                RoadWave — Privacy-first campground connections.
+                RoadWave — A private way to see campground updates, find shared interests, and say hello only when you want to.
               </td>
             </tr>
             <tr>

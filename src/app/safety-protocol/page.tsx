@@ -137,7 +137,7 @@ export default function SafetyProtocolPage() {
             </p>
             <Bullets
               items={[
-                'Cannot wave, message, or appear in nearby lists.',
+                'Cannot wave, message, or appear in checked-in camper lists.',
                 'Retain their data while review is in progress.',
                 'Are notified by email at the address on file, unless notification would risk tipping off someone in an active safety situation.',
                 'Can request review of the suspension by replying to that email.',

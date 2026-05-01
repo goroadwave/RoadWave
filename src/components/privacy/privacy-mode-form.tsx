@@ -18,9 +18,9 @@ const OPTIONS: {
     value: 'visible',
     label: 'Visible',
     Icon: Eye,
-    blurb: 'Show up in the nearby list. Open to waves.',
+    blurb: 'Show up in the checked-in camper list. Open to waves.',
     bullets: [
-      'You appear in the nearby list at your campground.',
+      'You appear in the checked-in camper list at your campground.',
       'You can wave at others. They can wave at you.',
       'Mutual waves create Crossed Paths.',
     ],
@@ -31,7 +31,7 @@ const OPTIONS: {
     Icon: EyeOff,
     blurb: 'Hidden, but you can still wave first.',
     bullets: [
-      'You stay out of the nearby list.',
+      'You stay out of the checked-in camper list.',
       'You can wave first at Visible campers.',
       "Others can't wave at you, so matches only happen if you flip Visible.",
     ],
@@ -42,7 +42,7 @@ const OPTIONS: {
     Icon: Ghost,
     blurb: 'Just here to look around.',
     bullets: [
-      'You stay out of the nearby list.',
+      'You stay out of the checked-in camper list.',
       "You can't wave or be waved at.",
       'A pure observer mode for when you want privacy.',
     ],
@@ -53,7 +53,7 @@ const OPTIONS: {
     Icon: MapPin,
     blurb: 'See campground bulletins and meetups — and nothing else.',
     bullets: [
-      'You stay out of the nearby list and can’t send or receive waves.',
+      'You stay out of the checked-in camper list and can’t send or receive waves.',
       'You still see campground bulletins and meetups (toggle each below).',
     ],
   },

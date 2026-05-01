@@ -31,7 +31,7 @@ const PRIVACY_OPTIONS: {
     slug: 'visible',
     label: 'Visible',
     emoji: '👁',
-    desc: 'You appear in the nearby list. Open to waves.',
+    desc: 'You appear in the checked-in camper list. Open to waves.',
   },
   {
     slug: 'quiet',
@@ -176,7 +176,7 @@ export function WelcomeModal({
             <StepShell
               eyebrow="Step 2 of 3"
               title="Choose your interests"
-              hint="Tap as many as you like. Helps the right neighbors find you."
+              hint="Tap as many as you like. Helps the right campers find you."
             >
               <div className="flex flex-wrap gap-1.5 max-h-56 overflow-y-auto -mr-1 pr-1">
                 {interests.map((i) => {

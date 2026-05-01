@@ -71,7 +71,7 @@ export default function OwnersPage() {
               site numbers, or extra work for your staff.
             </p>
             <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-flame font-semibold">
-              No exact site numbers. No public chat. No app download required.
+              No exact site numbers. No public group chat. No app download required.
               Guests control their visibility.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-center">
@@ -148,7 +148,7 @@ export default function OwnersPage() {
             </div>
             <ul className="grid gap-3 sm:grid-cols-2 max-w-2xl mx-auto">
               {[
-                'No public chat to moderate',
+                'No public group chat to moderate',
                 'No exact site numbers',
                 'No guest data selling',
                 'No app download required',
@@ -415,7 +415,7 @@ export default function OwnersPage() {
                 guests — things like coffee hours, food trucks, dog walks,
                 pickleball, campfires, weather notices, quiet-hour
                 reminders. Guests get one easy place to see what&apos;s
-                happening without creating an open public chat your staff
+                happening without creating an open public group chat your staff
                 has to moderate.
               </p>
             </div>

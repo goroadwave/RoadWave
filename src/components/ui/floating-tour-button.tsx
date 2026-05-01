@@ -11,7 +11,7 @@ const SPEECH_BY_PATH: Record<string, string> = {
   '/home':
     "This is your home base. Check in, set your vibe, and see what's happening at your campground.",
   '/nearby':
-    "These are the campers near you right now. Send a wave to anyone who looks interesting!",
+    "These are the campers checked in here right now. Send a wave to anyone who looks interesting!",
   '/meetups':
     "Check out what's happening at the campground tonight. Join a meetup or create your own!",
   '/settings/privacy':

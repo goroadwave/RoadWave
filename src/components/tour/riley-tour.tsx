@@ -62,7 +62,7 @@ const SLIDES: Slide[] = [
     id: 'nearby',
     title: "See Who's Around",
     narration:
-      "Open your nearby list and see who else is checked in right now. Filter by interests or travel style to find your kind of people.",
+      "See who else is checked in here right now. Filter by interests or travel style to find your kind of people.",
   },
   {
     id: 'wave',

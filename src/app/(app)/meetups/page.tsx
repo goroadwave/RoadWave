@@ -150,7 +150,7 @@ export default async function MeetupsPage() {
       <PageHeading
         eyebrow="Meetups"
         title="What's happening"
-        subtitle="From the campground and from neighbors. Show up if you want."
+        subtitle="From the campground and from campers. Show up if you want."
       />
 
       {isAdmin && (
