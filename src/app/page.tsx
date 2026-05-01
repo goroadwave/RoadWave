@@ -150,12 +150,12 @@ export default async function RootPage() {
                 >
                   Try the Demo <span aria-hidden>👋</span>
                 </Link>
-                <Link
-                  href="/owners"
+                <a
+                  href="#owner-section"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-cream px-6 py-3 text-base font-medium hover:bg-white/10 hover:border-flame/40 transition-colors"
                 >
                   I Run a Campground
-                </Link>
+                </a>
               </div>
               <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] text-flame/90 font-semibold pt-2">
                 No exact site numbers. No public group chats. No pressure.
@@ -333,12 +333,12 @@ export default async function RootPage() {
               >
                 Try the Demo <span aria-hidden>👋</span>
               </Link>
-              <Link
-                href="/owners"
+              <a
+                href="#owner-section"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-cream px-6 py-3 font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors"
               >
                 I Run a Campground
-              </Link>
+              </a>
             </div>
 
             <div className="pt-6 border-t border-white/10 mt-6 max-w-md mx-auto">
@@ -347,6 +347,281 @@ export default async function RootPage() {
               </p>
               <CampgroundRequestForm />
             </div>
+          </div>
+        </section>
+
+        {/* Collapsible owner section. The hero and final-CTA "I Run a
+            Campground" buttons anchor-scroll to #owner-section here.
+            Native <details>/<summary> for the outer collapse and each
+            inner item — no JS state needed, accessible by default. */}
+        <section className="px-4 py-14 border-t border-white/5">
+          <div className="mx-auto max-w-3xl">
+            <details
+              id="owner-section"
+              className="group rounded-2xl border border-flame/30 bg-card/40 overflow-hidden"
+            >
+              <summary className="list-none cursor-pointer flex items-center justify-between gap-3 px-5 py-4 hover:bg-flame/[0.04] transition-colors [&::-webkit-details-marker]:hidden">
+                <span className="text-base sm:text-lg font-semibold text-cream">
+                  Are you a campground owner?
+                </span>
+                <span
+                  className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-flame/40 text-flame text-lg font-bold leading-none transition-transform group-open:rotate-45"
+                  aria-hidden
+                >
+                  +
+                </span>
+              </summary>
+
+              <div className="px-5 pb-6 pt-2 space-y-10 border-t border-white/5">
+                {/* SECTION A — Owner Pitch */}
+                <div className="space-y-4 pt-4">
+                  <Eyebrow>For campground owners</Eyebrow>
+                  <h3 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-cream leading-tight">
+                    A branded campground guest page powered by your QR code.
+                  </h3>
+                  <ul className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      'Branded campground guest page',
+                      'Campground bulletins and meetup prompts',
+                      'Campground Updates Only for private guests',
+                      'Privacy-safe owner dashboard with engagement stats',
+                    ].map((b) => (
+                      <li
+                        key={b}
+                        className="rounded-xl border border-white/5 bg-card px-3 py-2 text-sm text-cream flex items-start gap-2"
+                      >
+                        <span className="text-flame mt-0.5" aria-hidden>
+                          ✓
+                        </span>
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="rounded-xl border border-flame/30 bg-flame/[0.06] p-4 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+                        Founding rate
+                      </p>
+                      <p className="text-cream font-semibold text-lg">
+                        $39<span className="text-mist text-sm font-medium">/month</span>
+                      </p>
+                    </div>
+                    <Link
+                      href="/start"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-5 py-2.5 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
+                    >
+                      Get Started <span aria-hidden>→</span>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* SECTION B — How It Works for You */}
+                <div className="space-y-3">
+                  <Eyebrow>How it works for you</Eyebrow>
+                  <h3 className="font-display text-xl font-extrabold text-cream">
+                    Your owner steps
+                  </h3>
+                  <div className="space-y-2">
+                    {[
+                      {
+                        title: '1. Your branded guest page',
+                        body: 'Guests scan your QR code and land on a page connected to your campground — your branding, your bulletins, your meetups.',
+                      },
+                      {
+                        title: '2. Your QR code',
+                        body: 'Print and place at check-in, the office window, the bulletin board, or the bath houses. No app download required for guests.',
+                      },
+                      {
+                        title: '3. Your front-desk script',
+                        body: 'One sentence at check-in: “Scan the QR at the office to see what’s happening this weekend.”',
+                      },
+                      {
+                        title: '4. Your admin dashboard',
+                        body: 'Post bulletins, meetup prompts, and see privacy-safe engagement stats — without seeing private guest details.',
+                      },
+                    ].map((s) => (
+                      <details
+                        key={s.title}
+                        className="group/inner rounded-xl border border-white/10 bg-card overflow-hidden"
+                      >
+                        <summary className="list-none cursor-pointer flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/[0.03] [&::-webkit-details-marker]:hidden">
+                          <span className="text-sm font-semibold text-cream">
+                            {s.title}
+                          </span>
+                          <span
+                            className="text-flame text-lg font-bold leading-none transition-transform group-open/inner:rotate-45"
+                            aria-hidden
+                          >
+                            +
+                          </span>
+                        </summary>
+                        <p className="px-4 pb-4 text-sm text-mist leading-relaxed">
+                          {s.body}
+                        </p>
+                      </details>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SECTION C — How It Works for Your Guests */}
+                <div className="space-y-3">
+                  <Eyebrow>How it works for your guests</Eyebrow>
+                  <h3 className="font-display text-xl font-extrabold text-cream">
+                    Your guest steps
+                  </h3>
+                  <div className="space-y-2">
+                    {[
+                      {
+                        title: '1. Guest scans the QR code',
+                        body: 'Lands on your branded guest page instantly. No download, no account required just to look around.',
+                      },
+                      {
+                        title: '2. Guest checks in',
+                        body: 'Picks travel style and interests. Check-in expires automatically after 24 hours.',
+                      },
+                      {
+                        title: '3. Guest chooses a privacy mode',
+                        body: 'Visible, Quiet, Invisible, or Campground Updates Only. They can switch any time, in one tap.',
+                      },
+                      {
+                        title: '4. Guest sees your bulletins and meetup prompts',
+                        body: 'One easy place for everything happening at your campground today.',
+                      },
+                      {
+                        title: '5. Guest browses campers who share their interests (optional)',
+                        body: 'No exact site numbers shown. Browsing is opt-in via Visible or Quiet mode.',
+                      },
+                      {
+                        title: '6. Optional wave',
+                        body: 'A private hello only opens when both people wave. No public group chat, no comment threads.',
+                      },
+                    ].map((s) => (
+                      <details
+                        key={s.title}
+                        className="group/inner rounded-xl border border-white/10 bg-card overflow-hidden"
+                      >
+                        <summary className="list-none cursor-pointer flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/[0.03] [&::-webkit-details-marker]:hidden">
+                          <span className="text-sm font-semibold text-cream">
+                            {s.title}
+                          </span>
+                          <span
+                            className="text-flame text-lg font-bold leading-none transition-transform group-open/inner:rotate-45"
+                            aria-hidden
+                          >
+                            +
+                          </span>
+                        </summary>
+                        <p className="px-4 pb-4 text-sm text-mist leading-relaxed">
+                          {s.body}
+                        </p>
+                      </details>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SECTION D — What You Can and Cannot See */}
+                <div className="space-y-3">
+                  <Eyebrow>What you can and cannot see</Eyebrow>
+                  <h3 className="font-display text-xl font-extrabold text-cream">
+                    Privacy-safe by design
+                  </h3>
+                  <div className="space-y-2">
+                    <details className="group/inner rounded-xl border border-flame/30 bg-card overflow-hidden">
+                      <summary className="list-none cursor-pointer flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/[0.03] [&::-webkit-details-marker]:hidden">
+                        <span className="text-sm font-semibold text-cream">
+                          What you can see
+                        </span>
+                        <span
+                          className="text-flame text-lg font-bold leading-none transition-transform group-open/inner:rotate-45"
+                          aria-hidden
+                        >
+                          +
+                        </span>
+                      </summary>
+                      <ul className="px-4 pb-4 text-sm text-mist list-disc list-inside space-y-1">
+                        <li>QR code scans</li>
+                        <li>Guest check-ins</li>
+                        <li>Bulletin views</li>
+                        <li>Meetup interest</li>
+                        <li>Popular guest interests</li>
+                      </ul>
+                    </details>
+                    <details className="group/inner rounded-xl border border-white/10 bg-card overflow-hidden">
+                      <summary className="list-none cursor-pointer flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/[0.03] [&::-webkit-details-marker]:hidden">
+                        <span className="text-sm font-semibold text-cream">
+                          What you cannot see
+                        </span>
+                        <span
+                          className="text-flame text-lg font-bold leading-none transition-transform group-open/inner:rotate-45"
+                          aria-hidden
+                        >
+                          +
+                        </span>
+                      </summary>
+                      <ul className="px-4 pb-4 text-sm text-mist list-disc list-inside space-y-1">
+                        <li>Private messages</li>
+                        <li>Exact site numbers</li>
+                        <li>Who waved at whom</li>
+                        <li>Guest-to-guest conversations</li>
+                        <li>Exact guest locations</li>
+                      </ul>
+                    </details>
+                  </div>
+                </div>
+
+                {/* SECTION E — Privacy and Safety */}
+                <div className="space-y-3">
+                  <Eyebrow>Privacy and safety</Eyebrow>
+                  <h3 className="font-display text-xl font-extrabold text-cream">
+                    The guardrails
+                  </h3>
+                  <div className="space-y-2">
+                    {[
+                      {
+                        title: 'No exact site numbers',
+                        body: 'Site numbers are never displayed in the app. Guests can share their site 1:1 via private hello after a mutual wave — never publicly.',
+                      },
+                      {
+                        title: 'No public group chat',
+                        body: 'Guests can\'t post to a public feed. Bulletins go from you to all checked-in guests; private hellos only open after both sides wave.',
+                      },
+                      {
+                        title: '18+ required',
+                        body: 'Guests confirm they\'re 18 or older during signup. Underage accounts are removed.',
+                      },
+                      {
+                        title: 'Campground Updates Only for private guests',
+                        body: 'Guests who want only your bulletins and meetups can pick Campground Updates Only — they\'re invisible to other campers and can\'t send or receive waves.',
+                      },
+                      {
+                        title: 'You are not responsible for guest-to-guest interactions after a mutual wave',
+                        body: 'Once two guests have mutually waved and a private hello is open, that conversation is between them. Your campground isn\'t the host of the conversation.',
+                      },
+                    ].map((s) => (
+                      <details
+                        key={s.title}
+                        className="group/inner rounded-xl border border-white/10 bg-card overflow-hidden"
+                      >
+                        <summary className="list-none cursor-pointer flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/[0.03] [&::-webkit-details-marker]:hidden">
+                          <span className="text-sm font-semibold text-cream">
+                            {s.title}
+                          </span>
+                          <span
+                            className="text-flame text-lg font-bold leading-none transition-transform group-open/inner:rotate-45"
+                            aria-hidden
+                          >
+                            +
+                          </span>
+                        </summary>
+                        <p className="px-4 pb-4 text-sm text-mist leading-relaxed">
+                          {s.body}
+                        </p>
+                      </details>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
         </section>
       </main>

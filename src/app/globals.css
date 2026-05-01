@@ -20,6 +20,12 @@ body {
   color: var(--color-cream);
 }
 
+html {
+  /* Anchor links on the marketing pages (e.g. "I Run a Campground" ->
+     #owner-section) glide instead of jumping. */
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: var(--font-sans);
   margin: 0;
