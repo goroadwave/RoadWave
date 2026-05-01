@@ -53,6 +53,16 @@ const PRIVACY_LABEL = Object.fromEntries(
   PRIVACY_MODES.map((m) => [m.slug, m.label]),
 )
 
+// Short label used in space-constrained tiles (Home privacy summary,
+// inline badges) where "Campground Updates Only" wraps onto multiple
+// lines and overlaps neighboring controls.
+const PRIVACY_LABEL_SHORT = {
+  visible: 'Visible',
+  quiet: 'Quiet',
+  invisible: 'Invisible',
+  campground_updates_only: 'Updates Only',
+}
+
 const SAMPLE_CAMPERS = [
   {
     id: 'c1',
@@ -1461,15 +1471,17 @@ function HomeScreen({ privacyMode, onScreen, campgroundName }) {
       </header>
 
       <div className="rounded-xl border border-white/5 bg-card px-3 py-2 flex items-center gap-3">
-        <ModeBadge mode={privacyMode} />
+        <ModeBadge mode={privacyMode} short />
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-wide text-mist">Privacy</p>
-          <p className="text-sm font-semibold text-cream">{PRIVACY_LABEL[privacyMode] ?? privacyMode}</p>
+          <p className="text-sm font-semibold text-cream truncate">
+            {PRIVACY_LABEL_SHORT[privacyMode] ?? privacyMode}
+          </p>
         </div>
         <button
           type="button"
           onClick={() => onScreen('privacy')}
-          className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
+          className="shrink-0 text-xs font-semibold text-flame underline-offset-2 hover:underline"
         >
           Change
         </button>
@@ -2425,18 +2437,21 @@ function Eyebrow({ children }) {
   )
 }
 
-function ModeBadge({ mode }) {
+function ModeBadge({ mode, short }) {
   const styles = {
     visible: 'bg-leaf/15 text-leaf border-leaf/30',
     quiet: 'bg-flame/15 text-flame border-flame/30',
     invisible: 'bg-white/10 text-mist border-white/15',
     campground_updates_only: 'bg-flame/15 text-flame border-flame/30',
   }
+  const label = short
+    ? PRIVACY_LABEL_SHORT[mode] ?? mode
+    : PRIVACY_LABEL[mode] ?? mode
   return (
     <span
-      className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${styles[mode] ?? 'bg-white/10 text-mist border-white/15'}`}
+      className={`inline-block shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-semibold ${styles[mode] ?? 'bg-white/10 text-mist border-white/15'}`}
     >
-      {PRIVACY_LABEL[mode] ?? mode}
+      {label}
     </span>
   )
 }
