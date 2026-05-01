@@ -39,7 +39,7 @@ const NOTIFICATIONS: DemoNotification[] = [
   {
     kind: 'screen',
     id: 'match-1',
-    text: 'You matched with OutdoorMike! Say hello 👋',
+    text: 'You both waved with OutdoorMike! Say hello 👋',
     target: 'paths',
   },
   {

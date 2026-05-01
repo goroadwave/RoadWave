@@ -44,9 +44,9 @@ export default async function WavesPage() {
             href="/nearby"
             className="text-cream font-semibold underline-offset-2 hover:underline"
           >
-            Nearby
+            Checked In
           </Link>{' '}
-          and say hi to your neighbors.
+          and say hi to a camper who shares your interests.
         </div>
       </div>
     )
@@ -135,7 +135,7 @@ function WaveStateBadge({ matched }: { matched: boolean }) {
   if (matched) {
     return (
       <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-flame/15 border border-flame/30 px-2 py-0.5 text-[10px] font-semibold text-flame">
-        Matched <span aria-hidden>🎉</span>
+        You both waved <span aria-hidden>🎉</span>
       </span>
     )
   }

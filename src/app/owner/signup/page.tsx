@@ -40,6 +40,11 @@ export default async function OwnerSignupPage({
             Start My Campground Pilot
           </h1>
           <p className="text-sm text-mist leading-relaxed">
+            Your campground gets a branded guest page for updates, meetup
+            prompts, shared-interest camper discovery, privacy modes, and
+            aggregate engagement stats.
+          </p>
+          <p className="text-sm text-mist leading-relaxed">
             Two minutes to set up. We&apos;ll send your QR code, front-desk
             script, and welcome packet to your inbox when you activate your
             campground.

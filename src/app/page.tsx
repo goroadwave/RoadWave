@@ -10,7 +10,7 @@ const STEPS: { emoji: string; title: string; body: string }[] = [
   {
     emoji: '📷',
     title: 'Scan the campground QR code',
-    body: 'Find RoadWave on the campground map, welcome card, front desk sign, check-in email, or activity board.',
+    body: 'Find RoadWave on the welcome card, front desk sign, check-in email, or activity board.',
   },
   {
     emoji: '👁',

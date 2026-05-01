@@ -89,7 +89,7 @@ export default function PrivacyPolicyPage() {
 
           <Section title="Privacy modes">
             <p>
-              You always have three modes available, and you can switch in one
+              You always have four modes available, and you can switch in one
               tap:
             </p>
             <Bullets
@@ -97,6 +97,7 @@ export default function PrivacyPolicyPage() {
                 'Visible — you appear in nearby lists at your campground.',
                 'Quiet — you are hidden from nearby lists, but you can still wave first.',
                 'Invisible — you are completely off the grid. Browse without leaving a trace.',
+                'Campground Updates Only — you can see official campground updates and meetup prompts without appearing to other campers, sending waves, or opening private hellos.',
               ]}
             />
           </Section>

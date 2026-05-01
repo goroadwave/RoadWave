@@ -100,7 +100,7 @@ async function buildBrandedQrPdf(args: {
   doc.setFontSize(captionSize)
   doc.setTextColor(FLAME[0], FLAME[1], FLAME[2])
   const yCaption = qrCardY + qrCardSize + captionSize * 1.4
-  doc.text('Scan to meet your neighbors', W / 2, yCaption, { align: 'center' })
+  doc.text('Scan for campground updates and connect privately', W / 2, yCaption, { align: 'center' })
 
   // 5) Safety paragraph in a tinted card — wrapped to width.
   doc.setFontSize(safetySize)

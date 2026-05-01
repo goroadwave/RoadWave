@@ -184,7 +184,6 @@ export default function OwnersPage() {
             <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 'Welcome packet',
-                'Campground map',
                 'Front desk sign',
                 'Activity board',
                 'Laundry room sign',
@@ -217,22 +216,37 @@ export default function OwnersPage() {
           </div>
         </section>
 
-        {/* Solution */}
+        {/* Solution — branded guest page */}
         <section className="px-4 py-14 border-t border-white/5 bg-flame/[0.03]">
           <div className="mx-auto max-w-3xl text-center space-y-4">
             <Eyebrow>The fix</Eyebrow>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              A private QR-code amenity. That&apos;s it.
+              A branded campground guest page powered by your QR code.
             </h2>
-            <p className="font-serif italic text-flame text-lg sm:text-xl leading-snug">
-              No app store. No public posts. No site numbers. Just a wave across the campground.
+            <p className="text-mist max-w-2xl mx-auto leading-relaxed">
+              Guests scan your QR code and land on a page that feels
+              connected to your campground. They can:
             </p>
-            <p className="text-mist max-w-xl mx-auto leading-relaxed">
-              You print one QR code per campground. Your guests scan it from
-              the welcome sign. They&apos;re in for 24 hours. They wave at the
-              folks they&apos;d like to meet. If both wave, they connect. If
-              not, no one knows.
-            </p>
+            <ul className="text-left grid gap-2 sm:grid-cols-2 max-w-2xl mx-auto pt-2">
+              {[
+                'See campground bulletins',
+                'Find meetup prompts',
+                'Choose Visible, Quiet, Invisible, or Campground Updates Only',
+                'Browse campers who share their interests',
+                'Send a wave',
+                'Open a private hello only when both people wave',
+              ].map((p) => (
+                <li
+                  key={p}
+                  className="rounded-xl border border-white/5 bg-card px-4 py-3 text-sm text-cream flex items-start gap-2"
+                >
+                  <span className="text-flame mt-0.5" aria-hidden>
+                    ✓
+                  </span>
+                  <span>{p}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
@@ -324,31 +338,36 @@ export default function OwnersPage() {
           </div>
         </section>
 
-        {/* Benefits — 3 cards (with §17 replacement) */}
+        {/* Benefits — 4 cards */}
         <section className="px-4 py-14 border-t border-white/5 bg-flame/[0.03]">
           <div className="mx-auto max-w-4xl">
             <div className="text-center mb-10 space-y-2">
-              <Eyebrow>Why campgrounds offer it</Eyebrow>
+              <Eyebrow>What you get</Eyebrow>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
                 A small amenity. A big return.
               </h2>
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               {[
                 {
-                  emoji: '✨',
-                  title: 'Better guest experience',
-                  body: 'Solo travelers and weekenders feel welcome from the moment they pull in. The campground feels more welcoming.',
+                  emoji: '🏕️',
+                  title: 'Branded campground guest page',
+                  body: 'A QR code that lands guests on a page that feels connected to your campground — not a generic app.',
                 },
                 {
-                  emoji: '🔥',
-                  title: 'More community',
-                  body: 'Coffee meetups, fire-ring crews, trail buddies — they happen on their own once people can find each other.',
+                  emoji: '📌',
+                  title: 'Campground bulletins and meetup prompts',
+                  body: 'Coffee hours, food trucks, dog walks, pickleball, campfires, weather notices, quiet-hour reminders — one place to share what is happening.',
                 },
                 {
-                  emoji: '🔁',
-                  title: 'More return visits',
-                  body: 'Guests come back to the place where they met their people. RoadWave campgrounds become destinations, not pit stops.',
+                  emoji: '📍',
+                  title: 'Campground Updates Only for private guests',
+                  body: 'Quiet guests still see your bulletins and meetups while staying invisible to other campers.',
+                },
+                {
+                  emoji: '📊',
+                  title: 'Privacy-safe owner dashboard',
+                  body: 'Aggregate engagement stats — check-ins, bulletin views, mutual waves — never private messages or personal data.',
                 },
               ].map((b) => (
                 <div
@@ -373,11 +392,11 @@ export default function OwnersPage() {
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
               Some guests want to meet. Others just want updates.
             </h2>
-            <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-              RoadWave serves both. Social campers wave at folks who share
-              their interests. Private guests pick Campground Updates Only —
-              they see your bulletins and meetups while staying invisible to
-              other campers. Either way, your campground is the host.
+            <p className="text-mist text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+              Guests can choose Campground Updates Only to see official
+              campground bulletins, activity reminders, weather notices, food
+              truck updates, quiet-hour reminders, and meetup prompts —
+              without appearing to other campers or participating in waves.
             </p>
           </div>
         </section>
@@ -388,10 +407,16 @@ export default function OwnersPage() {
             <div className="text-center space-y-2">
               <Eyebrow>Bulletins &amp; meetups</Eyebrow>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                Keep guests in the loop without spamming them.
+                Keep guests in the loop without starting a noisy group chat.
               </h2>
-              <p className="font-serif italic text-flame text-lg sm:text-xl leading-snug">
-                Post once. Reach every checked-in guest, however private they want to be.
+              <p className="text-mist text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+                RoadWave helps your campground share simple bulletins,
+                activity reminders, and meetup prompts with checked-in
+                guests — things like coffee hours, food trucks, dog walks,
+                pickleball, campfires, weather notices, quiet-hour
+                reminders. Guests get one easy place to see what&apos;s
+                happening without creating an open public chat your staff
+                has to moderate.
               </p>
             </div>
             <ul className="grid gap-3 sm:grid-cols-2 max-w-2xl mx-auto">
@@ -417,23 +442,40 @@ export default function OwnersPage() {
           </div>
         </section>
 
-        {/* See engagement at a glance */}
+        {/* Owner dashboard — what owners see and don't see */}
         <section className="px-4 py-14 border-t border-white/5">
-          <div className="mx-auto max-w-3xl text-center space-y-4">
-            <Eyebrow>Owner dashboard</Eyebrow>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              See engagement at a glance.
-            </h2>
-            <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-              A simple owner view shows how many guests are checked in, how
-              they&apos;ve set their visibility (Visible, Quiet, Invisible, or
-              Campground Updates Only), how many waves and connections are
-              happening, and which bulletins or meetups guests are actually
-              opening.
-            </p>
-            <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-flame font-semibold">
-              No private messages. No personal data. Just aggregate activity.
-            </p>
+          <div className="mx-auto max-w-4xl space-y-6">
+            <div className="text-center space-y-2">
+              <Eyebrow>Owner dashboard</Eyebrow>
+              <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
+                See guest engagement without seeing private guest details.
+              </h2>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 max-w-3xl mx-auto">
+              <div className="rounded-2xl border border-flame/30 bg-card p-5">
+                <h3 className="font-semibold text-cream mb-2">What owners can see</h3>
+                <ul className="text-sm text-mist leading-snug list-disc list-inside space-y-1">
+                  <li>QR code scans</li>
+                  <li>Guest check-ins</li>
+                  <li>Bulletin views</li>
+                  <li>Meetup interest</li>
+                  <li>Waves sent</li>
+                  <li>Mutual waves</li>
+                  <li>Popular guest interests</li>
+                </ul>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-card p-5">
+                <h3 className="font-semibold text-cream mb-2">What owners cannot see</h3>
+                <ul className="text-sm text-mist leading-snug list-disc list-inside space-y-1">
+                  <li>Exact site numbers</li>
+                  <li>Private messages</li>
+                  <li>Who waved at whom</li>
+                  <li>Guest-to-guest conversations</li>
+                  <li>Exact guest locations</li>
+                  <li>Private profile details</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -547,8 +589,8 @@ export default function OwnersPage() {
 
       <footer className="px-4 py-8 text-center text-xs text-mist/70 border-t border-white/5">
         <p>
-          RoadWave — A private way to meet campers who share your interests,
-          or just see campground updates.
+          RoadWave — A private way to see campground updates, find shared
+          interests, and say hello only when you want to.
         </p>
       </footer>
 

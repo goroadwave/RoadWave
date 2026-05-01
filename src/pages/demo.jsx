@@ -621,11 +621,11 @@ function GuestApp({ campgroundName, onReset }) {
           {[
             ['home', 'Home'],
             ['checkin', 'Check in'],
-            ['nearby', 'Nearby'],
+            ['nearby', 'Checked In'],
             ['meetups', 'Meetups'],
             ['waves', 'Waves'],
             ['privacy', 'Privacy'],
-            ['paths', 'Crossed'],
+            ['paths', 'Past Waves'],
           ].map(([id, label]) => (
             <button
               key={id}
@@ -1427,8 +1427,8 @@ function HomeScreen({ privacyMode, onScreen, campgroundName }) {
           Welcome to {campgroundName}
         </h1>
         <p className="font-serif italic text-flame text-sm leading-snug">
-          You&apos;re checked in for 24 hours. See who&apos;s open to a friendly
-          wave today.
+          You&apos;re checked in for 24 hours. See campground updates,
+          meetup prompts, and campers who share your interests.
         </p>
       </header>
 
@@ -2014,7 +2014,7 @@ function WavesScreen({ waved, onMessage, onRemove, blocked }) {
 
       {entries.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-6 text-center text-sm text-mist">
-          No waves yet. Head to <span className="text-cream">Nearby</span> and
+          No waves yet. Head to <span className="text-cream">Checked In</span> and
           say hi to your neighbors.
         </div>
       ) : (
@@ -2280,7 +2280,7 @@ function CrossedPathsScreen({ waved, campgroundName, onOpen }) {
 
       {all.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-4 text-center text-xs text-mist">
-          Try waving at someone in the Nearby tab. Sarah & Jim wave back.
+          Try waving at someone in the Checked In tab. Sarah & Jim wave back.
         </p>
       ) : (
         <ul className="space-y-2">

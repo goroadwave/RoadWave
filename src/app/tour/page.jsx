@@ -7,48 +7,48 @@ const RILEY_IMG = "iVBORw0KGgoAAAANSUhEUgAAAfQAAAH0CAIAAABEtEjdAAEAAElEQVR42lT9W
 
 const STEPS = [
   {
-    id: "welcome",
-    speech: "Welcome to RoadWave. This is your campground's guest page — a simple way to see what's happening, find campers who share your interests, and connect privately if you want to. No exact site numbers. No public group chat. No pressure. Let me show you around.",
+    id: "branded",
+    speech: "Welcome to RoadWave. This is your campground's branded guest page — a simple amenity that lives behind the QR code. Guests scan from the welcome sign, the front-desk card, or the activity board, and land on a page that feels connected to where they're parked. No download. No account required to look around.",
     screen: "home",
     highlight: "checkin",
-    bubble: { text: "Welcome to RoadWave", position: "top" },
+    bubble: { text: "A branded guest page powered by your QR code", position: "top" },
     rileyMood: "wave",
   },
   {
-    id: "happening",
-    speech: "First, see what's happening around the campground. Coffee meetups, dog walks, food trucks, campfires, pickleball, weather notices, and quiet-hour reminders can all show up in one simple place.",
+    id: "updatesOnly",
+    speech: "Not feeling social today? That's okay. Pick Campground Updates Only and you can see official campground bulletins, activity reminders, weather notices, food truck updates, and meetup prompts — without appearing to other campers, sending waves, or opening private hellos. Pure observer mode for campers who just want updates.",
+    screen: "privacy",
+    highlight: "none",
+    bubble: { text: "Campground Updates Only — see updates, stay private", position: "top" },
+    rileyMood: "explain",
+  },
+  {
+    id: "bulletins",
+    speech: "Here's what your campground can post. Coffee at the clubhouse at eight. Dog walk at nine. Food truck tonight. Campfire circle at seven. Quiet hours at ten. Bulletins and meetup prompts all live in one easy place — no public group chat, no notification storm, no moderation headache.",
     screen: "meetups",
     highlight: "none",
-    bubble: { text: "What's happening today", position: "top" },
+    bubble: { text: "Campground bulletins and meetup prompts", position: "top" },
     rileyMood: "explain",
   },
   {
     id: "shared",
-    speech: "Curious who else here likes what you like? Browse campers checked in at the same campground and look for shared interests like coffee, campfires, cards, hiking, fishing, dog walks, and more. If someone feels like a good fit, send a wave.",
+    speech: "Curious who else is checked in here right now? Browse campers at the same campground and look for shared interests like coffee, campfires, cards, hiking, fishing, dog walks, and more. No exact site numbers shown. If someone feels like a good fit, send a wave.",
     screen: "nearby",
     highlight: "none",
-    bubble: { text: "No exact site numbers shown.", position: "top" },
+    bubble: { text: "Campers who share your interests", position: "top" },
     rileyMood: "explain",
   },
   {
-    id: "wave",
-    speech: "See someone interesting? Send a wave. It is not a message, not a follow request, and not a public post. It is just a low-pressure way to say, hey, we might have something in common. If they wave back, a private hello opens. If they do not, nothing awkward happens.",
-    screen: "nearby",
-    highlight: "waveBtn",
-    bubble: { text: "If they wave back, a private hello opens. If they don't, nothing awkward happens.", position: "right" },
-    rileyMood: "wave",
-  },
-  {
-    id: "match",
-    speech: "When both people wave, a private hello opens automatically. That keeps the first step mutual, simple, and low-pressure. And if they don't wave back? Nothing awkward happens. And if you have connected with someone before, RoadWave remembers — so friendly faces from past campgrounds can find each other again.",
+    id: "mutualWave",
+    speech: "A wave is not a message, not a follow request, and not a public post. It's a low-pressure way to say, hey, we might have something in common. When both people wave, a private hello opens automatically. If they don't wave back, nothing awkward happens. RoadWave even remembers familiar faces from past campgrounds, so friendly people you've connected with before can find each other again.",
     screen: "chat",
     highlight: "chatBubble",
-    bubble: { text: "Mutual wave, private hello", position: "top" },
+    bubble: { text: "You both waved — private hello is open", position: "top" },
     rileyMood: "excited",
   },
   {
     id: "visibility",
-    speech: "Not feeling social today? That's okay. You can use RoadWave just for campground updates. See bulletins, reminders, activities, weather notices, and meetup prompts without being visible to other campers or sending waves. You control your visibility the whole time — Visible, Quiet, Invisible, or Campground Updates Only. RoadWave is optional from start to finish. Ready to try it? Hit the green button to start your check-in now.",
+    speech: "You control your visibility the whole time — Visible, Quiet, Invisible, or Campground Updates Only. Switch any time, in one tap. RoadWave is optional from start to finish. Ready to try it? Hit the green button to start your check-in now.",
     screen: "privacy",
     highlight: "none",
     bubble: { text: "Visible, Quiet, Invisible, or Campground Updates Only — your call.", position: "top" },
@@ -119,7 +119,7 @@ const AppScreen = ({ screen, highlight }) => {
     <div style={{ padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "14px", height: "100%" }}>
       <div style={{ ...hl("ghostMode"), display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", width: "100%" }}>
         <div style={{ fontSize: "60px", animation: "float 2.5s ease-in-out infinite" }}>🥷</div>
-        <div style={{ textAlign: "center" }}><div style={{ color: "#818cf8", fontSize: "16px", fontWeight: "700" }}>You're Invisible</div><div style={{ color: "#9ca3af", fontSize: "11px", marginTop: "4px" }}>Nobody can see you on the map</div></div>
+        <div style={{ textAlign: "center" }}><div style={{ color: "#818cf8", fontSize: "16px", fontWeight: "700" }}>You're Invisible</div><div style={{ color: "#9ca3af", fontSize: "11px", marginTop: "4px" }}>Other campers can't see your check-in</div></div>
         <div style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: "12px", padding: "10px 20px", textAlign: "center" }}><div style={{ color: "#c7d2fe", fontSize: "11px" }}>👻 A very well-rested ghost</div></div>
       </div>
       <div style={{ background: "#6366f1", borderRadius: "12px", padding: "10px 24px" }}><div style={{ color: "white", fontSize: "12px", fontWeight: "600" }}>Go Visible Again</div></div>

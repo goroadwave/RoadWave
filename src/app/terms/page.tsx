@@ -56,7 +56,7 @@ export default function TermsPage() {
           </Section>
 
           <Section title="Acceptable use">
-            <p>RoadWave is for connecting with neighbors at a campground. Don&apos;t use it to:</p>
+            <p>RoadWave is designed for campground updates, shared-interest discovery, and optional camper-to-camper connection. Don&apos;t use it to:</p>
             <Bullets
               items={[
                 'Harass, threaten, or stalk anyone — at a campground or anywhere else.',

@@ -82,12 +82,13 @@ export default function SafetyPage() {
           </Section>
 
           <Section title="Use your privacy modes">
-            <p>Three modes, switch in one tap:</p>
+            <p>Four modes, switch in one tap:</p>
             <Bullets
               items={[
                 'Visible — you appear in nearby lists at your campground.',
                 'Quiet — hidden from nearby lists, but you can still wave first if you choose to.',
                 "Invisible — completely off the grid. Browse without leaving a trace and without anyone knowing you're even on RoadWave.",
+                'Campground Updates Only — you can see official campground updates and meetup prompts without appearing to other campers, sending waves, or opening private hellos.',
               ]}
             />
             <p>

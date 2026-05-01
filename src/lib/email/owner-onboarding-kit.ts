@@ -90,7 +90,6 @@ export async function sendOwnerOnboardingKitEmail(args: Args): Promise<SendResul
     <ul style="margin:8px 0 16px;padding-left:20px;font-size:14px;line-height:1.7;color:#0a0f1c;">
       <li>Check-in counter</li>
       <li>Welcome packet</li>
-      <li>Campground map</li>
       <li>Activity board</li>
       <li>Laundry room</li>
       <li>Clubhouse</li>

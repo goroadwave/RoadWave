@@ -9,7 +9,7 @@ import { usePathname } from 'next/navigation'
 const TABS: { href: string; label: string; matchPrefix?: string }[] = [
   { href: '/home', label: 'Home' },
   { href: '/checkin', label: 'Check in' },
-  { href: '/nearby', label: 'Nearby' },
+  { href: '/nearby', label: 'Checked In' },
   { href: '/meetups', label: 'Meetups' },
   { href: '/waves', label: 'Waves' },
   { href: '/settings/privacy', label: 'Privacy', matchPrefix: '/settings/privacy' },

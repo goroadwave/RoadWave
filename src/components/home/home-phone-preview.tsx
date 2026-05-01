@@ -66,7 +66,7 @@ export function HomePhonePreview() {
 
               <div className="space-y-1.5">
                 <p className="text-[9px] uppercase tracking-[0.18em] text-mist">
-                  Nearby interests
+                  Shared interests
                 </p>
                 <ul className="flex flex-wrap gap-1">
                   {INTERESTS.map((i) => (

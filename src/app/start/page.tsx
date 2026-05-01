@@ -86,10 +86,10 @@ export default function StartPage({
               Activate RoadWave at Your Campground
             </h1>
             <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-              A QR-code amenity that helps your guests meet campers who share
-              their interests — or just see your bulletins and meetups, on
-              their terms. Visible, Quiet, Invisible, or Campground Updates
-              Only.
+              Give your guests a branded QR-code page where they can see
+              campground updates, find meetup prompts, discover campers who
+              share their interests, and connect privately — without exact
+              site numbers or public group chats.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-center">
               <Link

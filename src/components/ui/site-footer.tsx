@@ -33,8 +33,8 @@ export function SiteFooter() {
           <div className="col-span-2 sm:col-span-1 space-y-3">
             <Logo className="text-2xl" />
             <p className="text-xs text-mist leading-snug max-w-[18rem]">
-              A private way to meet campers who share your interests — or
-              just see campground updates. Wave when the vibe&apos;s right.
+              A private way to see campground updates, find shared
+              interests, and say hello only when you want to.
             </p>
           </div>
 
