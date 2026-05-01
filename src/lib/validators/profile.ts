@@ -39,7 +39,7 @@ export const profileSchema = z.object({
   has_pets: z.boolean(),
   pet_info: optionalText(120),
   travel_style: optionalTravelStyle,
-  privacy_mode: z.enum(['visible', 'quiet', 'invisible', 'campground_only']),
+  privacy_mode: z.enum(['visible', 'quiet', 'invisible', 'campground_updates_only']),
   share_rig_type: z.boolean(),
   share_miles_driven: z.boolean(),
   share_hometown: z.boolean(),
@@ -50,7 +50,7 @@ export const profileSchema = z.object({
   share_travel_style: z.boolean(),
   share_interests: z.boolean(),
   // Self-mute toggles. Only consulted when privacy_mode is
-  // 'campground_only', but always present so the form can roundtrip
+  // 'campground_updates_only', but always present so the form can roundtrip
   // them regardless of mode.
   share_bulletins: z.boolean().default(true),
   share_meetups: z.boolean().default(true),

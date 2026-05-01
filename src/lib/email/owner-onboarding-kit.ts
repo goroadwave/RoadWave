@@ -99,9 +99,10 @@ export async function sendOwnerOnboardingKitEmail(args: Args): Promise<SendResul
 
     <h2 style="margin:24px 0 8px;font-size:18px;color:#0a0f1c;">3. Front-desk script</h2>
     <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#0a0f1c;background:#fff7ed;border-left:4px solid #f59e0b;padding:12px 14px;border-radius:6px;">
-      <em>RoadWave is a private way for guests here at the campground to connect around shared interests.
-      You can scan this QR code, choose your visibility, and wave at other campers if you want to say
-      hello. It is completely optional.</em>
+      <em>RoadWave is a private way for guests here at the campground to connect around shared interests
+      — or just see our bulletins and meetups. Scan this QR code, choose your visibility (Visible, Quiet,
+      Invisible, or Campground Updates Only), and wave at other campers if you want to say hello. It is
+      completely optional.</em>
     </p>
 
     <h2 style="margin:24px 0 8px;font-size:18px;color:#0a0f1c;">4. Guest safety reminder</h2>

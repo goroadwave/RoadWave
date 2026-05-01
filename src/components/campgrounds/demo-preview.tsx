@@ -442,7 +442,7 @@ function NearbyPanel({ campgroundName }: { campgroundName: string }) {
           Currently at {campgroundName}
         </p>
         <h2 className="mt-0.5 font-display text-xl font-extrabold text-cream">
-          Nearby campers
+          Campers Checked In Here
         </h2>
         <p className="text-xs text-mist">Wave when the vibe feels right.</p>
       </div>

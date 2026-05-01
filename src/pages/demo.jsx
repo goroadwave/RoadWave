@@ -43,8 +43,8 @@ const PRIVACY_MODES = [
   { slug: 'quiet', label: 'Quiet', desc: 'Hidden, but you can wave first.' },
   { slug: 'invisible', label: 'Invisible', desc: 'Just here to look around.' },
   {
-    slug: 'campground_only',
-    label: 'Campground Only',
+    slug: 'campground_updates_only',
+    label: 'Campground Updates Only',
     desc: 'See bulletins + meetups, completely invisible to other campers.',
   },
 ]
@@ -381,7 +381,7 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
           <header className="text-center space-y-3">
             <Logo className="text-4xl sm:text-5xl" />
             <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-flame font-semibold">
-              Private campground check-ins for RVers
+              RoadWave Demo
             </p>
             <p className="text-xs uppercase tracking-[0.2em] text-mist">
               Demo · all data is mock
@@ -677,6 +677,8 @@ function GuestApp({ campgroundName, onReset }) {
             toast={toast}
             onDismissToast={() => setToast(null)}
             viewerInterests={chosenInterests}
+            privacy={privacy}
+            onChangePrivacy={() => setScreen('privacy')}
           />
         )}
         {screen === 'meetups' && <MeetupsScreen campgroundName={campgroundName} />}
@@ -1316,7 +1318,7 @@ function MatchCelebration({ name }) {
             {firstName}
           </p>
           <p className="match-sub mt-3 font-serif italic text-cream/80 text-sm">
-            Chat is now open
+            Private hello is open
           </p>
         </div>
       </div>
@@ -1403,7 +1405,7 @@ function AppHeader({ right, onNavigate }) {
       {/* DEMO-ONLY label. The real authenticated app does not render this
           string — production nav stays clean. */}
       <p className="mt-1 text-right text-[10px] text-mist/70 leading-snug">
-        Your Lantern — waves, messages &amp; meetup activity.
+        Your Lantern — waves, private hellos &amp; meetup activity.
       </p>
     </header>
   )
@@ -1444,7 +1446,7 @@ function HomeScreen({ privacyMode, onScreen, campgroundName }) {
       <div data-tour="action-section" className="space-y-2">
         <Eyebrow>Where the action is</Eyebrow>
         <Tile title="Check in" description="Scan the campground QR." onClick={() => onScreen('checkin')} />
-        <Tile title="Nearby campers" description="Who else is here right now." onClick={() => onScreen('nearby')} />
+        <Tile title="Campers checked in here" description="Who shares your interests?" onClick={() => onScreen('nearby')} />
         <Tile title="Meetup spots" description="Activities posted by your campground." onClick={() => onScreen('meetups')} />
         <Tile title="Crossed paths" description="Mutual waves you've made." onClick={() => onScreen('paths')} />
       </div>
@@ -1458,7 +1460,7 @@ function HomeScreen({ privacyMode, onScreen, campgroundName }) {
         onClick={() => onScreen('nearby')}
         className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-4 py-3 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 active:opacity-90 transition-colors"
       >
-        See Nearby Campers
+        See Campers Checked In Here
         <span aria-hidden>→</span>
       </button>
     </div>
@@ -1643,6 +1645,8 @@ function NearbyScreen({
   toast,
   onDismissToast,
   viewerInterests,
+  privacy,
+  onChangePrivacy,
 }) {
   // Multi-select style + interest filters. Both use OR semantics — adding
   // more selections *broadens* the result set. Empty set = "All".
@@ -1660,6 +1664,43 @@ function NearbyScreen({
       return true
     })
   }, [filterStyles, filterInterests, blocked])
+
+  if (privacy === 'campground_updates_only') {
+    return (
+      <div className="space-y-4 py-3">
+        <p
+          role="note"
+          className="rounded-md border border-flame/30 bg-flame/[0.08] px-3 py-2 text-[11px] text-cream leading-snug"
+        >
+          <span className="font-semibold text-flame">Safety reminder: </span>
+          Meet in public campground areas, trust your instincts, and do not
+          share your exact site number unless you choose to.
+        </p>
+        <header>
+          <Eyebrow>Currently at {campgroundName}</Eyebrow>
+          <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
+            Campers Checked In Here
+          </h1>
+          <p className="font-serif italic text-flame text-sm leading-snug">
+            Wave when the vibe feels right.
+          </p>
+        </header>
+        <div className="rounded-2xl border border-flame/30 bg-flame/[0.06] p-4 space-y-2">
+          <p className="text-sm text-cream leading-relaxed">
+            You are in Campground Updates Only mode. Switch to Visible
+            or Quiet to see campers checked in here.
+          </p>
+          <button
+            type="button"
+            onClick={onChangePrivacy}
+            className="inline-flex text-xs font-semibold text-flame underline-offset-2 hover:underline"
+          >
+            Open privacy settings →
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   function toggleStyle(style) {
     setFilterStyles((prev) => {
@@ -1699,7 +1740,7 @@ function NearbyScreen({
       <header className="relative">
         <Eyebrow>Currently at {campgroundName}</Eyebrow>
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
-          Nearby campers
+          Campers Checked In Here
         </h1>
         <p className="font-serif italic text-flame text-sm leading-snug">
           Wave when the vibe feels right.
@@ -2151,7 +2192,7 @@ function VerifiedBadge({ title, small }) {
 // ----------------------------------------------------------------------------
 
 function PrivacyScreen({ mode, onChange }) {
-  // Sub-toggle state for the campground_only mode. Defaults match the
+  // Sub-toggle state for the campground_updates_only mode. Defaults match the
   // live app: both sub-toggles on by default.
   const [shareBulletins, setShareBulletins] = useState(true)
   const [shareMeetups, setShareMeetups] = useState(true)
@@ -2162,6 +2203,8 @@ function PrivacyScreen({ mode, onChange }) {
     if (slug === 'invisible') return '👻'
     return '📍'
   }
+
+  const showCuoBanner = mode === 'campground_updates_only'
 
   return (
     <div className="space-y-4 py-3">
@@ -2174,6 +2217,17 @@ function PrivacyScreen({ mode, onChange }) {
           Four settings. You&apos;re always in control.
         </p>
       </header>
+
+      {showCuoBanner && (
+        <p
+          role="status"
+          className="rounded-2xl border border-flame/40 bg-flame/[0.08] px-4 py-3 text-sm text-cream leading-relaxed"
+        >
+          You are now in Campground Updates Only mode. You can see
+          campground bulletins and meetups but you are completely
+          invisible to other campers.
+        </p>
+      )}
 
       <div className="space-y-2">
         {PRIVACY_MODES.map((m) => {
@@ -2201,7 +2255,7 @@ function PrivacyScreen({ mode, onChange }) {
                   </span>
                 </span>
               </button>
-              {active && m.slug === 'campground_only' && (
+              {active && m.slug === 'campground_updates_only' && (
                 <div className="mt-2 rounded-xl border border-flame/30 bg-flame/[0.06] p-3 space-y-2">
                   <p className="text-[10px] uppercase tracking-[0.18em] text-flame font-semibold">
                     What you still see

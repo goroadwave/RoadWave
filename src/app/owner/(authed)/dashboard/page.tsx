@@ -36,13 +36,13 @@ export default async function OwnerDashboardPage() {
   )
 
   // Per-mode visibility breakdown (added in migration 0032). Includes
-  // campground_only guests who count toward activity stats but stay
+  // campground_updates_only guests who count toward activity stats but stay
   // invisible to other campers.
   type BreakdownRow = {
     visible_count: number
     quiet_count: number
     invisible_count: number
-    campground_only_count: number
+    campground_updates_only_count: number
   }
   const { data: breakdownRow } = await supabase
     .rpc('owner_visibility_breakdown', { _campground_id: campground.id })
@@ -51,7 +51,7 @@ export default async function OwnerDashboardPage() {
     visible: breakdownRow?.visible_count ?? 0,
     quiet: breakdownRow?.quiet_count ?? 0,
     invisible: breakdownRow?.invisible_count ?? 0,
-    campground_only: breakdownRow?.campground_only_count ?? 0,
+    campground_updates_only: breakdownRow?.campground_updates_only_count ?? 0,
   }
 
   // Active bulletin (most recent unexpired).

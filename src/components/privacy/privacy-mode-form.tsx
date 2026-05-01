@@ -48,8 +48,8 @@ const OPTIONS: {
     ],
   },
   {
-    value: 'campground_only',
-    label: 'Campground Only',
+    value: 'campground_updates_only',
+    label: 'Campground Updates Only',
     Icon: MapPin,
     blurb: 'See campground bulletins and meetups — and nothing else.',
     bullets: [
@@ -76,8 +76,26 @@ export function PrivacyModeForm({
   const [bulletins, setBulletins] = useState(shareBulletins)
   const [meetups, setMeetups] = useState(shareMeetups)
 
+  // Show the confirmation banner whenever the user has selected
+  // Campground Updates Only — both on the saved row (preserved
+  // through the currentMode prop) and on transient selection before
+  // they hit Save, so the consequence is visible at the moment of
+  // choosing.
+  const showCuoBanner = mode === 'campground_updates_only'
+
   return (
     <form action={formAction} className="space-y-4">
+      {showCuoBanner && (
+        <p
+          role="status"
+          className="rounded-2xl border border-flame/40 bg-flame/[0.08] px-4 py-3 text-sm text-cream leading-relaxed"
+        >
+          You are now in Campground Updates Only mode. You can see
+          campground bulletins and meetups but you are completely
+          invisible to other campers.
+        </p>
+      )}
+
       <div className="space-y-3">
         {OPTIONS.map((opt) => {
           const Icon = opt.Icon
@@ -107,7 +125,7 @@ export function PrivacyModeForm({
                     <li key={b}>{b}</li>
                   ))}
                 </ul>
-                {opt.value === 'campground_only' && mode === 'campground_only' && (
+                {opt.value === 'campground_updates_only' && mode === 'campground_updates_only' && (
                   <fieldset className="mt-3 rounded-xl border border-flame/30 bg-flame/[0.06] p-3 space-y-2">
                     <legend className="px-1 text-[11px] uppercase tracking-[0.18em] text-flame font-semibold">
                       What you still see
@@ -134,7 +152,7 @@ export function PrivacyModeForm({
 
       {/* Submit the toggles regardless of selected mode so a user can
           pre-set their preference and have it stick when they flip
-          into campground_only later. */}
+          into campground_updates_only later. */}
       <input
         type="hidden"
         name="share_bulletins"

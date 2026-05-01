@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const GUEST_BENEFITS: string[] = [
   'Private campground check-in',
   'Shared-interest discovery',
-  'Visible / Quiet / Invisible modes',
+  'Visible / Quiet / Invisible / Campground Updates Only modes',
   'Mutual waves before messaging',
   'No exact site numbers',
   'No public group chat',
@@ -86,8 +86,10 @@ export default function StartPage({
               Activate RoadWave at Your Campground
             </h1>
             <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-              Give your guests a simple, private way to meet other campers
-              through a QR code at check-in.
+              A QR-code amenity that helps your guests meet campers who share
+              their interests — or just see your bulletins and meetups, on
+              their terms. Visible, Quiet, Invisible, or Campground Updates
+              Only.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-center">
               <Link

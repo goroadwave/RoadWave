@@ -90,7 +90,7 @@ export default async function HomePage() {
 
   // Active bulletin from the campground the guest is checked into.
   // Self-mute: users with share_bulletins=false don't see this banner
-  // (campground_only mode toggles surface this preference, but the
+  // (campground_updates_only mode toggles surface this preference, but the
   // toggle persists across all modes for predictable behavior).
   let activeBulletin: {
     id: string
@@ -175,8 +175,8 @@ export default async function HomePage() {
         <div className="grid gap-3 sm:grid-cols-2">
           <Tile
             Icon={Users}
-            title="Nearby campers"
-            description="See who else is here right now."
+            title="Campers checked in here"
+            description="Who shares your interests?"
             href="/nearby"
           />
           <Tile

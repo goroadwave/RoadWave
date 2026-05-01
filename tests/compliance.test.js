@@ -420,7 +420,7 @@ test.describe('Demo lantern', () => {
     await expect(panel).toBeVisible()
     await expect(panel.getByText(/CampingFan42 sent you a wave/)).toBeVisible()
     await expect(
-      panel.getByText(/You matched with OutdoorMike/),
+      panel.getByText(/You both waved with OutdoorMike/),
     ).toBeVisible()
     await expect(
       panel.getByText(/Campfire Night at Site Loop B/),
@@ -1138,7 +1138,7 @@ test.describe('Wave 5-step flow — schema + structure', () => {
       .click({ timeout: 6000 })
     // Back to the Nearby header.
     await expect(
-      page.getByRole('heading', { name: /Nearby campers/i }),
+      page.getByRole('heading', { name: /Campers Checked In Here/i }),
     ).toBeVisible()
   })
 

@@ -176,13 +176,15 @@ test.describe('Demo — simulated phone, real interaction', () => {
     ).toBeVisible()
   })
 
-  test('"See Nearby Campers" CTA navigates to the Nearby tab', async ({
+  test('"See Campers Checked In Here" CTA navigates to the Nearby tab', async ({
     page,
   }) => {
     await page.goto('/demo')
-    await page.getByRole('button', { name: /See Nearby Campers/i }).click()
+    await page
+      .getByRole('button', { name: /See Campers Checked In Here/i })
+      .click()
     await expect(
-      page.getByRole('heading', { name: /Nearby campers/i }),
+      page.getByRole('heading', { name: /Campers Checked In Here/i }),
     ).toBeVisible()
   })
 

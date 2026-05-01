@@ -662,7 +662,7 @@ const SAMPLE_NEARBY = [
 function NearbyMockup() {
   return (
     <div>
-      <MockupHeader title="Nearby campers" />
+      <MockupHeader title="Campers checked in here" />
       <div className="space-y-1.5">
         {SAMPLE_NEARBY.map((c) => (
           <div

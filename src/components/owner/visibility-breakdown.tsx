@@ -2,15 +2,15 @@ type Counts = {
   visible: number
   quiet: number
   invisible: number
-  campground_only: number
+  campground_updates_only: number
 }
 
 // Per-mode breakdown of currently checked-in guests for the owner
-// dashboard. campground_only guests count for owner activity stats
+// dashboard. campground_updates_only guests count for owner activity stats
 // (RSVPs, etc.) — invisible guests don't, by design.
 export function VisibilityBreakdown({ counts }: { counts: Counts }) {
   const total =
-    counts.visible + counts.quiet + counts.invisible + counts.campground_only
+    counts.visible + counts.quiet + counts.invisible + counts.campground_updates_only
   const rows: { label: string; value: number; tone: string; sub: string }[] = [
     {
       label: 'Visible',
@@ -31,8 +31,8 @@ export function VisibilityBreakdown({ counts }: { counts: Counts }) {
       sub: 'Pure observers',
     },
     {
-      label: 'Campground Only',
-      value: counts.campground_only,
+      label: 'Campground Updates Only',
+      value: counts.campground_updates_only,
       tone: 'text-flame',
       sub: 'Sees bulletins/meetups, hidden from campers',
     },

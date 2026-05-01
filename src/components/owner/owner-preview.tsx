@@ -432,7 +432,7 @@ function NearbyTab() {
     <div className="space-y-3">
       <header>
         <h2 className="font-display text-lg font-extrabold text-cream">
-          Nearby campers
+          Campers Checked In Here
         </h2>
         <p className="text-xs text-mist">
           Wave when the vibe feels right.

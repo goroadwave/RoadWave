@@ -6,8 +6,8 @@ import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 const schema = z.object({
-  privacy_mode: z.enum(['visible', 'quiet', 'invisible', 'campground_only']),
-  // The two sub-toggles only matter for the campground_only mode but
+  privacy_mode: z.enum(['visible', 'quiet', 'invisible', 'campground_updates_only']),
+  // The two sub-toggles only matter for the campground_updates_only mode but
   // we always accept + persist them so the user can pre-set their
   // preference from any mode and have it stick when they switch.
   share_bulletins: z.preprocess(

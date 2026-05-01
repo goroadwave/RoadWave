@@ -63,7 +63,7 @@ export async function saveProfileAction(
     share_pet: formData.get('share_pet') === 'on',
     share_travel_style: formData.get('share_travel_style') === 'on',
     share_interests: formData.get('share_interests') === 'on',
-    // The setup form doesn't render the campground_only sub-toggles
+    // The setup form doesn't render the campground_updates_only sub-toggles
     // (those live on /settings/privacy), so default to true here.
     // Existing values on the row are preserved by the upsert below.
     share_bulletins:

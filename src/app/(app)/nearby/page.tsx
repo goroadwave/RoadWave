@@ -14,10 +14,12 @@ export default async function NearbyPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('nearby_filter_interests')
+    .select('nearby_filter_interests, privacy_mode')
     .eq('id', user!.id)
     .single()
   const initialInterests = profile?.nearby_filter_interests ?? []
+  const inUpdatesOnlyMode =
+    profile?.privacy_mode === 'campground_updates_only'
 
   const { data: viewerInterestRows } = await supabase
     .from('profile_interests')
@@ -71,6 +73,33 @@ export default async function NearbyPage() {
     .eq('id', latestCheckIn.campground_id)
     .single()
 
+  // Campground Updates Only mode: skip the camper list entirely and
+  // show a soft message pointing the user back to settings.
+  if (inUpdatesOnlyMode) {
+    return (
+      <div className="space-y-5">
+        <SafetyBanner message="Safety reminder: Meet in public campground areas, trust your instincts, and do not share your exact site number unless you choose to." />
+        <PageHeading
+          eyebrow={`Currently at ${campground?.name ?? 'your campground'}`}
+          title="Campers Checked In Here"
+          subtitle="Wave when the vibe feels right."
+        />
+        <div className="rounded-2xl border border-flame/30 bg-flame/[0.06] p-5 space-y-2">
+          <p className="text-sm text-cream leading-relaxed">
+            You are in Campground Updates Only mode. Switch to Visible
+            or Quiet to see campers checked in here.
+          </p>
+          <Link
+            href="/settings/privacy"
+            className="inline-flex text-xs font-semibold text-flame underline-offset-2 hover:underline"
+          >
+            Open privacy settings →
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const { data: campers, error } = await supabase.rpc('nearby_campers', {
     _campground_id: latestCheckIn.campground_id,
   })
@@ -106,7 +135,7 @@ export default async function NearbyPage() {
       <SafetyBanner message="Safety reminder: Meet in public campground areas, trust your instincts, and do not share your exact site number unless you choose to." />
       <PageHeading
         eyebrow={`Currently at ${campground?.name ?? 'your campground'}`}
-        title="Nearby campers"
+        title="Campers Checked In Here"
         subtitle="Wave when the vibe feels right."
       />
 

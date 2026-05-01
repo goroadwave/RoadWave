@@ -403,8 +403,8 @@ function PrivacyModeRadio({ defaultValue }: { defaultValue: PrivacyMode }) {
       description: 'Just here to look around.',
     },
     {
-      value: 'campground_only',
-      label: 'Campground Only',
+      value: 'campground_updates_only',
+      label: 'Campground Updates Only',
       Icon: MapPin,
       description:
         'See bulletins + meetups, completely invisible to other campers.',

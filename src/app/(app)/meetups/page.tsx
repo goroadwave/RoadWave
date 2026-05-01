@@ -53,7 +53,7 @@ export default async function MeetupsPage() {
     )
   }
 
-  // Self-mute: users with share_meetups=false (the campground_only
+  // Self-mute: users with share_meetups=false (the campground_updates_only
   // sub-toggle, persisted across all modes) see a quiet placeholder
   // instead of the meetup list.
   const { data: meetupsPref } = await supabase

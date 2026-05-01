@@ -8,7 +8,7 @@ const RILEY_IMG = "iVBORw0KGgoAAAANSUhEUgAAAfQAAAH0CAIAAABEtEjdAAEAAElEQVR42lT9W
 const STEPS = [
   {
     id: "welcome",
-    speech: "Welcome to RoadWave. This is the guest page for [Campground Name] — a private way to find campers who share your interests. No exact site numbers. No public group chat. No pressure.",
+    speech: "Welcome to RoadWave. This is your campground's guest page — a simple way to see what's happening, find campers who share your interests, and connect privately if you want to. No exact site numbers. No public group chat. No pressure. Let me show you around.",
     screen: "home",
     highlight: "checkin",
     bubble: { text: "Welcome to RoadWave", position: "top" },
@@ -24,7 +24,7 @@ const STEPS = [
   },
   {
     id: "shared",
-    speech: "Curious who else here likes what you like? RoadWave helps you find campers checked in at the same campground who are open to shared interests — like coffee, cards, hiking, fishing, campfires, or dog walks.",
+    speech: "Curious who else here likes what you like? Browse campers checked in at the same campground and look for shared interests like coffee, campfires, cards, hiking, fishing, dog walks, and more. If someone feels like a good fit, send a wave.",
     screen: "nearby",
     highlight: "none",
     bubble: { text: "No exact site numbers shown.", position: "top" },
@@ -32,7 +32,7 @@ const STEPS = [
   },
   {
     id: "wave",
-    speech: "See someone interesting? Send a wave. It is not a message, not a follow request, and not a public post. It is just a low-pressure way to say, hey, we might have something in common.",
+    speech: "See someone interesting? Send a wave. It is not a message, not a follow request, and not a public post. It is just a low-pressure way to say, hey, we might have something in common. If they wave back, a private hello opens. If they do not, nothing awkward happens.",
     screen: "nearby",
     highlight: "waveBtn",
     bubble: { text: "If they wave back, a private hello opens. If they don't, nothing awkward happens.", position: "right" },
@@ -40,7 +40,7 @@ const STEPS = [
   },
   {
     id: "match",
-    speech: "When both people wave, a private hello opens. That keeps the first step mutual, simple, and comfortable.",
+    speech: "When both people wave, a private hello opens automatically. That keeps the first step mutual, simple, and low-pressure. And if they don't wave back? Nothing awkward happens. And if you have connected with someone before, RoadWave remembers — so friendly faces from past campgrounds can find each other again.",
     screen: "chat",
     highlight: "chatBubble",
     bubble: { text: "Mutual wave, private hello", position: "top" },
@@ -48,10 +48,10 @@ const STEPS = [
   },
   {
     id: "visibility",
-    speech: "You control your visibility the whole time. Be visible when you feel social, quiet when you are just browsing, invisible when you want privacy, or choose Campground Only to see bulletins and meetups without appearing to other campers at all. RoadWave is optional from start to finish. Ready to try it? Hit the green button to start your check-in now.",
+    speech: "Not feeling social today? That's okay. You can use RoadWave just for campground updates. See bulletins, reminders, activities, weather notices, and meetup prompts without being visible to other campers or sending waves. You control your visibility the whole time — Visible, Quiet, Invisible, or Campground Updates Only. RoadWave is optional from start to finish. Ready to try it? Hit the green button to start your check-in now.",
     screen: "privacy",
     highlight: "none",
-    bubble: { text: "Visible, Quiet, or Invisible — your call.", position: "top" },
+    bubble: { text: "Visible, Quiet, Invisible, or Campground Updates Only — your call.", position: "top" },
     rileyMood: "explain",
   },
 ];
@@ -104,7 +104,7 @@ const AppScreen = ({ screen, highlight }) => {
     <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px", height: "100%", justifyContent: "center" }}>
       <div style={{ color: "#fde68a", fontSize: "10px", letterSpacing: "2px", textAlign: "center" }}>YOUR PRIVACY</div>
       <div style={{ ...hl("privacyToggle"), display: "flex", flexDirection: "column", gap: "10px" }}>
-        {[["🌍", "Open", "Everyone nearby sees you", "#22c55e", false], ["🤝", "Selective", "Matching vibes only", "#f59e0b", true], ["🥷", "Invisible", "Total ghost mode", "#6366f1", false], ["📍", "Campground Only", "See bulletins and meetups, hidden from campers", "#10b981", false]].map(([e, l, s, c, sel]) => (
+        {[["👁️", "Visible", "Show up and wave", "#22c55e", false], ["🤫", "Quiet", "Hidden, wave first", "#f59e0b", true], ["🥷", "Invisible", "Just here to look around", "#6366f1", false], ["📍", "Campground Updates Only", "See bulletins and meetups, hidden from campers", "#10b981", false]].map(([e, l, s, c, sel]) => (
           <div key={l} style={{ background: sel ? `${c}18` : "rgba(255,255,255,0.04)", border: sel ? `1.5px solid ${c}` : "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "14px", display: "flex", alignItems: "center", gap: "12px" }}>
             <span style={{ fontSize: "24px" }}>{e}</span>
             <div style={{ flex: 1 }}><div style={{ color: "white", fontSize: "13px", fontWeight: "600" }}>{l}</div><div style={{ color: "#9ca3af", fontSize: "10px" }}>{s}</div></div>
@@ -128,7 +128,7 @@ const AppScreen = ({ screen, highlight }) => {
 
   if (screen === "nearby") return (
     <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "8px", height: "100%" }}>
-      <div style={{ color: "#fde68a", fontSize: "10px", letterSpacing: "2px" }}>NEARBY CAMPERS</div>
+      <div style={{ color: "#fde68a", fontSize: "10px", letterSpacing: "2px" }}>CAMPERS CHECKED IN HERE</div>
       <div style={{ ...hl("camperList"), display: "flex", flexDirection: "column", gap: "8px" }}>
         {[["🐺", "@solo_ranger", "Solo Wolf", "🎸 🏕️ 📸"], ["🏠", "@rolling_home", "Full-timer", "🎣 🔥 🎲"], ["⛺", "@weekend_fam", "Family Crew", "🚴 🏊 🎯"]].map(([e, u, t, i]) => (
           <div key={u} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", padding: "10px", display: "flex", gap: "10px", alignItems: "center" }}>
@@ -154,16 +154,16 @@ const AppScreen = ({ screen, highlight }) => {
 
   if (screen === "meetups") return (
     <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "8px", height: "100%" }}>
-      <div style={{ color: "#fde68a", fontSize: "10px", letterSpacing: "2px" }}>MEETUPS NEARBY</div>
+      <div style={{ color: "#fde68a", fontSize: "10px", letterSpacing: "2px" }}>CAMPGROUND BULLETINS</div>
       <div style={{ ...hl("meetupList"), display: "flex", flexDirection: "column", gap: "8px" }}>
-        {[["🔥", "Sunset Campfire", "7:30 PM · Fire Ring 3", "4 going", true], ["☕", "Morning Coffee Walk", "7:00 AM · Trailhead", "2 going", false], ["🎸", "Acoustic Jam", "8:00 PM · Pavilion", "6 going", false]].map(([e, t, s, g, j]) => (
+        {[["☕", "Coffee at the clubhouse", "8:00 AM · Clubhouse", "Daily", true], ["🐕", "Dog walk meetup", "9:00 AM · Trailhead", "Bring your pup", false], ["🚚", "Food truck tonight", "5–8 PM · Main Loop", "Tacos & shaved ice", false], ["🔥", "Campfire circle", "7:00 PM · Fire Ring 3", "Bring a chair", false], ["🌙", "Quiet hours reminder", "10 PM – 7 AM", "Please respect neighbors", false]].map(([e, t, s, g, j]) => (
           <div key={t} style={{ background: j ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.05)", border: j ? "1px solid rgba(245,158,11,0.3)" : "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", padding: "10px" }}>
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}><span style={{ fontSize: "20px" }}>{e}</span><div style={{ flex: 1 }}><div style={{ color: "white", fontSize: "11px", fontWeight: "600" }}>{t}</div><div style={{ color: "#9ca3af", fontSize: "9px" }}>{s}</div></div><div style={{ background: j ? "#f59e0b" : "rgba(255,255,255,0.08)", borderRadius: "6px", padding: "4px 8px" }}><div style={{ color: j ? "#0a0f1c" : "white", fontSize: "9px", fontWeight: j ? "700" : "400" }}>{j ? "Joined ✓" : "Join"}</div></div></div>
             <div style={{ color: "#6b7280", fontSize: "9px", marginTop: "4px", paddingLeft: "30px" }}>{g}</div>
           </div>
         ))}
       </div>
-      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "12px", padding: "10px", textAlign: "center", border: "1px dashed rgba(255,255,255,0.1)" }}><div style={{ color: "#9ca3af", fontSize: "11px" }}>+ Create a Meetup</div></div>
+      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "12px", padding: "10px", textAlign: "center", border: "1px dashed rgba(255,255,255,0.1)" }}><div style={{ color: "#9ca3af", fontSize: "11px" }}>+ Post a bulletin</div></div>
     </div>
   );
 

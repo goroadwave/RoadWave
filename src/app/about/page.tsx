@@ -117,7 +117,7 @@ export default function AboutPage() {
                 {
                   emoji: '🔒',
                   title: 'Privacy is not optional',
-                  body: 'Your data is yours. We collect the minimum we need, share nothing without your input, and never sell anything to anyone. Three privacy modes mean you choose how visible you are.',
+                  body: 'Your data is yours. We collect the minimum we need, share nothing without your input, and never sell anything to anyone. Four privacy modes — Visible, Quiet, Invisible, or Campground Updates Only — mean you choose how visible you are.',
                 },
                 {
                   emoji: '🤝',

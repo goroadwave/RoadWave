@@ -15,7 +15,7 @@ const STEPS: { emoji: string; title: string; body: string }[] = [
   {
     emoji: '👁',
     title: 'Choose how visible you want to be',
-    body: 'Be visible, stay quiet, or go invisible. You control whether other campers can see you.',
+    body: 'Be visible, stay quiet, go invisible, or just see campground updates. You control whether other campers can see you.',
   },
   {
     emoji: '🎯',
@@ -36,6 +36,25 @@ const PRIVACY_BULLETS: string[] = [
   'No one sees you unless you choose to be visible',
   'Check-ins are temporary',
   'You can go Invisible anytime',
+  'Switch to Campground Updates Only whenever you just want updates',
+]
+
+const USE_OPTIONS: { emoji: string; title: string; body: string }[] = [
+  {
+    emoji: '👋',
+    title: 'Use it socially',
+    body: 'Be Visible, browse campers checked in here, and wave at folks who share your interests.',
+  },
+  {
+    emoji: '🤫',
+    title: 'Use it quietly',
+    body: 'Stay Quiet or Invisible. Look around without showing up — wave first only if someone catches your eye.',
+  },
+  {
+    emoji: '📍',
+    title: 'Use it for updates only',
+    body: 'Campground Updates Only — see bulletins, weather, quiet hours, and meetups, hidden from other campers.',
+  },
 ]
 
 const WHO_ITS_FOR: { title: string; body: string }[] = [
@@ -121,7 +140,8 @@ export default async function RootPage() {
               </p>
               <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
                 Wave when you want. Stay quiet when you don&apos;t. Go
-                invisible anytime.
+                invisible anytime — or just keep an eye on campground
+                updates.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-center lg:justify-start">
                 <Link
@@ -139,7 +159,8 @@ export default async function RootPage() {
               </div>
               <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] text-flame/90 font-semibold pt-2">
                 No exact site numbers. No public group chats. No pressure.
-                Visible, Quiet, or Invisible anytime. No download required.
+                Visible, Quiet, Invisible, or Campground Updates Only — your
+                call. No download required.
               </p>
             </div>
             <div className="lg:pl-4">
@@ -176,6 +197,35 @@ export default async function RootPage() {
                 </li>
               ))}
             </ol>
+          </div>
+        </section>
+
+        {/* Choose how you want to use RoadWave */}
+        <section className="px-4 py-14 border-t border-white/5">
+          <div className="mx-auto max-w-4xl">
+            <div className="text-center mb-10 space-y-2">
+              <Eyebrow>Three ways to use it</Eyebrow>
+              <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
+                Choose how you want to use RoadWave.
+              </h2>
+              <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
+                Same app, three different vibes. Switch any time.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {USE_OPTIONS.map((o) => (
+                <div
+                  key={o.title}
+                  className="rounded-2xl border border-white/5 bg-card p-5"
+                >
+                  <div className="text-2xl mb-2" aria-hidden>
+                    {o.emoji}
+                  </div>
+                  <h3 className="font-semibold text-cream mb-1">{o.title}</h3>
+                  <p className="text-sm text-mist leading-snug">{o.body}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
