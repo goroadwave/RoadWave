@@ -150,12 +150,6 @@ export default async function RootPage() {
                 >
                   Try the Demo <span aria-hidden>👋</span>
                 </Link>
-                <a
-                  href="#owner-section"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-cream px-6 py-3 text-base font-medium hover:bg-white/10 hover:border-flame/40 transition-colors"
-                >
-                  I Run a Campground
-                </a>
               </div>
               <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] text-flame/90 font-semibold pt-2">
                 No exact site numbers. No public group chats. No pressure.
@@ -326,19 +320,13 @@ export default async function RootPage() {
               Try RoadWave with sample campground data. No account needed.
               No download required.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <div className="flex justify-center pt-2">
               <Link
                 href="/demo"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
               >
                 Try the Demo <span aria-hidden>👋</span>
               </Link>
-              <a
-                href="#owner-section"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-cream px-6 py-3 font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors"
-              >
-                I Run a Campground
-              </a>
             </div>
 
             <div className="pt-6 border-t border-white/10 mt-6 max-w-md mx-auto">
