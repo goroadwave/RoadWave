@@ -1418,18 +1418,6 @@ function AppHeader({ onNavigate }) {
           >
             Exit
           </a>
-          {/* Sign out is rendered for everyone here. Anonymous viewers
-              just bounce to / (same as Exit); signed-in users get an
-              actual Supabase signOut + redirect. Cheaper than wiring
-              the demo into the Supabase session check. */}
-          <form action="/auth/sign-out?next=/" method="post" className="leading-none">
-            <button
-              type="submit"
-              className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline leading-none"
-            >
-              Sign out
-            </button>
-          </form>
         </div>
       </div>
     </header>
