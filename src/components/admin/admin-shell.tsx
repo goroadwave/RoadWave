@@ -22,12 +22,22 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <Link href="/admin" className="font-display text-lg font-extrabold text-cream">
             RoadWave <span className="text-flame">Admin</span>
           </Link>
-          <Link
-            href="/home"
-            className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
-          >
-            ← Back to app
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/home"
+              className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
+            >
+              ← Back to app
+            </Link>
+            <form action="/auth/sign-out?next=/" method="post">
+              <button
+                type="submit"
+                className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </header>
 

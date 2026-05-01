@@ -47,7 +47,19 @@ export default async function OwnerSetupPage() {
     ''
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10 relative">
+      <form
+        action="/auth/sign-out?next=/"
+        method="post"
+        className="absolute top-4 right-4"
+      >
+        <button
+          type="submit"
+          className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
+        >
+          Sign out
+        </button>
+      </form>
       <Link
         href="/"
         className="mb-8 inline-block font-display font-extrabold tracking-[-0.02em] leading-none text-4xl whitespace-nowrap"

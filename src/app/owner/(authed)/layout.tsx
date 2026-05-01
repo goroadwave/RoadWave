@@ -78,7 +78,7 @@ export default async function AuthedOwnerLayout({
               </span>
             </span>
           </Link>
-          <form action="/auth/sign-out?next=/owner/login" method="post">
+          <form action="/auth/sign-out?next=/" method="post">
             <button
               type="submit"
               className="text-sm text-mist hover:text-cream underline-offset-2 hover:underline"
