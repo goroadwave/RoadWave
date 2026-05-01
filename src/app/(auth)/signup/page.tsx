@@ -30,7 +30,8 @@ export default async function SignupPage() {
         <p className="text-sm text-cream/85 leading-relaxed">
           You&apos;ll be part of the early RoadWave launch list. As campground
           pages go live, you&apos;ll be able to check in privately, choose your
-          visibility, find shared interests, and wave before messaging.
+          visibility, find shared interests, and open a private hello only
+          after a mutual wave.
         </p>
       </div>
       <SignupCard />

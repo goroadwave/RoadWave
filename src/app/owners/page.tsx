@@ -510,9 +510,9 @@ export default function OwnersPage() {
               </div>
             </div>
             <p className="text-center text-mist text-sm sm:text-base leading-relaxed pt-2 max-w-xl mx-auto">
-              The same QR code works for everyone, whether they want to wave
-              at strangers or just keep tabs on what&apos;s happening at your
-              campground.
+              The same QR code works for everyone, whether they want to
+              connect with other guests or just keep tabs on what&apos;s
+              happening at your campground.
             </p>
           </div>
         </section>

@@ -155,7 +155,7 @@ const AppScreen = ({ screen, highlight }) => {
     <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px", height: "100%", justifyContent: "center" }}>
       <div style={{ color: "#fde68a", fontSize: "10px", letterSpacing: "2px", textAlign: "center" }}>YOUR PRIVACY</div>
       <div style={{ ...hl("privacyToggle"), display: "flex", flexDirection: "column", gap: "10px" }}>
-        {[["👁️", "Visible", "Show up and wave", "#22c55e", false], ["🤫", "Quiet", "Hidden, wave first", "#f59e0b", true], ["🥷", "Invisible", "Just here to look around", "#6366f1", false], ["📍", "Campground Updates Only", "See bulletins and meetups, hidden from campers", "#10b981", false]].map(([e, l, s, c, sel]) => (
+        {[["👁️", "Visible", "Show up and wave", "#22c55e", false], ["🤫", "Quiet", "Hidden, wave first", "#f59e0b", true], ["🥷", "Invisible", "Just here to look around", "#6366f1", false], ["📍", "Campground Updates Only", "Bulletins only. Invisible to other campers.", "#10b981", false]].map(([e, l, s, c, sel]) => (
           <div key={l} style={{ background: sel ? `${c}18` : "rgba(255,255,255,0.04)", border: sel ? `1.5px solid ${c}` : "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "14px", display: "flex", alignItems: "center", gap: "12px" }}>
             <span style={{ fontSize: "24px" }}>{e}</span>
             <div style={{ flex: 1 }}><div style={{ color: "white", fontSize: "13px", fontWeight: "600" }}>{l}</div><div style={{ color: "#9ca3af", fontSize: "10px" }}>{s}</div></div>
