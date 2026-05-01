@@ -45,9 +45,13 @@ const PRIVACY_MODES = [
   {
     slug: 'campground_updates_only',
     label: 'Campground Updates Only',
-    desc: 'See bulletins + meetups, completely invisible to other campers.',
+    desc: 'Bulletins only. Invisible to other campers.',
   },
 ]
+
+const PRIVACY_LABEL = Object.fromEntries(
+  PRIVACY_MODES.map((m) => [m.slug, m.label]),
+)
 
 const SAMPLE_CAMPERS = [
   {
@@ -1432,7 +1436,7 @@ function HomeScreen({ privacyMode, onScreen, campgroundName }) {
         <ModeBadge mode={privacyMode} />
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-wide text-mist">Privacy</p>
-          <p className="text-sm font-semibold text-cream capitalize">{privacyMode}</p>
+          <p className="text-sm font-semibold text-cream">{PRIVACY_LABEL[privacyMode] ?? privacyMode}</p>
         </div>
         <button
           type="button"
@@ -2192,19 +2196,12 @@ function VerifiedBadge({ title, small }) {
 // ----------------------------------------------------------------------------
 
 function PrivacyScreen({ mode, onChange }) {
-  // Sub-toggle state for the campground_updates_only mode. Defaults match the
-  // live app: both sub-toggles on by default.
-  const [shareBulletins, setShareBulletins] = useState(true)
-  const [shareMeetups, setShareMeetups] = useState(true)
-
   const iconFor = (slug) => {
     if (slug === 'visible') return '👁'
     if (slug === 'quiet') return '🤫'
     if (slug === 'invisible') return '👻'
     return '📍'
   }
-
-  const showCuoBanner = mode === 'campground_updates_only'
 
   return (
     <div className="space-y-4 py-3">
@@ -2218,83 +2215,32 @@ function PrivacyScreen({ mode, onChange }) {
         </p>
       </header>
 
-      {showCuoBanner && (
-        <p
-          role="status"
-          className="rounded-2xl border border-flame/40 bg-flame/[0.08] px-4 py-3 text-sm text-cream leading-relaxed"
-        >
-          You are now in Campground Updates Only mode. You can see
-          campground bulletins and meetups but you are completely
-          invisible to other campers.
-        </p>
-      )}
-
       <div className="space-y-2">
         {PRIVACY_MODES.map((m) => {
           const active = mode === m.slug
           return (
-            <div key={m.slug}>
-              <button
-                type="button"
-                onClick={() => onChange(m.slug)}
-                className={
-                  active
-                    ? 'w-full text-left flex items-start gap-3 rounded-2xl border border-flame bg-flame/10 p-3'
-                    : 'w-full text-left flex items-start gap-3 rounded-2xl border border-white/10 bg-card p-3'
-                }
-              >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-flame/15 text-flame text-base">
-                  {iconFor(m.slug)}
+            <button
+              key={m.slug}
+              type="button"
+              onClick={() => onChange(m.slug)}
+              className={
+                active
+                  ? 'w-full text-left flex items-start gap-3 rounded-2xl border border-flame bg-flame/10 p-3'
+                  : 'w-full text-left flex items-start gap-3 rounded-2xl border border-white/10 bg-card p-3'
+              }
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-flame/15 text-flame text-base">
+                {iconFor(m.slug)}
+              </span>
+              <span>
+                <span className="block text-sm font-semibold text-cream">
+                  {m.label}
                 </span>
-                <span>
-                  <span className="block text-sm font-semibold text-cream">
-                    {m.label}
-                  </span>
-                  <span className="block font-serif italic text-flame text-sm leading-snug">
-                    {m.desc}
-                  </span>
+                <span className="block font-serif italic text-flame text-sm leading-snug">
+                  {m.desc}
                 </span>
-              </button>
-              {active && m.slug === 'campground_updates_only' && (
-                <div className="mt-2 rounded-xl border border-flame/30 bg-flame/[0.06] p-3 space-y-2">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-flame font-semibold">
-                    What you still see
-                  </p>
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={shareBulletins}
-                      onChange={(e) => setShareBulletins(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 accent-flame"
-                    />
-                    <span>
-                      <span className="block text-sm font-semibold text-cream">
-                        Campground Bulletins
-                      </span>
-                      <span className="block text-[11px] text-mist leading-snug">
-                        Announcements + notices from the campground.
-                      </span>
-                    </span>
-                  </label>
-                  <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={shareMeetups}
-                      onChange={(e) => setShareMeetups(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 accent-flame"
-                    />
-                    <span>
-                      <span className="block text-sm font-semibold text-cream">
-                        Meetups & Activities
-                      </span>
-                      <span className="block text-[11px] text-mist leading-snug">
-                        Hosted meetups + RSVP.
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              )}
-            </div>
+              </span>
+            </button>
           )
         })}
       </div>
@@ -2568,12 +2514,13 @@ function ModeBadge({ mode }) {
     visible: 'bg-leaf/15 text-leaf border-leaf/30',
     quiet: 'bg-flame/15 text-flame border-flame/30',
     invisible: 'bg-white/10 text-mist border-white/15',
+    campground_updates_only: 'bg-flame/15 text-flame border-flame/30',
   }
   return (
     <span
-      className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize ${styles[mode]}`}
+      className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${styles[mode] ?? 'bg-white/10 text-mist border-white/15'}`}
     >
-      {mode}
+      {PRIVACY_LABEL[mode] ?? mode}
     </span>
   )
 }

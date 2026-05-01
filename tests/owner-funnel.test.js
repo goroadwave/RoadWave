@@ -282,12 +282,13 @@ test.describe('Owner funnel — structural wiring', () => {
     expect(adminAct).toContain('active_campground_updates_only')
     expect(adminAct).toContain('Campground Updates Only')
 
-    // 9. Demo PrivacyScreen and Riley tour Step 6 mention the new
-    //    mode + sub-toggles + the CUO banner copy.
+    // 9. Demo PrivacyScreen renders all four modes as identical cards
+    //    (the demo intentionally drops the sub-toggle panel — the live
+    //    app keeps it; that's checked in step 4 above).
     const demo = await fs.readFile('src/pages/demo.jsx', 'utf8')
     expect(demo).toContain("'campground_updates_only'")
-    expect(demo).toContain('Campground Bulletins')
-    expect(demo).toContain('You are now in Campground Updates Only mode')
+    expect(demo).toContain('Campground Updates Only')
+    expect(demo).toContain('Bulletins only. Invisible to other campers.')
     const tour = await fs.readFile('src/app/tour/page.jsx', 'utf8')
     expect(tour).toContain('Campground Updates Only')
   })
