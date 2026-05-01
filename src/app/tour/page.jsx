@@ -48,7 +48,7 @@ const STEPS = [
   },
   {
     id: "visibility",
-    speech: "You control your visibility the whole time. Be visible when you feel social, quiet when you are just browsing, or invisible when you want privacy. RoadWave is optional from start to finish.",
+    speech: "You control your visibility the whole time. Be visible when you feel social, quiet when you are just browsing, or invisible when you want privacy. RoadWave is optional from start to finish. Ready to try it? Hit the green button to start your check-in now.",
     screen: "privacy",
     highlight: "none",
     bubble: { text: "Visible, Quiet, or Invisible — your call.", position: "top" },
