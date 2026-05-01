@@ -9,6 +9,9 @@ type Campground = {
   region: string | null
   is_active: boolean
   created_at: string
+  subscription_status: 'trial' | 'active' | 'past_due' | 'canceled'
+  plan: 'monthly' | 'annual' | null
+  trial_ends_at: string | null
 }
 
 type BulletinCount = { campground_id: string }
@@ -19,7 +22,9 @@ export default async function CampgroundsPage() {
   const [{ data: campgrounds }, { data: bulletins }] = await Promise.all([
     supabase
       .from('campgrounds')
-      .select('id, name, city, region, is_active, created_at')
+      .select(
+        'id, name, city, region, is_active, created_at, subscription_status, plan, trial_ends_at',
+      )
       .order('created_at', { ascending: false }),
     supabase.from('bulletins').select('campground_id'),
   ])
@@ -29,10 +34,27 @@ export default async function CampgroundsPage() {
     counts.set(b.campground_id, (counts.get(b.campground_id) ?? 0) + 1)
   }
 
-  const rows = ((campgrounds ?? []) as Campground[]).map((c) => ({
-    ...c,
-    bulletin_count: counts.get(c.id) ?? 0,
-  }))
+  // Highlight rows whose trial expires within the next 7 days. Useful
+  // for the founder to see at-a-glance who needs a follow-up nudge.
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+  const now = Date.now()
+  const rows = ((campgrounds ?? []) as Campground[]).map((c) => {
+    const trialEndMs = c.trial_ends_at ? new Date(c.trial_ends_at).getTime() : null
+    const daysToExpiry =
+      trialEndMs !== null
+        ? Math.ceil((trialEndMs - now) / (24 * 60 * 60 * 1000))
+        : null
+    const expiringSoon =
+      c.subscription_status === 'trial' &&
+      trialEndMs !== null &&
+      trialEndMs - now <= sevenDaysMs
+    return {
+      ...c,
+      bulletin_count: counts.get(c.id) ?? 0,
+      days_to_expiry: daysToExpiry,
+      expiring_soon: expiringSoon,
+    }
+  })
 
   return (
     <div className="space-y-5">
@@ -44,8 +66,8 @@ export default async function CampgroundsPage() {
           Registered campgrounds ({rows.length})
         </h1>
         <p className="text-xs text-mist">
-          QR scan activity is not tracked yet — listed bulletins is the
-          best campground-level activity signal we have today.
+          Showing subscription status + trial expiry. Rows highlighted in
+          amber are within 7 days of trial expiry.
         </p>
       </header>
 

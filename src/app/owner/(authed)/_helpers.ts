@@ -15,6 +15,19 @@ export type OwnerCampground = {
   timezone: string
   is_verified: boolean
   is_active: boolean
+  // Billing + onboarding fields (added in migration 0031). Optional in
+  // the type so any pre-migration deployment doesn't break — runtime
+  // values default to nulls / false from the migration's column
+  // defaults.
+  subscription_status: 'trial' | 'active' | 'past_due' | 'canceled'
+  plan: 'monthly' | 'annual' | null
+  trial_started_at: string | null
+  trial_ends_at: string | null
+  current_period_end: string | null
+  stripe_customer_id: string | null
+  onb_qr_printed: boolean
+  onb_qr_posted: boolean
+  onb_first_bulletin_sent: boolean
 }
 
 export async function loadOwnerCampground() {
@@ -36,7 +49,7 @@ export async function loadOwnerCampground() {
   const { data: cg } = await supabase
     .from('campgrounds')
     .select(
-      'id, name, slug, city, region, address, phone, website, logo_url, amenities, timezone, is_verified, is_active',
+      'id, name, slug, city, region, address, phone, website, logo_url, amenities, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent',
     )
     .eq('id', link.campground_id)
     .single()

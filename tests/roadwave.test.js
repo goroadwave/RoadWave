@@ -334,17 +334,17 @@ test.describe('Owner — auth gates + signup/login form scaffolding', () => {
     await expect(page.getByRole('button', { name: /^Sign in$/i })).toBeVisible()
   })
 
-  test('/owner/signup renders all four required fields', async ({ page }) => {
+  test('/owner/signup renders the self-serve form fields', async ({ page }) => {
     await page.goto('/owner/signup')
     await expect(
-      page.getByRole('heading', { name: /Set up your campground/i }),
+      page.getByRole('heading', { name: /Start My Campground Pilot/i }),
     ).toBeVisible()
-    await expect(page.locator('input[name="display_name"]')).toBeVisible()
-    await expect(page.locator('input[name="email"]')).toBeVisible()
-    await expect(page.locator('input[name="password"]')).toBeVisible()
     await expect(page.locator('input[name="campground_name"]')).toBeVisible()
+    await expect(page.locator('input[name="owner_name"]')).toBeVisible()
+    await expect(page.locator('input[name="email"]')).toBeVisible()
+    await expect(page.locator('input[name="phone"]')).toBeVisible()
     await expect(
-      page.getByRole('button', { name: /Create campground account/i }),
+      page.getByRole('button', { name: /Start My Campground Pilot/i }),
     ).toBeVisible()
   })
 })

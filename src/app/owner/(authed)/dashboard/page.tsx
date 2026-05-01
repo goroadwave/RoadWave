@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Eyebrow } from '@/components/ui/eyebrow'
+import { TrialBanner } from '@/components/owner/trial-banner'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loadOwnerCampground } from '../_helpers'
 
@@ -46,21 +47,39 @@ export default async function OwnerDashboardPage() {
     .limit(1)
     .maybeSingle()
 
-  const hasLogo = !!campground.logo_url
-  const hasAddress = !!campground.address
-  const hasBulletin = !!activeBulletin
+  const hasBulletin = !!activeBulletin || campground.onb_first_bulletin_sent
 
-  // Onboarding checklist.
+  // Onboarding checklist (spec §5):
+  //   1. Download and print your QR code → onb_qr_printed (auto-marked
+  //      when owner downloads from /owner/qr)
+  //   2. Post it at your welcome sign → onb_qr_posted (manual toggle)
+  //   3. Send your first guest bulletin → hasBulletin (auto from
+  //      bulletins existence + onb_first_bulletin_sent latch)
   const checklist = [
-    { label: 'Add campground info', done: hasAddress, href: '/owner/profile' },
-    { label: 'Upload a logo', done: hasLogo, href: '/owner/profile' },
-    { label: 'Download your QR code', done: false, href: '/owner/qr' },
-    { label: 'Post your first bulletin', done: hasBulletin, href: '/owner/bulletin' },
+    {
+      label: 'Download and print your QR code',
+      done: campground.onb_qr_printed,
+      href: '/owner/qr',
+    },
+    {
+      label: 'Post it at your welcome sign',
+      done: campground.onb_qr_posted,
+      href: '/owner/qr',
+    },
+    {
+      label: 'Send your first guest bulletin',
+      done: hasBulletin,
+      href: '/owner/bulletin',
+    },
   ]
   const incomplete = checklist.filter((c) => !c.done)
 
   return (
     <div className="space-y-6">
+      <TrialBanner
+        status={campground.subscription_status}
+        trialEndsAt={campground.trial_ends_at}
+      />
       <header className="flex items-center gap-4">
         {campground.logo_url ? (
           // eslint-disable-next-line @next/next/no-img-element -- simple <img> for owner-uploaded logo
@@ -186,6 +205,7 @@ export default async function OwnerDashboardPage() {
         <Tile href="/owner/bulletin" title="Bulletin board" desc="One announcement at a time." />
         <Tile href="/owner/meetups" title="Meetups" desc="Hosted events for guests." />
         <Tile href="/owner/analytics" title="Analytics" desc="Anonymous check-in stats." />
+        <Tile href="/owner/billing" title="Billing" desc="Plan, next billing date, and Stripe portal." />
       </section>
     </div>
   )

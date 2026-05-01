@@ -1,270 +1,143 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { getRequestIp, getSiteOrigin } from '@/lib/utils'
-import { headers } from 'next/headers'
-import { sendOwnerSignupConfirmEmail } from '@/lib/email/signup-confirmation'
-import {
-  PARTNER_TERMS_VERSION,
-  PRIVACY_VERSION,
-  TERMS_VERSION,
-} from '@/lib/constants/interests'
+import { getRequestIp } from '@/lib/utils'
+import { isPlan } from '@/lib/stripe/prices'
+import { isStripeConfigured } from '@/lib/stripe/server'
 
-export type OwnerSignupState = { error: string | null }
+// Self-serve owner signup. Captures the spec §2 form, persists an
+// owner_signup_submission row, then either redirects to Stripe
+// Checkout (if STRIPE_* env vars are configured) or to the welcome
+// page in "pending Stripe setup" mode (graceful fallback).
+//
+// No auth user is created here — that happens after payment in the
+// Stripe webhook handler. Returning owners log in via /owner/login.
 
 const schema = z.object({
-  display_name: z.string().min(1).max(120),
+  campground_name: z.string().min(1).max(200),
+  owner_name: z.string().min(1).max(200),
   email: z.string().email(),
-  password: z.string().min(8).max(200),
-  campground_name: z.string().min(1).max(120),
-  phone: z.string().max(60).optional().or(z.literal('')),
-  accept_partner_terms: z.boolean().refine((v) => v === true, {
-    message: 'You must agree to the Partner Terms and Conduct Restrictions.',
-  }),
-  confirm_18_and_authorized: z.boolean().refine((v) => v === true, {
-    message:
-      'You must confirm you are 18+ and authorized to represent the campground.',
-  }),
+  phone: z.string().max(40).optional().or(z.literal('')),
+  website: z.string().max(500).optional().or(z.literal('')),
+  city: z.string().max(120).optional().or(z.literal('')),
+  state: z.string().max(120).optional().or(z.literal('')),
+  num_sites: z
+    .union([z.string(), z.number(), z.null()])
+    .optional()
+    .transform((v) => {
+      if (v === undefined || v === null || v === '') return null
+      const n = typeof v === 'number' ? v : parseInt(String(v), 10)
+      return Number.isFinite(n) && n >= 0 ? n : null
+    }),
+  campground_type: z
+    .enum(['rv_park', 'resort', 'state_park', 'private', 'seasonal', 'other'])
+    .optional()
+    .or(z.literal('')),
+  hosts_events: z.preprocess((v) => v === 'on' || v === true, z.boolean()),
+  target_guests: z
+    .enum(['overnight', 'seasonal', 'events', 'all'])
+    .optional()
+    .or(z.literal('')),
+  logo_url: z.string().max(500).optional().or(z.literal('')),
+  wants_setup_call: z.preprocess((v) => v === 'on' || v === true, z.boolean()),
+  accepted_partner_terms: z
+    .literal('on', { message: 'You must agree to the Campground Partner Terms.' })
+    .or(z.boolean().refine((v) => v === true, 'You must agree to the Campground Partner Terms.')),
+  ack_optional: z
+    .literal('on', { message: 'Please confirm RoadWave is optional for guests.' })
+    .or(z.boolean().refine((v) => v === true, 'Please confirm RoadWave is optional for guests.')),
+  ack_no_site_numbers: z
+    .literal('on', { message: 'Please confirm the site-number acknowledgement.' })
+    .or(z.boolean().refine((v) => v === true, 'Please confirm the site-number acknowledgement.')),
+  ack_not_emergency: z
+    .literal('on', { message: 'Please confirm RoadWave is not an emergency service.' })
+    .or(z.boolean().refine((v) => v === true, 'Please confirm RoadWave is not an emergency service.')),
+  plan: z.enum(['monthly', 'annual']),
 })
 
-function slugify(name: string): string {
-  return (
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 60) || 'campground'
-  )
-}
-
-// profiles.username has a CHECK constraint: ^[a-zA-Z0-9_]{3,24}$. We pre-compute
-// a valid username so the handle_new_user trigger uses it directly via
-// raw_user_meta_data and we don't have to override it later (which is what
-// caused the original bug — the override was 31 chars and silently failed
-// the CHECK, leaving role at 'guest').
-function makeUsername(userId: string): string {
-  // 6 + 18 = 24 chars exactly. Strip dashes so it stays alphanumeric.
-  const tail = userId.replace(/-/g, '').slice(0, 18)
-  return `owner_${tail}`
-}
+export type OwnerSignupState = { error: string | null }
 
 export async function ownerSignupAction(
   _prev: OwnerSignupState,
   formData: FormData,
 ): Promise<OwnerSignupState> {
   const parsed = schema.safeParse({
-    display_name: formData.get('display_name'),
-    email: formData.get('email'),
-    password: formData.get('password'),
     campground_name: formData.get('campground_name'),
+    owner_name: formData.get('owner_name'),
+    email: formData.get('email'),
     phone: formData.get('phone') ?? '',
-    accept_partner_terms: formData.get('accept_partner_terms') === 'on',
-    confirm_18_and_authorized:
-      formData.get('confirm_18_and_authorized') === 'on',
+    website: formData.get('website') ?? '',
+    city: formData.get('city') ?? '',
+    state: formData.get('state') ?? '',
+    num_sites: formData.get('num_sites') ?? '',
+    campground_type: formData.get('campground_type') || '',
+    hosts_events: formData.get('hosts_events'),
+    target_guests: formData.get('target_guests') || '',
+    logo_url: (formData.get('logo_url') as string) || '',
+    wants_setup_call: formData.get('wants_setup_call'),
+    accepted_partner_terms: formData.get('accepted_partner_terms'),
+    ack_optional: formData.get('ack_optional'),
+    ack_no_site_numbers: formData.get('ack_no_site_numbers'),
+    ack_not_emergency: formData.get('ack_not_emergency'),
+    plan: formData.get('plan') ?? 'monthly',
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()
     const first =
-      Object.values(flat.fieldErrors).flat()[0] ?? 'Check your fields and try again.'
+      Object.values(flat.fieldErrors).flat()[0] ??
+      flat.formErrors[0] ??
+      'Please check the form and try again.'
     return { error: String(first) }
   }
-  const { display_name, email, password, campground_name, phone } = parsed.data
+  const data = parsed.data
+  if (!isPlan(data.plan)) return { error: 'Invalid plan.' }
 
-  const h = await headers()
-  const origin = getSiteOrigin(h)
+  const headerList = await headers()
   const admin = createSupabaseAdminClient()
-
-  // 1) Create auth user via admin.generateLink so Supabase doesn't auto-send
-  // its global confirmation email — we send a branded owner-flavored one
-  // via Resend below. The handle_new_user trigger still fires on the
-  // auth.users insert, so the profile row gets created the same way.
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type: 'signup',
-    email,
-    password,
-    options: {
-      data: { display_name },
-      redirectTo: `${origin}/auth/callback`,
-    },
-  })
-  if (linkError) {
-    console.error('[owner-signup] generateLink failed:', linkError.message)
-    return { error: linkError.message }
-  }
-  const confirmUrl = linkData.properties?.action_link
-  const userId = linkData.user?.id
-  if (!confirmUrl || !userId) {
-    console.error('[owner-signup] generateLink returned no link/user id')
-    return { error: "Couldn't finish signup. Try logging in." }
-  }
-
-  // 1b) Record acceptance of Partner Terms (and the general Terms +
-  // Privacy versions implicit in account creation). Service-role insert
-  // since the user has no session yet. Append-only by app convention.
-  const { error: ackError } = await admin.from('legal_acks').insert({
-    user_id: userId,
-    terms_version: TERMS_VERSION,
-    privacy_version: PRIVACY_VERSION,
-    partner_terms_version: PARTNER_TERMS_VERSION,
-    ip_address: getRequestIp(h),
-    user_agent: h.get('user-agent'),
-  })
-  if (ackError) {
-    console.error('[owner-signup] legal_acks insert failed:', ackError.message)
-    // Non-fatal — user can finish signup; we just don't have a recorded ack.
-  }
-
-  // 2) Confirm the auth.users row + the trigger-created profile are visible
-  // to the admin client. If for any reason the trigger didn't fire, fall
-  // back to an explicit insert. This guards against a missing profile row,
-  // which would silently break role-based routing later.
-  const { data: profileExisting } = await admin
-    .from('profiles')
-    .select('id')
-    .eq('id', userId)
-    .maybeSingle()
-
-  const username = makeUsername(userId)
-  if (!profileExisting) {
-    const { error: insertProfileErr } = await admin.from('profiles').insert({
-      id: userId,
-      username,
-      display_name,
-      role: 'owner',
-    })
-    if (insertProfileErr) {
-      console.error(
-        '[owner-signup] profile fallback insert failed:',
-        insertProfileErr.message,
-      )
-      return { error: `Profile setup failed: ${insertProfileErr.message}` }
-    }
-  } else {
-    // Update only the fields we need. Keep the trigger-set username unless
-    // it's the auto-generated rv_xxx default — then upgrade it to owner_xxx
-    // for cleanliness. Either way, the constraint is satisfied because
-    // we never set anything > 24 chars.
-    const { error: updateErr } = await admin
-      .from('profiles')
-      .update({
-        username,
-        display_name,
-        role: 'owner',
-      })
-      .eq('id', userId)
-    if (updateErr) {
-      console.error('[owner-signup] profile update failed:', updateErr.message)
-      return { error: `Profile setup failed: ${updateErr.message}` }
-    }
-  }
-
-  // 3) Create the campground.
-  const slug = `${slugify(campground_name)}-${userId.slice(0, 6)}`
-  const { data: campground, error: cgError } = await admin
-    .from('campgrounds')
+  const { data: row, error } = await admin
+    .from('owner_signup_submissions')
     .insert({
-      name: campground_name,
-      slug,
-      owner_email: email,
-      phone: phone || null,
-      is_active: true,
+      campground_name: data.campground_name,
+      owner_name: data.owner_name,
+      email: data.email,
+      phone: data.phone || null,
+      website: data.website ? normalizeUrl(data.website) : null,
+      city: data.city || null,
+      state: data.state || null,
+      num_sites: data.num_sites ?? null,
+      campground_type: data.campground_type || null,
+      hosts_events: data.hosts_events,
+      target_guests: data.target_guests || null,
+      logo_url: data.logo_url || null,
+      wants_setup_call: data.wants_setup_call,
+      accepted_partner_terms: true,
+      ack_optional: true,
+      ack_no_site_numbers: true,
+      ack_not_emergency: true,
+      ip_address: getRequestIp(headerList),
+      user_agent: headerList.get('user-agent'),
     })
     .select('id')
     .single()
-  if (cgError || !campground) {
-    console.error(
-      '[owner-signup] campground insert failed:',
-      cgError?.message ?? '(no row returned)',
-    )
-    return { error: cgError?.message ?? "Couldn't create campground." }
-  }
-  const campgroundId = campground.id
-
-  // 4) Link owner ↔ campground via campground_admins. We always insert with
-  // role='host' first because that value has been in the campground_role
-  // enum since 0001 — guaranteed valid regardless of whether migration
-  // 0011 (which adds 'owner') has been applied. The rest of the app
-  // matches on user_id alone (loadOwnerCampground), so routing works the
-  // same with either role value.
-  const { error: adminError } = await admin
-    .from('campground_admins')
-    .insert({
-      campground_id: campgroundId,
-      user_id: userId,
-      role: 'host',
-    })
-  if (adminError) {
-    console.error(
-      '[owner-signup] campground_admins insert failed:',
-      adminError.message,
-    )
-    // Best-effort cleanup of the orphan campground so we don't leave
-    // half-provisioned data behind.
-    await admin.from('campgrounds').delete().eq('id', campgroundId)
-    return {
-      error: `Couldn't finish linking your account to the campground: ${adminError.message}`,
-    }
-  }
-
-  // 5) Best-effort upgrade to role='owner' for cleanliness. Will succeed
-  // once migration 0011 is applied; will silently no-op until then.
-  const { error: upgradeError } = await admin
-    .from('campground_admins')
-    .update({ role: 'owner' })
-    .eq('campground_id', campgroundId)
-    .eq('user_id', userId)
-  if (upgradeError) {
-    console.warn(
-      "[owner-signup] couldn't upgrade campground_admins.role to 'owner' (apply 0011_fix_owner_enum.sql):",
-      upgradeError.message,
-    )
-  }
-
-  // 6) Verify the link is visible via a SELECT before redirecting. If the
-  // dashboard's same query returns null, we want to surface that here
-  // rather than dropping the user on a "No campground linked" page.
-  const { data: verify } = await admin
-    .from('campground_admins')
-    .select('campground_id')
-    .eq('user_id', userId)
-    .maybeSingle()
-  if (!verify) {
-    console.error(
-      '[owner-signup] verification select returned no row after insert — RLS or replication issue?',
-    )
+  if (error || !row) {
     return {
       error:
-        "Account created but campground link did not persist. Try signing in.",
+        error?.message ?? 'Could not save your submission. Please try again.',
     }
   }
 
-  // 7) Issue a QR token row so /owner/qr immediately works. Best effort —
-  // /owner/qr surfaces a friendly fallback if the row is missing.
-  const { error: tokenError } = await admin
-    .from('campground_qr_tokens')
-    .insert({ campground_id: campgroundId })
-  if (tokenError) {
-    console.warn(
-      '[owner-signup] qr token insert failed (non-fatal):',
-      tokenError.message,
-    )
+  if (!isStripeConfigured()) {
+    redirect(`/start/welcome?submission_id=${row.id}&pending=stripe`)
   }
+  redirect(`/api/stripe/checkout?submission_id=${row.id}&plan=${data.plan}`)
+}
 
-  // 8) Send the branded owner-flavored confirmation email via Resend.
-  // generateLink already produced the confirmation URL above without
-  // triggering Supabase's global mailer.
-  const sent = await sendOwnerSignupConfirmEmail({ toEmail: email, confirmUrl })
-  if (!sent.ok) {
-    console.error('[owner-signup] confirmation email failed:', sent.error)
-    // Don't unwind: the account + campground are real and good. Surface a
-    // recoverable error so the user can request a fresh email from /verify.
-    return {
-      error:
-        "Account created but we couldn't send the confirmation email. Try requesting a new one from the verify page.",
-    }
-  }
-
-  redirect(`/verify?email=${encodeURIComponent(email)}`)
+function normalizeUrl(input: string): string {
+  const trimmed = input.trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
 }

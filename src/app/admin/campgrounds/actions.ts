@@ -5,6 +5,36 @@ import { requireAdmin } from '@/lib/admin/guard'
 
 export type AdminMutationResult = { ok: boolean; error: string | null }
 
+export async function extendCampgroundTrialAction(
+  id: string,
+  days: number,
+): Promise<AdminMutationResult> {
+  if (!Number.isInteger(days) || days <= 0 || days > 365) {
+    return { ok: false, error: 'Days must be 1–365.' }
+  }
+  const { supabase, user } = await requireAdmin()
+  const { data: prior } = await supabase
+    .from('campgrounds')
+    .select('trial_ends_at, subscription_status')
+    .eq('id', id)
+    .maybeSingle()
+  const { data: newEnd, error } = await supabase.rpc(
+    'extend_campground_trial',
+    { _campground_id: id, _days: days },
+  )
+  if (error) return { ok: false, error: error.message }
+  await supabase.from('admin_audit_log').insert({
+    admin_id: user.id,
+    action: 'campground.extend_trial',
+    target_table: 'campgrounds',
+    target_id: id,
+    before: prior,
+    after: { trial_ends_at: newEnd, days_added: days },
+  })
+  revalidatePath('/admin/campgrounds')
+  return { ok: true, error: null }
+}
+
 export async function toggleCampgroundActiveAction(
   id: string,
   next: boolean,
