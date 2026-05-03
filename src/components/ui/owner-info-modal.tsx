@@ -196,7 +196,7 @@ export function OwnerInfoModal() {
                   <Link
                     href="/start"
                     onClick={() => setOpen(false)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-5 py-2.5 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4caf82] text-night px-5 py-2.5 text-sm font-semibold shadow-md shadow-[#4caf82]/20 hover:bg-[#3f9d72] transition-colors"
                   >
                     Get Started <span aria-hidden>→</span>
                   </Link>
@@ -262,7 +262,7 @@ export function OwnerInfoModal() {
                 <Link
                   href="/start"
                   onClick={() => setOpen(false)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4caf82] text-night px-6 py-3 font-semibold shadow-md shadow-[#4caf82]/20 hover:bg-[#3f9d72] transition-colors"
                 >
                   Get Started <span aria-hidden>→</span>
                 </Link>
