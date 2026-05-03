@@ -249,10 +249,73 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
   // fall back to legacy fields via cast for older payloads.
   const sid = extractSubscriptionId(invoice)
   if (!sid) return
+
+  // Look up the campground first so we have the owner email + name for
+  // the notification email. The status update can happen either way.
+  const { data: cg } = await admin
+    .from('campgrounds')
+    .select('id, name, owner_email')
+    .eq('stripe_subscription_id', sid)
+    .maybeSingle<{ id: string; name: string; owner_email: string | null }>()
+
   await admin
     .from('campgrounds')
     .update({ subscription_status: 'past_due' })
     .eq('stripe_subscription_id', sid)
+
+  if (!cg?.owner_email) return
+
+  // Format the failed amount. Stripe gives us minor units (cents).
+  const amountDue =
+    typeof invoice.amount_due === 'number'
+      ? invoice.amount_due
+      : 0
+  const currency = (invoice.currency ?? 'usd').toUpperCase()
+  const amountFormatted = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+  }).format(amountDue / 100)
+
+  // Stripe customer portal session for this customer.
+  const customerId =
+    typeof invoice.customer === 'string'
+      ? invoice.customer
+      : (invoice.customer?.id ?? null)
+
+  // Best-effort portal URL. If portal session creation fails, fall back
+  // to a generic /owner/billing link — the owner can land there and
+  // click through.
+  const siteOrigin =
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.getroadwave.com'
+  let portalUrl = `${siteOrigin}/owner/billing`
+  try {
+    if (customerId) {
+      const stripeKey = process.env.STRIPE_SECRET_KEY
+      if (stripeKey) {
+        const stripeClient = (await import('stripe')).default
+        const stripe = new stripeClient(stripeKey)
+        const session = await stripe.billingPortal.sessions.create({
+          customer: customerId,
+          return_url: `${siteOrigin}/owner/billing`,
+        })
+        if (session.url) portalUrl = session.url
+      }
+    }
+  } catch (err) {
+    console.warn(
+      '[stripe/webhook] portal session create failed for payment-failed email:',
+      err instanceof Error ? err.message : String(err),
+    )
+  }
+
+  const { sendPaymentFailedEmail } = await import('@/lib/email/payment-failed')
+  await sendPaymentFailedEmail({
+    toEmail: cg.owner_email,
+    ownerName: null,
+    campgroundName: cg.name,
+    amountFormatted,
+    portalUrl,
+  })
 }
 
 function extractSubscriptionId(invoice: Stripe.Invoice): string | null {

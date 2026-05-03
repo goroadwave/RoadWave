@@ -12,6 +12,7 @@ type Props = {
   row: {
     id: string
     name: string
+    slug: string
     city: string | null
     region: string | null
     is_active: boolean
@@ -112,6 +113,16 @@ export function CampgroundRow({ row }: Props) {
                 </span>
               </>
             )}
+          </p>
+          <p className="text-[10px] text-mist/70 mt-0.5">
+            <a
+              href={`/campground/${row.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-flame underline-offset-2 hover:underline"
+            >
+              /campground/{row.slug}
+            </a>
           </p>
         </div>
         <div className="flex flex-col items-end gap-1.5 shrink-0">

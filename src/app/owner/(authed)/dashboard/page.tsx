@@ -1,9 +1,13 @@
 import Link from 'next/link'
+import { CopyLinkButton } from '@/components/owner/copy-link-button'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { TrialBanner } from '@/components/owner/trial-banner'
 import { VisibilityBreakdown } from '@/components/owner/visibility-breakdown'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loadOwnerCampground } from '../_helpers'
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.getroadwave.com'
 
 export default async function OwnerDashboardPage() {
   const { campground } = await loadOwnerCampground()
@@ -137,6 +141,38 @@ export default async function OwnerDashboardPage() {
           See exactly what guests see after scanning your QR code.
         </p>
       </Link>
+
+      {/* Public RoadWave page URL — the human-readable companion to the
+          QR. Owners can share this directly or print it on signage. */}
+      <section className="rounded-2xl border border-flame/30 bg-flame/[0.06] p-4 space-y-2">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-flame">
+          Your RoadWave page
+        </p>
+        <p className="text-sm text-cream leading-snug">
+          Your campground RoadWave page is at:
+        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <a
+            href={`${SITE_URL}/campground/${campground.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 break-all rounded-lg border border-white/10 bg-night/40 px-3 py-2 text-sm text-flame underline-offset-2 hover:underline"
+          >
+            {`${SITE_URL}/campground/${campground.slug}`}
+          </a>
+          <CopyLinkButton url={`${SITE_URL}/campground/${campground.slug}`} />
+        </div>
+        <p className="text-[11px] text-mist leading-snug">
+          Share this with guests, or print the QR code from{' '}
+          <Link
+            href="/owner/qr"
+            className="text-flame underline-offset-2 hover:underline"
+          >
+            Your QR code
+          </Link>
+          .
+        </p>
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/5 bg-card p-4">

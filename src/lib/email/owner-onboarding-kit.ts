@@ -1,7 +1,10 @@
 import QR from 'qrcode'
+import { sendBrandedEmail, escapeHtml, type SendResult } from '@/lib/email/resend'
 
-const FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL || 'RoadWave <hello@getroadwave.com>'
+// Owner onboarding kit — sent post-payment with the printable QR + setup
+// instructions + magic-link sign-in. Intentionally NOT wrapped in the
+// dark-themed branded shell — this email is designed to print well, so
+// the body uses a light cream background with high-contrast type.
 
 type Args = {
   toEmail: string
@@ -12,20 +15,11 @@ type Args = {
   setupCallBookingUrl?: string
 }
 
-export type SendResult = { ok: boolean; error: string | null }
+export type { SendResult }
 
-// Sends the post-payment onboarding kit per the spec.
-// Subject: Your RoadWave Campground Kit Is Ready
-// Includes: campground RoadWave link + printable QR + front-desk
-// script + suggested QR placements + safety reminder + optional
-// setup-call link + warm closing from Mark.
-export async function sendOwnerOnboardingKitEmail(args: Args): Promise<SendResult> {
-  const resendKey = process.env.RESEND_API_KEY
-  if (!resendKey) {
-    console.warn('[onboarding-kit] RESEND_API_KEY not set — skipping email.')
-    return { ok: false, error: 'RESEND_API_KEY not set' }
-  }
-
+export async function sendOwnerOnboardingKitEmail(
+  args: Args,
+): Promise<SendResult> {
   let qrBase64: string
   try {
     const buffer = await QR.toBuffer(args.qrCheckInUrl, {
@@ -46,7 +40,7 @@ export async function sendOwnerOnboardingKitEmail(args: Args): Promise<SendResul
   const setupBlock = args.setupCallBookingUrl
     ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#0a0f1c;">
          Want to walk through it together?
-         <a href="${esc(args.setupCallBookingUrl)}"
+         <a href="${escapeHtml(args.setupCallBookingUrl)}"
             style="color:#b45309;text-decoration:underline;">
            Book your free 30-minute setup call
          </a>.
@@ -59,13 +53,13 @@ export async function sendOwnerOnboardingKitEmail(args: Args): Promise<SendResul
   <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
     <h1 style="margin:0 0 8px;font-size:26px;color:#0a0f1c;">Your RoadWave Campground Kit Is Ready</h1>
     <p style="margin:0 0 20px;font-size:15px;line-height:1.5;color:#475569;">
-      Hi ${esc(greetingName)} — welcome to RoadWave. Here is everything you need
-      to activate ${esc(args.campgroundName)} for guests.
+      Hi ${escapeHtml(greetingName)} — welcome to RoadWave. Here is everything you need
+      to activate ${escapeHtml(args.campgroundName)} for guests.
     </p>
 
     <h2 style="margin:24px 0 8px;font-size:18px;color:#0a0f1c;">1. Your campground page</h2>
     <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#0a0f1c;">
-      <a href="${esc(args.dashboardMagicLink)}"
+      <a href="${escapeHtml(args.dashboardMagicLink)}"
          style="display:inline-block;background:#f59e0b;color:#0a0f1c;padding:10px 18px;border-radius:8px;font-weight:700;text-decoration:none;">
         Open your dashboard
       </a>
@@ -79,13 +73,13 @@ export async function sendOwnerOnboardingKitEmail(args: Args): Promise<SendResul
       Print this QR and post it where guests already look:
     </p>
     <p style="margin:0 0 8px;text-align:center;">
-      <img src="cid:roadwave-onboarding-qr" alt="${esc(args.campgroundName)} RoadWave QR code"
+      <img src="cid:roadwave-onboarding-qr" alt="${escapeHtml(args.campgroundName)} RoadWave QR code"
            width="220" height="220"
            style="display:inline-block;background:#fff;padding:12px;border-radius:12px;border:1px solid #e2e8f0;" />
     </p>
     <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#475569;text-align:center;">
       Direct link:
-      <a href="${esc(args.qrCheckInUrl)}" style="color:#b45309;">${esc(args.qrCheckInUrl)}</a>
+      <a href="${escapeHtml(args.qrCheckInUrl)}" style="color:#b45309;">${escapeHtml(args.qrCheckInUrl)}</a>
     </p>
     <ul style="margin:8px 0 16px;padding-left:20px;font-size:14px;line-height:1.7;color:#0a0f1c;">
       <li>Check-in counter</li>
@@ -117,45 +111,26 @@ export async function sendOwnerOnboardingKitEmail(args: Args): Promise<SendResul
   </div>
 </body></html>`.trim()
 
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: [args.toEmail],
-        subject: 'Your RoadWave Campground Kit Is Ready',
-        html,
-        attachments: [
-          {
-            filename: 'roadwave-qr.png',
-            content: qrBase64,
-            content_id: 'roadwave-onboarding-qr',
-          },
-        ],
-      }),
-    })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      return { ok: false, error: `Resend ${res.status}: ${text}` }
-    }
-    return { ok: true, error: null }
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : 'Email send failed',
-    }
-  }
-}
+  return sendBrandedEmail({
+    to: args.toEmail,
+    subject: 'Your RoadWave Campground Kit Is Ready',
+    html,
+    text: `Your RoadWave Campground Kit Is Ready
 
-function esc(raw: string): string {
-  return raw
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+Hi ${greetingName} — welcome to RoadWave. Here is everything you need to activate ${args.campgroundName} for guests.
+
+1. Open your dashboard: ${args.dashboardMagicLink}
+2. Print and post your QR code (attached).
+3. Direct check-in link: ${args.qrCheckInUrl}
+${args.setupCallBookingUrl ? `4. Book a free 30-minute setup call: ${args.setupCallBookingUrl}\n` : ''}
+
+— Mark, RoadWave`,
+    attachments: [
+      {
+        filename: 'roadwave-qr.png',
+        content: qrBase64,
+        contentId: 'roadwave-onboarding-qr',
+      },
+    ],
+  })
 }

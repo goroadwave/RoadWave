@@ -1,9 +1,12 @@
-// Sends a notification to the safety inbox whenever a report is filed.
-// Routed to safety@getroadwave.com (which forwards to hello@getroadwave.com
-// at the mail server until the safety inbox has its own mailbox).
+import { sendBrandedEmail, escapeHtml, type SendResult } from '@/lib/email/resend'
 
-const FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL || 'RoadWave <hello@getroadwave.com>'
+// Internal report notification — goes to the safety inbox, not the reporter.
+// Intentionally NOT branded with the public RoadWave shell since it's an
+// ops alert and the safety team needs the raw fields easy to scan.
+//
+// For the user-facing "your report was received" confirmation, see
+// report-confirmation.ts.
+
 const SAFETY_INBOX = 'safety@getroadwave.com'
 
 export type SafetyArgs = {
@@ -18,42 +21,17 @@ export type SafetyArgs = {
   suspended: boolean
 }
 
-export type SendResult = { ok: boolean; error: string | null }
+export type { SendResult }
 
-export async function sendReportNotificationEmail(args: SafetyArgs): Promise<SendResult> {
-  const resendKey = process.env.RESEND_API_KEY
-  if (!resendKey) {
-    console.warn('[report-notify] RESEND_API_KEY not set — skipping email.')
-    return { ok: false, error: 'RESEND_API_KEY not set' }
-  }
-
-  const subject = subjectFor(args)
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: [SAFETY_INBOX],
-        subject,
-        html: buildHtml(args),
-        text: buildText(args),
-      }),
-    })
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '')
-      console.error('[report-notify] Resend rejected:', res.status, detail)
-      return { ok: false, error: `Resend ${res.status}: ${detail}` }
-    }
-    return { ok: true, error: null }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Resend send failed'
-    console.error('[report-notify] send error:', msg)
-    return { ok: false, error: msg }
-  }
+export async function sendReportNotificationEmail(
+  args: SafetyArgs,
+): Promise<SendResult> {
+  return sendBrandedEmail({
+    to: SAFETY_INBOX,
+    subject: subjectFor(args),
+    html: buildHtml(args),
+    text: buildText(args),
+  })
 }
 
 function subjectFor(a: SafetyArgs): string {
@@ -65,16 +43,6 @@ function subjectFor(a: SafetyArgs): string {
         : '[low] '
   const target = a.reported.username ? `@${a.reported.username}` : 'a user'
   return `${tag}RoadWave report — ${target}`
-}
-
-function escapeHtml(s: string | null | undefined): string {
-  if (!s) return ''
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
 }
 
 function buildHtml(a: SafetyArgs): string {

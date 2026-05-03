@@ -12,9 +12,10 @@ import { OwnerInfoModal } from '@/components/ui/owner-info-modal'
 // My Campground Pilot link list both moved into the modal body.
 
 const GUEST_LINKS: { label: string; href: string }[] = [
+  { label: 'See a sample campground page', href: '/demo' },
   { label: 'Safety', href: '/safety' },
   { label: 'Community Rules', href: '/community-rules' },
-  { label: 'Account Deletion', href: '/safety' },
+  { label: 'Account Deletion', href: '/account/delete' },
 ]
 
 const LEGAL_LINKS: { label: string; href: string }[] = [

@@ -5,6 +5,7 @@ import { CampgroundRow } from '@/components/admin/campground-row'
 type Campground = {
   id: string
   name: string
+  slug: string
   city: string | null
   region: string | null
   is_active: boolean
@@ -23,7 +24,7 @@ export default async function CampgroundsPage() {
     supabase
       .from('campgrounds')
       .select(
-        'id, name, city, region, is_active, created_at, subscription_status, plan, trial_ends_at',
+        'id, name, slug, city, region, is_active, created_at, subscription_status, plan, trial_ends_at',
       )
       .order('created_at', { ascending: false }),
     supabase.from('bulletins').select('campground_id'),
