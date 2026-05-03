@@ -48,3 +48,6 @@ playwright-report/
 supabase/.temp/
 
 .vercel
+
+# Scratch / one-off generated assets (QR PNGs, etc.)
+/tmp
