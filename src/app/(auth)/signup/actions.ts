@@ -3,6 +3,7 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { signupSchema } from '@/lib/validators/auth'
 import {
   COMMUNITY_RULES_VERSION,
@@ -10,10 +11,25 @@ import {
   TERMS_VERSION,
 } from '@/lib/constants/interests'
 import { getRequestIp, getSiteOrigin } from '@/lib/utils'
-import { sendGuestSignupConfirmEmail } from '@/lib/email/signup-confirmation'
 
 export type SignupState = { error: string | null }
 
+// Camper signup. Two pieces of work:
+//
+//   1. supabase.auth.signUp() — creates the auth.users row AND triggers
+//      Supabase to send the confirmation email through Custom SMTP
+//      (Resend, configured in Supabase Authentication → SMTP). No call
+//      to our own Resend SDK here — Supabase handles delivery end to
+//      end. Customize the email body in Supabase Authentication →
+//      Email Templates → Confirm signup.
+//
+//   2. legal_acks insert — service-role write so the consent row lands
+//      regardless of session state. Required for /consent/legal gating
+//      in (app) and /owner/(authed) layouts.
+//
+// On success the user is redirected to /verify with their email; the
+// confirmation link in the email lands on /auth/confirm, which marks
+// email_confirmed_at and routes them onward.
 export async function signupAction(
   _prev: SignupState,
   formData: FormData,
@@ -40,39 +56,45 @@ export async function signupAction(
 
   const headerList = await headers()
   const origin = getSiteOrigin(headerList)
+  const supabase = await createSupabaseServerClient()
   const admin = createSupabaseAdminClient()
 
-  // generateLink({ type: 'signup' }) creates the auth.users row + returns the
-  // confirmation URL without sending Supabase's global confirmation email.
-  // We then send our branded guest-flavored email via Resend.
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type: 'signup',
+  // 1. signUp() — creates the auth.users row + Supabase sends the
+  //    confirmation email via Custom SMTP (Resend).
+  const { data, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { username },
-      redirectTo: `${origin}/auth/confirm`,
+      emailRedirectTo: `${origin}/auth/confirm`,
     },
   })
-  if (linkError) {
-    console.error(`[guest-signup] generateLink failed for ${email}:`, linkError.message)
-    return { error: linkError.message }
+  if (signUpError) {
+    console.error(
+      `[guest-signup] signUp failed for ${email}:`,
+      signUpError.message,
+    )
+    return { error: signUpError.message }
   }
-  const confirmUrl = linkData.properties?.action_link
-  const userId = linkData.user?.id
-  if (!confirmUrl || !userId) {
-    console.error(`[guest-signup] generateLink returned no link/user for ${email}`)
-    return { error: 'Signup failed.' }
+  const userId = data.user?.id
+  if (!userId) {
+    // Supabase returns user=null when the email already exists and is
+    // confirmed (intentional — prevents email enumeration). The signup
+    // form should treat this as success-ish; route the user to /verify
+    // where they can resend if needed.
+    console.warn(
+      `[guest-signup] signUp returned no user for ${email} (likely already-confirmed account)`,
+    )
+    redirect(`/verify?email=${encodeURIComponent(email)}`)
   }
-  console.log(
-    `[guest-signup] generateLink ok for ${email} (user=${userId}, link.host=${new URL(confirmUrl).host})`,
-  )
+  console.log(`[guest-signup] signUp ok for ${email} (user=${userId})`)
 
-  // Legal ack — service-role insert so it lands regardless of session state.
-  // Records the explicit consent flags (age_confirmed / accepted_terms /
-  // accepted_rules) alongside the version strings, plus request metadata.
-  // The form's required checkboxes + zod schema both gate submission, so
-  // anything that reaches this insert has affirmatively consented.
+  // 2. Legal ack — service-role insert so it lands regardless of
+  //    session state. Records the explicit consent flags
+  //    (age_confirmed / accepted_terms / accepted_rules) alongside the
+  //    version strings, plus request metadata. The form's required
+  //    checkboxes + zod schema both gate submission, so anything that
+  //    reaches this insert has affirmatively consented.
   const { error: ackError } = await admin.from('legal_acks').insert({
     user_id: userId,
     age_confirmed: true,
@@ -87,20 +109,6 @@ export async function signupAction(
   if (ackError) {
     console.error('legal_acks insert failed:', ackError.message)
   }
-
-  // Custom branded confirmation email.
-  console.log(`[guest-signup] calling sendGuestSignupConfirmEmail for ${email}`)
-  const sent = await sendGuestSignupConfirmEmail({ toEmail: email, confirmUrl })
-  if (!sent.ok) {
-    console.error('[guest-signup] confirmation email failed:', sent.error)
-    return {
-      error:
-        "Account created but we couldn't send the confirmation email. Try requesting a new one from the verify page.",
-    }
-  }
-  console.log(
-    `[guest-signup] confirmation email sent ok for ${email} (resend id=${sent.id ?? 'unknown'})`,
-  )
 
   redirect(`/verify?email=${encodeURIComponent(email)}`)
 }
