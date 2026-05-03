@@ -60,10 +60,16 @@ export async function sendBrandedEmail(args: SendArgs): Promise<SendResult> {
     return { ok: false, error: 'RESEND_API_KEY not set' }
   }
 
+  const fromEmail = args.from ?? FROM_EMAIL
+  const recipients = Array.isArray(args.to) ? args.to : [args.to]
+  console.log(
+    `[email/resend] attempting send: subject=${JSON.stringify(args.subject)} from=${JSON.stringify(fromEmail)} to=${JSON.stringify(recipients)}`,
+  )
+
   try {
     const result = await client.emails.send({
-      from: args.from ?? FROM_EMAIL,
-      to: Array.isArray(args.to) ? args.to : [args.to],
+      from: fromEmail,
+      to: recipients,
       subject: args.subject,
       html: args.html,
       text: args.text,
@@ -80,6 +86,7 @@ export async function sendBrandedEmail(args: SendArgs): Promise<SendResult> {
       console.error('[email/resend] send rejected:', result.error)
       return { ok: false, error: result.error.message ?? 'Resend rejected' }
     }
+    console.log(`[email/resend] send ok id=${result.data?.id ?? 'unknown'}`)
     return { ok: true, error: null, id: result.data?.id }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Resend send failed'

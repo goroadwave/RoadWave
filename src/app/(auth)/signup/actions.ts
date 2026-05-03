@@ -31,9 +31,12 @@ export async function signupAction(
     const flat = parsed.error.flatten()
     const first =
       Object.values(flat.fieldErrors).flat()[0] ?? flat.formErrors[0] ?? 'Invalid input'
+    console.warn('[guest-signup] schema validation failed:', first)
     return { error: first }
   }
   const { email, password, username } = parsed.data
+
+  console.log(`[guest-signup] action invoked for ${email}`)
 
   const headerList = await headers()
   const origin = getSiteOrigin(headerList)
@@ -51,10 +54,19 @@ export async function signupAction(
       redirectTo: `${origin}/auth/confirm`,
     },
   })
-  if (linkError) return { error: linkError.message }
+  if (linkError) {
+    console.error(`[guest-signup] generateLink failed for ${email}:`, linkError.message)
+    return { error: linkError.message }
+  }
   const confirmUrl = linkData.properties?.action_link
   const userId = linkData.user?.id
-  if (!confirmUrl || !userId) return { error: 'Signup failed.' }
+  if (!confirmUrl || !userId) {
+    console.error(`[guest-signup] generateLink returned no link/user for ${email}`)
+    return { error: 'Signup failed.' }
+  }
+  console.log(
+    `[guest-signup] generateLink ok for ${email} (user=${userId}, link.host=${new URL(confirmUrl).host})`,
+  )
 
   // Legal ack — service-role insert so it lands regardless of session state.
   // Records the explicit consent flags (age_confirmed / accepted_terms /
@@ -77,6 +89,7 @@ export async function signupAction(
   }
 
   // Custom branded confirmation email.
+  console.log(`[guest-signup] calling sendGuestSignupConfirmEmail for ${email}`)
   const sent = await sendGuestSignupConfirmEmail({ toEmail: email, confirmUrl })
   if (!sent.ok) {
     console.error('[guest-signup] confirmation email failed:', sent.error)
@@ -85,6 +98,9 @@ export async function signupAction(
         "Account created but we couldn't send the confirmation email. Try requesting a new one from the verify page.",
     }
   }
+  console.log(
+    `[guest-signup] confirmation email sent ok for ${email} (resend id=${sent.id ?? 'unknown'})`,
+  )
 
   redirect(`/verify?email=${encodeURIComponent(email)}`)
 }
