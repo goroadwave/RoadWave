@@ -23,7 +23,7 @@ export async function resendAction(
   const { error } = await supabase.auth.resend({
     type: 'signup',
     email: parsed.data.email,
-    options: { emailRedirectTo: `${origin}/auth/callback` },
+    options: { emailRedirectTo: `${origin}/auth/confirm` },
   })
   if (error) return { error: error.message, ok: false }
 

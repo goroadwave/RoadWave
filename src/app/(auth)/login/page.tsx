@@ -79,7 +79,15 @@ function friendlyError(raw: string): {
       body: 'The site was reached at a domain Supabase is not configured to allow. Check your Supabase Auth → URL Configuration.',
     }
   }
-  if (lower === 'missing+verification+token' || lower.includes('missing')) {
+  // Match only the specific "missing verification token" error our auth
+  // routes emit (raw + URL-encoded form). The previous broad
+  // `lower.includes('missing')` was catching unrelated Supabase errors
+  // and showing a misleading "token missing" banner on the login page
+  // in cases that had nothing to do with verification.
+  if (
+    lower === 'missing verification token' ||
+    lower === 'missing+verification+token'
+  ) {
     return {
       title: 'Verification token missing.',
       body: 'Open the link directly from your email. Some clients strip the token if you copy/paste.',

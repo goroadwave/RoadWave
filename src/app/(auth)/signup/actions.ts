@@ -48,7 +48,7 @@ export async function signupAction(
     password,
     options: {
       data: { username },
-      redirectTo: `${origin}/auth/callback`,
+      redirectTo: `${origin}/auth/confirm`,
     },
   })
   if (linkError) return { error: linkError.message }
