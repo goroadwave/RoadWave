@@ -69,7 +69,7 @@ export default function DataBreachPolicyPage() {
                 'RoadWave founder / incident lead — point of accountability for the response.',
                 'Engineering — for technical containment and forensics.',
                 "Counsel — when there is a reasonable likelihood that personal information was involved or that breach-notification statutes are triggered.",
-                'Hosting / infrastructure providers (Vercel, Supabase, Resend, Namecheap) — when their platform is implicated or rotation depends on them.',
+                'Hosting, database, email, DNS, and infrastructure providers — notified when their platform is implicated or when credential rotation depends on them.',
                 'Law enforcement — when the incident involves unauthorized intrusion, extortion, or credible threats. See our Law Enforcement Request Policy.',
               ]}
             />
@@ -83,7 +83,7 @@ export default function DataBreachPolicyPage() {
             <Bullets
               items={[
                 'Revoking all active sessions and forcing re-authentication.',
-                'Rotating database credentials, service-role keys, and API tokens for Supabase, Resend, and any other implicated provider.',
+                'Rotating database credentials, service-role keys, and API tokens for any implicated provider.',
                 'Disabling the affected feature, route, or RPC at the platform level.',
                 "Pausing inbound writes (read-only mode) when integrity of the data is in question.",
                 'Cutting off third-party integrations until they can be verified.',
