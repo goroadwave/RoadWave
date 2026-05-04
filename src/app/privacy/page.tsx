@@ -135,7 +135,7 @@ export default function PrivacyPolicyPage() {
                 href="/account/delete"
                 className="text-flame underline-offset-2 hover:underline"
               >
-                account deletion page
+                in-app account deletion page
               </Link>
               .
             </p>
