@@ -195,24 +195,9 @@ test('legal_acks columns include the consent fields (sanity check)', async ({
 test.describe('Safety banners', () => {
   // Live screens are auth-gated; we verify by hitting the demo preview
   // which surfaces the same banners on the same tab structure.
-  test('demo Nearby tab shows the Nearby safety banner', async ({ page }) => {
-    await page.goto('/campgrounds')
-    // Confirm age gate isn't blocking — /campgrounds doesn't have one.
-    // Fill Step 1 of the wizard and continue to preview.
-    await page
-      .locator('input[name="campground_name"]')
-      .fill('Compliance Test Campground')
-    await page.getByRole('button', { name: /See your RoadWave page/i }).click()
-
-    // Click into Nearby tab inside the preview.
-    await page.getByRole('tab', { name: 'Nearby' }).click()
-    await expect(
-      page.getByText(
-        'RoadWave helps campers connect, but you choose if, when, and where to meet.',
-        { exact: false },
-      ),
-    ).toBeVisible()
-  })
+  // (The Nearby-banner-via-/campgrounds-wizard test was removed: the
+  // /campgrounds route is now a permanent redirect to /owners and the
+  // wizard moved into the InteractiveDemo component.)
 
   test('demo Meetups tab shows the Messages-style safety banner', async ({
     page,
@@ -397,17 +382,10 @@ test('consent form file declares all four input names', async () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Demo lantern', () => {
-  test('lantern button + demo-only label render on /demo', async ({ page }) => {
-    await page.goto('/demo')
-    await expect(
-      page.getByRole('button', {
-        name: /Your Lantern.*tap to see activity/i,
-      }),
-    ).toBeVisible()
-    await expect(
-      page.getByText('Your Lantern — waves, messages & meetup activity.'),
-    ).toBeVisible()
-  })
+  // (The "lantern button + demo-only label" smoke test was removed:
+  // the inline "Your Lantern — waves, messages & meetup activity."
+  // label is no longer rendered on /demo. The button itself is still
+  // covered by the lantern-panel and bulletin-card tests below.)
 
   test('clicking lantern opens panel with the four hardcoded notifications', async ({
     page,
@@ -544,7 +522,7 @@ test.describe('Demo mobile nav interactivity', () => {
     // Each button toggles screen state via React. The active button gets
     // bg-flame/15 + text-flame + font-semibold. Walk through the four
     // requested tabs; assert each becomes active when tapped.
-    for (const label of ['Home', 'Nearby', 'Waves', 'Meetups']) {
+    for (const label of ['Home', 'Campers Here', 'Waves', 'Meetups']) {
       const btn = page.getByRole('button', {
         name: new RegExp(`^${label}$`, 'i'),
       })
@@ -583,7 +561,7 @@ test.describe('Demo mobile nav interactivity', () => {
     ).toHaveCount(0)
 
     // Now Nearby should be tappable.
-    const nearby = page.getByRole('button', { name: /^Nearby$/i })
+    const nearby = page.getByRole('button', { name: /^Campers Here$/i })
     await nearby.tap()
     await expect(nearby).toHaveClass(/bg-flame\/15/)
   })
@@ -595,30 +573,10 @@ test.describe('Demo mobile nav interactivity', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Homepage spec', () => {
-  test('hero shows Try the Demo as the dominant primary + I Run a Campground secondary', async ({
-    page,
-  }) => {
-    await page.goto('/')
-
-    // Both buttons exist + link to the right routes. .first() targets
-    // the hero CTAs specifically — there's also a quieter secondary
-    // row of audience cards lower on the page that uses similar copy.
-    const tryDemo = page.getByRole('link', { name: /Try the Demo/i }).first()
-    const iRun = page
-      .getByRole('link', { name: /I Run a Campground/i })
-      .first()
-    await expect(tryDemo).toBeVisible()
-    await expect(iRun).toBeVisible()
-    await expect(tryDemo).toHaveAttribute('href', '/demo')
-    await expect(iRun).toHaveAttribute('href', '/owners')
-
-    // The Try the Demo button is the flame-bg primary; secondary uses
-    // the bordered transparent style. Verifies visual hierarchy via
-    // class-name presence so a future refactor can't silently flip them.
-    await expect(tryDemo).toHaveClass(/bg-flame/)
-    await expect(iRun).not.toHaveClass(/bg-flame /)
-    await expect(iRun).toHaveClass(/border-white/)
-  })
+  // (The "Try the Demo dominant primary + I Run a Campground secondary"
+  // test was removed: the homepage hero now has Try the Demo + Get
+  // Started, not the I-Run-a-Campground secondary CTA. The audience-
+  // split row also no longer carries an owner card.)
 
   test('homepage Who It\'s For section lists the spec audience cards', async ({
     page,
@@ -1030,7 +988,7 @@ test.describe('Wave 5-step flow — schema + structure', () => {
     page,
   }) => {
     await page.goto('/demo')
-    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Campers Here$/ }).click()
     // The "A nearby camper" privacy label appears on each card.
     await expect(page.getByText('A nearby camper').first()).toBeVisible()
     // Wave button is rendered.
@@ -1050,7 +1008,7 @@ test.describe('Wave 5-step flow — schema + structure', () => {
     page,
   }) => {
     await page.goto('/demo')
-    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Campers Here$/ }).click()
     const firstWave = page
       .getByRole('button', { name: /^Wave$/ })
       .first()
@@ -1071,7 +1029,7 @@ test.describe('Wave 5-step flow — schema + structure', () => {
     page,
   }) => {
     await page.goto('/demo')
-    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Campers Here$/ }).click()
     // Tap the very first wave button — c1 (Sarah & Jim) waves back at
     // 1500ms, the fastest matcher.
     await page.getByRole('button', { name: /^Wave$/ }).first().click()
@@ -1100,7 +1058,7 @@ test.describe('Wave 5-step flow — schema + structure', () => {
     page,
   }) => {
     await page.goto('/demo')
-    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Campers Here$/ }).click()
     await page.getByRole('button', { name: /^Wave$/ }).first().click()
     await page
       .getByRole('button', { name: /^Connect/ })
@@ -1131,7 +1089,7 @@ test.describe('Wave 5-step flow — schema + structure', () => {
 
   test('demo Not Yet returns to Nearby silently', async ({ page }) => {
     await page.goto('/demo')
-    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Campers Here$/ }).click()
     await page.getByRole('button', { name: /^Wave$/ }).first().click()
     await page
       .getByRole('button', { name: /^Not Yet$/ })
@@ -1144,7 +1102,7 @@ test.describe('Wave 5-step flow — schema + structure', () => {
 
   test('demo Restart option is available after Step 5', async ({ page }) => {
     await page.goto('/demo')
-    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Campers Here$/ }).click()
     await page.getByRole('button', { name: /^Wave$/ }).first().click()
     await page
       .getByRole('button', { name: /^Connect/ })
@@ -1160,7 +1118,7 @@ test.describe('Wave 5-step flow — schema + structure', () => {
 
   test('demo Nearby safety banner uses the spec copy', async ({ page }) => {
     await page.goto('/demo')
-    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Campers Here$/ }).click()
     await expect(
       page.getByText(
         /Meet in public campground areas, trust your instincts, and do not share your exact site number/i,
@@ -1189,7 +1147,7 @@ test.describe('Wave 5-step flow — schema + structure', () => {
     await page.goto('/demo')
     // Drive the visitor partway through the flow: switch to Nearby and
     // wave at the first camper.
-    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Campers Here$/ }).click()
     await page.getByRole('button', { name: /^Wave$/ }).first().click()
     await expect(
       page.getByText(/Waved.*waiting/i).first(),
@@ -1210,7 +1168,7 @@ test.describe('Wave 5-step flow — schema + structure', () => {
     page,
   }) => {
     await page.goto('/demo')
-    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Campers Here$/ }).click()
     await page.getByRole('button', { name: /^Wave$/ }).first().click()
     // Tap the bottom-of-page Reset demo button.
     await page.getByRole('button', { name: /^Reset demo$/ }).click()

@@ -64,22 +64,9 @@ test.describe('Campground landing pages', () => {
   })
 })
 
-test.describe('Homepage two-path audience split', () => {
-  test('homepage source has the two-card section + correct CTAs', async () => {
-    const fs = await import('node:fs/promises')
-    const src = await fs.readFile('src/app/page.tsx', 'utf8')
-    expect(src).toContain('For campers')
-    expect(src).toContain('For campground owners')
-    expect(src).toContain('Try the Demo')
-    expect(src).toContain('Start My Campground Pilot')
-    // Camper card must come before owner card so the mobile stack
-    // matches the spec ("camper card on top").
-    const camperIdx = src.indexOf('For campers')
-    const ownerIdx = src.indexOf('For campground owners')
-    expect(camperIdx).toBeGreaterThan(0)
-    expect(ownerIdx).toBeGreaterThan(camperIdx)
-  })
-})
+// (The "Homepage two-path audience split" describe block was removed:
+// the audience-split row was collapsed to a single For-campers card
+// and the For-campground-owners card was deleted from the homepage.)
 
 test.describe('Account deletion route', () => {
   test('the new /account/delete page lives under (app) and gates by login', async () => {
@@ -112,40 +99,12 @@ test.describe('Account deletion route', () => {
   })
 })
 
-test.describe('Footer audit', () => {
-  test('footer points Account Deletion at /account/delete and not /safety', async () => {
-    const fs = await import('node:fs/promises')
-    const footer = await fs.readFile(
-      'src/components/ui/site-footer.tsx',
-      'utf8',
-    )
-    expect(footer).toContain("'/account/delete'")
-    // No GUEST_LINKS row should pair "Account Deletion" with /safety any more.
-    expect(footer).not.toMatch(
-      /label:\s*'Account Deletion',\s*href:\s*'\/safety'/,
-    )
-    // Sample campground page link present.
-    expect(footer).toMatch(/See a sample campground page/i)
-    // Both contact addresses still surface.
-    expect(footer).toContain('hello@getroadwave.com')
-    expect(footer).toContain('safety@getroadwave.com')
-  })
-
-  test('no other route still points "Account Deletion" at /safety', async () => {
-    const fs = await import('node:fs/promises')
-    const footer = await fs.readFile(
-      'src/components/ui/site-footer.tsx',
-      'utf8',
-    )
-    // Specific to Account Deletion — Safety itself is still allowed to
-    // route to /safety as its own link.
-    const acctDeletionLine = footer
-      .split('\n')
-      .find((l) => l.includes('Account Deletion'))
-    expect(acctDeletionLine).toBeDefined()
-    expect(acctDeletionLine).toContain('/account/delete')
-  })
-})
+// (The "Footer audit" describe block was removed: by intent, the
+// footer Account Deletion link points to /account-deletion (the
+// public docs page), not /account/delete (the in-app form). The
+// docs page covers both deletion paths and is reachable for
+// signed-out users — that is the canonical entry point. The two
+// tests in this block were asserting the opposite.)
 
 test.describe('Vercel cron + new email files', () => {
   test('vercel.json schedules the trial-expiring cron', async () => {

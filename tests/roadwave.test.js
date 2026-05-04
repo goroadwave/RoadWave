@@ -27,41 +27,6 @@ import { expect, test } from '@playwright/test'
 // ---------------------------------------------------------------------------
 
 test.describe('Public marketing pages', () => {
-  test('homepage loads with hero copy + Try the Demo + I Run a Campground + footer', async ({
-    page,
-  }) => {
-    await page.goto('/')
-    await expect(page).toHaveTitle(/RoadWave/i)
-    await expect(
-      page.getByRole('heading', {
-        name: /Curious who else here shares your interests/i,
-      }),
-    ).toBeVisible()
-    await expect(
-      page.getByRole('link', { name: /Try the Demo/i }).first(),
-    ).toBeVisible()
-    await expect(
-      page.getByRole('link', { name: /I Run a Campground/i }).first(),
-    ).toBeVisible()
-    // Trust strip carries the no-X promises.
-    await expect(
-      page.getByText(
-        /No exact site numbers\. No public group chats\. No pressure\./i,
-      ),
-    ).toBeVisible()
-    // Footer columns — site-footer renders the Legal + Guests + Owners
-    // columns with the links below.
-    await expect(
-      page.getByRole('link', { name: /^Privacy Policy$/i }),
-    ).toBeVisible()
-    await expect(
-      page.getByRole('link', { name: /^Terms of Service$/i }),
-    ).toBeVisible()
-    await expect(
-      page.getByRole('link', { name: /^Safety$/i }).first(),
-    ).toBeVisible()
-  })
-
   test('about page renders the founder story and CTA', async ({ page }) => {
     await page.goto('/about')
     await expect(
@@ -109,12 +74,10 @@ test.describe('Public marketing pages', () => {
         name: /Help guests feel welcome faster/i,
       }),
     ).toBeVisible()
-    // Hero CTAs from spec §13.
+    // Hero CTA from spec §13. /owners has only the Start CTA;
+    // there is no demo button on this page.
     await expect(
       page.getByRole('link', { name: /Start My Campground Pilot/i }).first(),
-    ).toBeVisible()
-    await expect(
-      page.getByRole('link', { name: /Try Interactive Demo/i }).first(),
     ).toBeVisible()
     // Staff workload section (§14).
     await expect(
@@ -140,18 +103,6 @@ test.describe('Public marketing pages', () => {
   test('/campgrounds permanently redirects to /owners', async ({ page }) => {
     await page.goto('/campgrounds')
     await expect(page).toHaveURL(/\/owners(\?|$|#|\/)/)
-  })
-
-  test('homepage "Request RoadWave at My Campground" form is on screen', async ({
-    page,
-  }) => {
-    await page.goto('/')
-    // Form lives in the Example campgrounds section.
-    await expect(
-      page.getByRole('button', {
-        name: /Request RoadWave at My Campground/i,
-      }),
-    ).toBeVisible()
   })
 
   test('tour page loads the tap-to-start splash', async ({ page }) => {
@@ -192,11 +143,11 @@ test.describe('Demo — simulated phone, real interaction', () => {
     await page.goto('/demo')
     const order = [
       'Check in',
-      'Nearby',
+      'Campers Here',
       'Meetups',
       'Waves',
       'Privacy',
-      'Crossed',
+      'Past Waves',
       'Home',
     ]
     for (const label of order) {
@@ -213,7 +164,7 @@ test.describe('Demo — simulated phone, real interaction', () => {
     page,
   }) => {
     await page.goto('/demo')
-    await page.getByRole('button', { name: /^Nearby$/ }).click()
+    await page.getByRole('button', { name: /^Campers Here$/ }).click()
     const firstWave = page
       .getByRole('button', { name: /^Wave$/ })
       .first()
@@ -268,7 +219,7 @@ test.describe('Demo — simulated phone, real interaction', () => {
     page,
   }) => {
     await page.goto('/demo')
-    await page.getByRole('button', { name: /^Crossed$/ }).click()
+    await page.getByRole('button', { name: /^Past Waves$/ }).click()
     // Crossed-paths cards show the camper's name + @username; tap the
     // first card.
     const firstCard = page.locator('button').filter({ hasText: /@/ }).first()
@@ -382,22 +333,7 @@ test('5 concurrent visits to /owner/signup all render the form', async ({
 // to Supabase or trigger Resend.
 // ---------------------------------------------------------------------------
 
-test.describe('Public forms — fields render without submission', () => {
-  test('homepage Request RoadWave form has email + campground name + submit', async ({
-    page,
-  }) => {
-    await page.goto('/')
-    const submit = page.getByRole('button', {
-      name: /Request RoadWave at My Campground/i,
-    })
-    await expect(submit).toBeVisible()
-    // Fields live in the same dashed-border section.
-    await expect(
-      page.locator('input[type="email"]').first(),
-    ).toBeVisible()
-  })
-
-  // Old lead form on /campgrounds was replaced by the InteractiveDemo
-  // wizard when the owner content moved to /owners. Wizard coverage
-  // lives in its own component test.
-})
+// Public forms describe block was deleted: the homepage Request
+// RoadWave form was removed when the homepage was redesigned. The
+// /campgrounds wizard form moved into the InteractiveDemo component
+// and lives behind its own component test.

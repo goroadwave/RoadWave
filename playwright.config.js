@@ -27,6 +27,22 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    // Pre-confirm the AgeGate so tests don't get blocked by the 18+ modal
+    // on first visit. The flag matches src/components/ui/age-gate.tsx
+    // (STORAGE_KEY = 'roadwave:age-18-confirmed'). If you ever add a
+    // dedicated test that exercises the age gate itself, override this
+    // in that test's context.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: BASE_URL,
+          localStorage: [
+            { name: 'roadwave:age-18-confirmed', value: '1' },
+          ],
+        },
+      ],
+    },
   },
   projects: [
     {
