@@ -44,7 +44,10 @@ test.describe('Public marketing pages', () => {
     await expect(
       page.getByRole('heading', { name: /Get in touch/i }),
     ).toBeVisible()
-    const btn = page.getByRole('link', { name: /Email us/i })
+    // Each ContactRow renders a single "Email" link; the first one
+    // belongs to the General questions row (hello@). The label was
+    // previously "Email us" but is now just "Email".
+    const btn = page.getByRole('link', { name: /^Email$/i }).first()
     await expect(btn).toBeVisible()
     await expect(btn).toHaveAttribute(
       'href',

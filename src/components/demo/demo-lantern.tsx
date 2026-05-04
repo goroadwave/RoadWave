@@ -126,9 +126,19 @@ export function DemoLantern({ onNavigate }: Props) {
       // Anchor the panel below the button's bottom edge, right-aligned
       // to the button's right edge. Use viewport coords so the portal-
       // rendered fixed panel lines up correctly.
+      //
+      // On narrow viewports the right-anchored placement can poke the
+      // panel off the LEFT edge if the button sits far enough right
+      // that desiredRight > viewport - panelWidth - SAFE. Clamp the
+      // right offset so the panel always stays inside [SAFE, viewport
+      // - panelWidth - SAFE]. Mirrors the live AppLantern math.
+      const SAFE = 12
+      const PANEL_WIDTH = Math.min(288, window.innerWidth - 24) // w-72 + max-w-[calc(100vw-1.5rem)]
+      const desiredRight = Math.round(window.innerWidth - rect.right)
+      const maxRight = window.innerWidth - PANEL_WIDTH - SAFE
       setPos({
         top: Math.round(rect.bottom + 8),
-        right: Math.round(window.innerWidth - rect.right),
+        right: Math.max(SAFE, Math.min(desiredRight, maxRight)),
       })
     } else {
       // Fallback for the rare case where the ref isn't attached yet:

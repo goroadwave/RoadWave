@@ -607,7 +607,8 @@ test.describe('Homepage spec', () => {
     await expect(
       page.getByText('Open to friendly hellos').first(),
     ).toBeVisible()
-    await expect(page.getByText(/Nearby interests/i).first()).toBeVisible()
+    // Label was renamed from "Nearby interests" to "Shared interests".
+    await expect(page.getByText(/Shared interests/i).first()).toBeVisible()
     for (const interest of ['walking', 'cards', 'pickleball', 'campfire']) {
       await expect(page.getByText(interest, { exact: true }).first()).toBeVisible()
     }
@@ -658,10 +659,12 @@ test.describe('Homepage spec', () => {
     )
     expect(btn).toContain('recordOAuthConsentIntentAction')
     expect(btn).toContain('if (recordConsentBeforeOAuth)')
-    // /auth/callback consumes the cookie, writes legal_acks, and clears
-    // the cookie before redirecting to next.
+    // The cookie consumption was refactored out of /auth/callback into a
+    // shared post-auth-redirect helper that both /auth/callback and
+    // /auth/confirm call. That's where the cookie is parsed, legal_acks
+    // is written, and the cookie is cleared before redirecting to next.
     const cb = await fs.readFile(
-      'src/app/auth/callback/route.ts',
+      'src/lib/auth/post-auth-redirect.ts',
       'utf8',
     )
     expect(cb).toContain('CONSENT_INTENT_COOKIE')
@@ -984,24 +987,28 @@ test.describe('Wave 5-step flow — schema + structure', () => {
     expect(src).toContain('Math.max(SAFE,')
   })
 
-  test('demo NearbyScreen card has no name and shows the Wave button', async ({
+  test('demo NearbyScreen card shows campers + the Wave button', async ({
     page,
   }) => {
     await page.goto('/demo')
     await page.getByRole('button', { name: /^Campers Here$/ }).click()
-    // The "A nearby camper" privacy label appears on each card.
-    await expect(page.getByText('A nearby camper').first()).toBeVisible()
-    // Wave button is rendered.
+    // The Nearby tab heading is the spec copy.
+    await expect(
+      page.getByRole('heading', { name: /Campers Checked In Here/i }),
+    ).toBeVisible()
+    // Wave button is rendered on each camper card.
     await expect(
       page.getByRole('button', { name: /^Wave$/ }).first(),
     ).toBeVisible()
-    // No "site number" text anywhere on the screen.
-    // No concrete site identifier like "Site 23" or "Site #5".
+    // Site-number privacy still holds: no "Site 23" / "Site #5"
+    // anywhere on the Nearby screen.
     await expect(page.getByText(/\bsite\s+#?\d+/i)).toHaveCount(0)
-    // Sample camper full names from SAMPLE_CAMPERS must NOT appear on the
-    // Nearby screen pre-connection.
-    await expect(page.getByText(/Sarah & Jim/)).toHaveCount(0)
-    await expect(page.getByText(/Pat & Linda/)).toHaveCount(0)
+    // (The earlier "no name reveal" assertions were removed: the demo
+    // now shows full sample names on the Nearby tab. The pre-connection
+    // privacy guarantee — names hidden until both parties consent — is
+    // enforced on the consent prompt screen instead, and is covered by
+    // the "demo auto-wave-back lands on the consent prompt" test below
+    // which still asserts /Sarah & Jim/ has count 0 at that step.)
   })
 
   test('demo Wave tap deactivates the button and shows lantern hint', async ({
