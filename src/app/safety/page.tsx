@@ -141,9 +141,33 @@ export default function SafetyPage() {
             />
           </Section>
 
-          <Section title="Data deletion request">
+          <Section title="Delete your account">
             <p>
-              To delete your RoadWave account and data, email{' '}
+              Two ways to delete your RoadWave account and data, depending
+              on whether you can still sign in.
+            </p>
+            <p>
+              <strong className="text-cream">If you&rsquo;re signed in</strong>{' '}
+              (or can sign in): visit{' '}
+              <Link
+                href="/account/delete"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                /account/delete
+              </Link>{' '}
+              and follow the prompts. You&rsquo;ll be asked to type{' '}
+              <code className="rounded bg-night/60 px-1.5 py-0.5 text-flame text-[13px]">DELETE</code>{' '}
+              to confirm, after which your profile, check-ins, waves,
+              crossed paths, and messages are removed immediately. We send
+              a confirmation email to the address on file as a receipt and
+              keep a small compliance record (user id + email snapshot +
+              timestamp). The same link is available in the footer of every
+              page under <strong className="text-cream">Guests → Account Deletion</strong>.
+            </p>
+            <p>
+              <strong className="text-cream">If you can&rsquo;t sign in</strong>{' '}
+              (lost password without a recovery email, account suspended,
+              etc.): email{' '}
               <a
                 href="mailto:hello@getroadwave.com"
                 className="text-flame underline-offset-2 hover:underline"
@@ -151,9 +175,8 @@ export default function SafetyPage() {
                 hello@getroadwave.com
               </a>{' '}
               from the email address tied to your account and request
-              deletion. We&apos;ll confirm the request and delete your
-              account data within 7 business days. An in-app delete button
-              is planned.
+              deletion. We&rsquo;ll verify and delete your account data
+              within 7 business days.
             </p>
           </Section>
 
