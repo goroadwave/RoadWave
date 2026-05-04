@@ -171,11 +171,13 @@ export default async function RootPage() {
           </div>
         </section>
 
-        {/* Audience split — sits right under the hero so a visitor
-            immediately sees which path is for them. Camper card on
-            top in the mobile stack per spec. */}
+        {/* For-campers card. The matching For-campground-owners card
+            previously sat next to it, but owners now reach owner content
+            via the footer Campground Owners column (For Campgrounds,
+            Start a Campground Pilot, etc.) so we don't double up the
+            entry point on the homepage. */}
         <section className="px-4 pb-10 sm:pb-14">
-          <div className="mx-auto max-w-4xl grid gap-4 sm:grid-cols-2">
+          <div className="mx-auto max-w-2xl">
             <article className="rounded-2xl border border-white/10 bg-card p-6 space-y-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-flame">
                 For campers
@@ -194,27 +196,6 @@ export default async function RootPage() {
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-5 py-2.5 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
                 >
                   Try the Demo <span aria-hidden>👋</span>
-                </Link>
-              </div>
-            </article>
-            <article className="rounded-2xl border border-flame/30 bg-flame/[0.04] p-6 space-y-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-flame">
-                For campground owners
-              </p>
-              <h2 className="font-display text-xl sm:text-2xl font-extrabold text-cream leading-tight">
-                Give your guests a private way to connect and stay updated
-              </h2>
-              <p className="text-sm text-mist leading-relaxed">
-                A branded guest page powered by your QR code — bulletins,
-                meetups, and shared-interest discovery without exact site
-                numbers or public group chat.
-              </p>
-              <div className="pt-1">
-                <Link
-                  href="/start"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4caf82] text-night px-5 py-2.5 text-sm font-semibold shadow-md shadow-[#4caf82]/20 hover:bg-[#3f9d72] transition-colors"
-                >
-                  Start My Campground Pilot
                 </Link>
               </div>
             </article>
