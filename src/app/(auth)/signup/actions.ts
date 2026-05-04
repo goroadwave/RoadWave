@@ -95,6 +95,11 @@ export async function signupAction(
   //    version strings, plus request metadata. The form's required
   //    checkboxes + zod schema both gate submission, so anything that
   //    reaches this insert has affirmatively consented.
+  // Single insert moment, but write per-field timestamps too so audit
+  // queries can reason about each consent independently (per migration
+  // 0036). All four timestamps equal `now` because the user gave every
+  // consent simultaneously by submitting the form.
+  const consentNow = new Date().toISOString()
   const { error: ackError } = await admin.from('legal_acks').insert({
     user_id: userId,
     age_confirmed: true,
@@ -103,6 +108,10 @@ export async function signupAction(
     terms_version: TERMS_VERSION,
     privacy_version: PRIVACY_VERSION,
     community_rules_version: COMMUNITY_RULES_VERSION,
+    confirmed_18_at: consentNow,
+    accepted_terms_at: consentNow,
+    accepted_privacy_at: consentNow,
+    accepted_community_rules_at: consentNow,
     ip_address: getRequestIp(headerList),
     user_agent: headerList.get('user-agent'),
   })

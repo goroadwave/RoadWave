@@ -79,6 +79,10 @@ export async function recordConsentAction(
     .maybeSingle()
 
   if (!existing) {
+    // Per-field consent timestamps (per migration 0036). All four are
+    // set to `now` because the user gave every consent simultaneously
+    // by submitting the /consent form.
+    const consentNow = new Date().toISOString()
     const { error: insertErr } = await admin.from('legal_acks').insert({
       user_id: user.id,
       age_confirmed: true,
@@ -87,6 +91,10 @@ export async function recordConsentAction(
       terms_version: TERMS_VERSION,
       privacy_version: PRIVACY_VERSION,
       community_rules_version: COMMUNITY_RULES_VERSION,
+      confirmed_18_at: consentNow,
+      accepted_terms_at: consentNow,
+      accepted_privacy_at: consentNow,
+      accepted_community_rules_at: consentNow,
       ip_address: getRequestIp(h),
       user_agent: h.get('user-agent'),
     })

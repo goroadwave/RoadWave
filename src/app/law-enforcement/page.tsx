@@ -122,24 +122,47 @@ export default function LawEnforcementPage() {
             <p>
               Before sending a request, please consider whether RoadWave is
               likely to have the information you&apos;re looking for. We
-              maintain limited data:
+              maintain limited data, organized around two distinct subjects:
+              individual <strong className="text-cream">campers</strong>{' '}
+              (guest accounts) and{' '}
+              <strong className="text-cream">campground owners</strong>{' '}
+              (business accounts). The records and retention rules differ.
             </p>
+
+            <h3 className="font-semibold text-cream pt-2">
+              For camper (guest) accounts
+            </h3>
             <Bullets
               items={[
                 "Account info: email on file, account creation date, last sign-in time. No real names; we don't collect them.",
-                "Profile fields the user chose to enter (display name, hometown, rig type, etc.) — but only if not deleted by the user.",
+                'Profile fields the user chose to enter (display name, hometown, rig type, interests) — but only if not deleted by the user.',
                 "Check-in records: which campground, when, and when the 24-hour window expired or was cancelled. No exact site number — we don't collect it.",
-                'Wave records: who waved at whom, when, and which campground. We do not retain unsuccessful wave attempts.',
+                'Wave records — who waved at whom, when, and which campground. Retained for the lifetime of the account; deleted when the user deletes their account. Same retention rule applies to mutual matches (Crossed Paths).',
                 'Message records: text content of messages between mutually-matched users. RoadWave is end-to-server (not end-to-end) encrypted, so plaintext is recoverable.',
-                'Trust & Safety records: reports filed and the reviewing notes.',
+                'Consent records (legal_acks): per-field timestamps for age/terms/privacy/community-rules acceptance + the version strings in force at the time, plus IP and user-agent at signup.',
+                'Trust & Safety records: reports the user filed or that were filed against them, with reviewing notes.',
               ]}
             />
-            <p>
+
+            <h3 className="font-semibold text-cream pt-2">
+              For campground owner (business) accounts
+            </h3>
+            <Bullets
+              items={[
+                'Business contact info: business email, owner-supplied display name, optional phone number.',
+                'Campground entity info: legal name, public slug, city/region/timezone, optional logo URL, optional website, optional physical address (only if the owner chose to enter one).',
+                "Billing metadata: Stripe customer ID, subscription ID, plan, subscription status, current period end. We do not store card numbers — Stripe is the system of record for payment instruments.",
+                'Bulletins and meetups the owner posted, with timestamps.',
+                'Aggregate engagement stats — counts of check-ins, bulletin views, mutual waves at the owner’s campground. Aggregate only; never tied to specific campers.',
+              ]}
+            />
+
+            <p className="pt-2">
               We do <strong className="text-cream">not</strong> have: real
-              names (unless self-supplied), phone numbers, government IDs,
-              physical addresses (other than what an owner sets for their
-              own campground), payment information, or precise GPS
-              coordinates of a user&apos;s location.
+              names of campers (unless self-supplied), phone numbers (other
+              than what an owner self-supplies for their campground),
+              government IDs, residential addresses, payment card numbers,
+              or precise real-time GPS coordinates of any user.
             </p>
           </Section>
 

@@ -104,6 +104,11 @@ export async function postAuthRedirectResponse(
   )
   if (intent) {
     const headerList = request.headers
+    // Per-field consent timestamps mirror the email/password signup
+    // path (see 0036_consent_per_field_timestamps.sql). All four are
+    // set to `now` because the user gave every consent simultaneously
+    // by checking all three boxes before the OAuth click.
+    const consentNow = new Date().toISOString()
     const { error: ackError } = await admin.from('legal_acks').insert({
       user_id: user.id,
       age_confirmed: true,
@@ -112,6 +117,10 @@ export async function postAuthRedirectResponse(
       terms_version: TERMS_VERSION,
       privacy_version: PRIVACY_VERSION,
       community_rules_version: COMMUNITY_RULES_VERSION,
+      confirmed_18_at: consentNow,
+      accepted_terms_at: consentNow,
+      accepted_privacy_at: consentNow,
+      accepted_community_rules_at: consentNow,
       ip_address: getRequestIp(headerList),
       user_agent: headerList.get('user-agent'),
     })

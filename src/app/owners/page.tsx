@@ -81,12 +81,6 @@ export default function OwnersPage() {
               >
                 Start My Campground Pilot
               </Link>
-              <Link
-                href="/demo"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-cream px-6 py-3 font-medium hover:bg-white/10 hover:border-flame/40 transition-colors"
-              >
-                Watch 90-Second Demo
-              </Link>
             </div>
           </div>
         </section>
@@ -575,12 +569,6 @@ export default function OwnersPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
               >
                 Start My Campground Pilot
-              </Link>
-              <Link
-                href="/demo"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-cream px-6 py-3 font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors"
-              >
-                Watch 90-Second Demo
               </Link>
             </div>
           </div>

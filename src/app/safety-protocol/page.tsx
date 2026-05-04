@@ -29,7 +29,7 @@ export default function SafetyProtocolPage() {
       <main className="px-4 py-10 sm:py-16">
         <article className="mx-auto max-w-2xl space-y-8">
           <div className="space-y-3 text-center">
-            <Eyebrow>Internal · Trust &amp; Safety Protocol</Eyebrow>
+            <Eyebrow>Trust &amp; Safety Protocol</Eyebrow>
             <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
               How we handle reports.
             </h1>
@@ -156,7 +156,7 @@ export default function SafetyProtocolPage() {
             />
           </Section>
 
-          <Section title="Internal contact">
+          <Section title="Trust & Safety Contact">
             <p>
               For trust and safety matters, email{' '}
               <a

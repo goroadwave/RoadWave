@@ -162,8 +162,11 @@ export default async function RootPage() {
                 call. No download required.
               </p>
             </div>
-            <div className="lg:pl-4">
+            <div className="lg:pl-4 space-y-2">
               <HomePhonePreview />
+              <p className="text-center text-[11px] text-mist/70 italic">
+                Sample campground preview — demo data shown
+              </p>
             </div>
           </div>
         </section>

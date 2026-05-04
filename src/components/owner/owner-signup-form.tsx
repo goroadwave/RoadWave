@@ -165,7 +165,19 @@ export function OwnerSignupForm() {
           name="accepted_partner_terms"
           checked={partner}
           onChange={setPartner}
-          label="I agree to the RoadWave Campground Partner Terms"
+          label={
+            <>
+              I agree to the{' '}
+              <a
+                href="/campground-partner-terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                RoadWave Campground Partner Terms
+              </a>
+            </>
+          }
         />
         <Ack
           name="ack_optional"
@@ -301,7 +313,7 @@ function Ack({
   name: string
   checked: boolean
   onChange: (v: boolean) => void
-  label: string
+  label: React.ReactNode
 }) {
   return (
     <label className="flex items-start gap-2 text-sm text-cream cursor-pointer">

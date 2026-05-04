@@ -104,11 +104,13 @@ export default function PrivacyPolicyPage() {
 
           <Section title="How long we keep it">
             <p>
-              Check-ins automatically expire 24 hours after you scan in. Wave
-              history and crossed paths persist as long as your account does —
-              that&apos;s the whole point of remembering people you met. See
-              &ldquo;Deleting your data&rdquo; below for how to remove your
-              account.
+              Check-ins automatically expire 24 hours after you scan in.
+              Wave records — who you waved at, who waved back, when, and
+              which campground — persist for the lifetime of your account;
+              that&apos;s how Crossed Paths remembers people you&apos;ve met
+              before. Wave records are deleted when you delete your
+              account. See &ldquo;Deleting your data&rdquo; below for how
+              to remove your account.
             </p>
           </Section>
 

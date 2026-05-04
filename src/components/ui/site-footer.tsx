@@ -1,21 +1,25 @@
 import Link from 'next/link'
 import { Logo } from '@/components/ui/logo'
-import { OwnerInfoModal } from '@/components/ui/owner-info-modal'
 
 // Single shared footer for guest, marketing, AND owner-facing pages.
 //
-// The "Campground Owners" column is now a single tappable trigger
-// rendered by the OwnerInfoModal client component. Tap opens a
-// full-screen modal sheet on mobile (centered card on >=sm) holding
-// the full owner pitch + sections + Get Started CTA. The previous
-// inline expandable + the Campground Safety / Partner Terms / Start
-// My Campground Pilot link list both moved into the modal body.
+// Five-column layout on >=sm: logo + tagline, Guests, Campground
+// Owners, Legal, Contact. Two-column on phone (logo + tagline span
+// the full row, then the four link columns wrap into 2x2).
 
 const GUEST_LINKS: { label: string; href: string }[] = [
   { label: 'See a sample campground page', href: '/demo' },
   { label: 'Safety', href: '/safety' },
   { label: 'Community Rules', href: '/community-rules' },
-  { label: 'Account Deletion', href: '/account/delete' },
+  { label: 'Account Deletion', href: '/account-deletion' },
+]
+
+const OWNER_LINKS: { label: string; href: string }[] = [
+  { label: 'For Campgrounds', href: '/owners' },
+  { label: 'Start a Campground Pilot', href: '/start' },
+  { label: 'Campground Safety Overview', href: '/campground-safety' },
+  { label: 'Campground Partner Terms', href: '/campground-partner-terms' },
+  { label: 'Contact RoadWave', href: '/contact' },
 ]
 
 const LEGAL_LINKS: { label: string; href: string }[] = [
@@ -40,9 +44,7 @@ export function SiteFooter() {
           </div>
 
           <Column title="Guests" links={GUEST_LINKS} />
-          <div>
-            <OwnerInfoModal />
-          </div>
+          <Column title="Campground Owners" links={OWNER_LINKS} />
           <Column title="Legal" links={LEGAL_LINKS} />
           <ContactColumn />
         </div>
