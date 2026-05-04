@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { PrivacyModeForm } from '@/components/privacy/privacy-mode-form'
 import { PageHeading } from '@/components/ui/page-heading'
@@ -42,7 +43,15 @@ export default async function PrivacyPage() {
           </a>{' '}
           from the email address tied to your account and request deletion.
           We&apos;ll confirm the request and delete your account data within
-          7 business days. An in-app delete button is planned.
+          7 business days. If you&apos;re signed in, you can also delete
+          your account immediately from inside the app using the{' '}
+          <Link
+            href="/account/delete"
+            className="text-flame underline-offset-2 hover:underline"
+          >
+            account deletion page
+          </Link>
+          .
         </p>
       </section>
     </div>

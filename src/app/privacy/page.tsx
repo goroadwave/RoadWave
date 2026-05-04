@@ -105,12 +105,15 @@ export default function PrivacyPolicyPage() {
           <Section title="How long we keep it">
             <p>
               Check-ins automatically expire 24 hours after you scan in.
-              Mutual waves and crossed paths are retained while your
-              account remains active. Unmatched wave attempts are not
-              shown to the other person and are not retained longer than
-              needed to operate the feature, prevent abuse, and maintain
-              system integrity. See &ldquo;Deleting your data&rdquo;
-              below for how to remove your account.
+              Mutual waves and crossed-path history are retained while
+              your account remains active so RoadWave can remember
+              people you connected with. Unmatched wave attempts are
+              not shown to the other person and are not retained longer
+              than needed to operate the feature, prevent abuse, and
+              maintain system integrity. Wave and crossed-path records
+              are deleted when you delete your account, except for
+              limited trust, safety, legal, or compliance records
+              described in this policy.
             </p>
           </Section>
 
@@ -125,21 +128,14 @@ export default function PrivacyPolicyPage() {
               </a>{' '}
               from the email address tied to your account and request
               deletion. We&apos;ll confirm the request and delete your
-              account data within 7 business days. You can delete your
-              account by emailing{' '}
-              <a
-                href="mailto:hello@getroadwave.com"
-                className="text-flame underline-offset-2 hover:underline"
-              >
-                hello@getroadwave.com
-              </a>{' '}
-              from the email address tied to your account, or, if signed
-              in, by using the{' '}
+              account data within 7 business days. If you&apos;re signed
+              in, you can also delete your account immediately from
+              inside the app using the{' '}
               <Link
                 href="/account/delete"
                 className="text-flame underline-offset-2 hover:underline"
               >
-                in-app account deletion page
+                account deletion page
               </Link>
               .
             </p>

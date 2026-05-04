@@ -24,7 +24,7 @@ test.describe('Owner funnel — public', () => {
     ).toBeVisible()
     await expect(
       page
-        .getByRole('link', { name: /Watch 90-Second Demo/i })
+        .getByRole('link', { name: /Try Interactive Demo/i })
         .first(),
     ).toBeVisible()
     // §3 pricing block.

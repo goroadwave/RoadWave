@@ -114,7 +114,7 @@ test.describe('Public marketing pages', () => {
       page.getByRole('link', { name: /Start My Campground Pilot/i }).first(),
     ).toBeVisible()
     await expect(
-      page.getByRole('link', { name: /Watch 90-Second Demo/i }).first(),
+      page.getByRole('link', { name: /Try Interactive Demo/i }).first(),
     ).toBeVisible()
     // Staff workload section (§14).
     await expect(

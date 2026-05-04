@@ -102,7 +102,7 @@ export default function StartPage({
                 href="/demo"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 text-cream px-6 py-3 font-medium hover:bg-white/10 hover:border-flame/40 transition-colors"
               >
-                Watch 90-Second Demo
+                Try Interactive Demo
               </Link>
             </div>
           </div>
