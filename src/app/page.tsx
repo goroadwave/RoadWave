@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { OwnerInfoModal } from '@/components/ui/owner-info-modal'
 import { HomePhonePreview } from '@/components/home/home-phone-preview'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Logo } from '@/components/ui/logo'
@@ -172,13 +171,11 @@ export default async function RootPage() {
           </div>
         </section>
 
-        {/* Audience split. Camper card is inline (full pitch + Try
-            the Demo CTA). Owner side is a trigger card that opens the
-            OwnerInfoModal — keeps the homepage uncluttered while still
-            giving owners an obvious entry point to the pitch + Start
-            My Campground Pilot CTA. */}
+        {/* Camper-focused recap card. The owner trigger lived here
+            previously; owners now reach the pitch via the footer
+            Campground Owners trigger and the dedicated /owners page. */}
         <section className="px-4 pb-10 sm:pb-14">
-          <div className="mx-auto max-w-4xl grid gap-4 sm:grid-cols-2">
+          <div className="mx-auto max-w-xl">
             <article className="rounded-2xl border border-white/10 bg-card p-6 space-y-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-flame">
                 For campers
@@ -200,7 +197,6 @@ export default async function RootPage() {
                 </Link>
               </div>
             </article>
-            <OwnerInfoModal />
           </div>
         </section>
 
