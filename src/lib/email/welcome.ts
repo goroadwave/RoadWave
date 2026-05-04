@@ -1,25 +1,28 @@
 import { sendBrandedEmail, escapeHtml, type SendResult } from '@/lib/email/resend'
 import { buildBrandedHtml } from '@/lib/email/templates/base-html'
 
-// Sent once on a user's first successful Google OAuth callback.
-// Triggered from src/lib/auth/post-auth-redirect.ts when the auth
-// callback detects a freshly created auth.users row (created_at < 5
-// min ago), a Google identity, and no legal_acks row yet — i.e. this
-// is genuinely the user's first arrival, not a repeat sign-in.
+// Sent once on a user's first successful auth — both Google OAuth
+// (where the OAuth callback IS the first verification) and email +
+// password (where clicking the confirmation link is). Triggered from
+// src/lib/auth/post-auth-redirect.ts when the auth handler detects
+// a fresh email_confirmed_at timestamp, regardless of provider.
+// Repeat sign-ins skip the trigger because email_confirmed_at stops
+// updating after the first verification.
 
 type Args = {
   toEmail: string
-  /** Display name from Google's profile data (user.user_metadata.full_name).
-   *  Falls back to a generic greeting when null. */
+  /** Display name pulled from user.user_metadata.full_name when
+   *  available (Google sets it), or null for email/password signups
+   *  where we don't have it yet. Falls back to a generic greeting. */
   fullName?: string | null
-  /** Absolute URL where the user lands when they tap the CTA. Defaults to
-   *  the production /home if not provided. */
+  /** Absolute URL where the user lands when they tap the CTA. Defaults
+   *  to the production /home if not provided. */
   homeUrl?: string
 }
 
 export type { SendResult }
 
-export async function sendGoogleWelcomeEmail(args: Args): Promise<SendResult> {
+export async function sendWelcomeEmail(args: Args): Promise<SendResult> {
   const firstName = (args.fullName ?? '').trim().split(/\s+/)[0] ?? ''
   const greeting = firstName ? `Welcome, ${escapeHtml(firstName)}` : 'Welcome to RoadWave'
 

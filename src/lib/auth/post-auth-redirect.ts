@@ -8,7 +8,7 @@ import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from '@/lib/constants/interests'
-import { sendGoogleWelcomeEmail } from '@/lib/email/google-welcome'
+import { sendWelcomeEmail } from '@/lib/email/welcome'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getRequestIp } from '@/lib/utils'
@@ -39,32 +39,30 @@ export async function postAuthRedirectResponse(
   } = await supabase.auth.getUser()
   if (!user) return NextResponse.redirect(new URL(next, origin))
 
-  const admin = createSupabaseAdminClient()
-  const { data: existing } = await admin
-    .from('legal_acks')
-    .select('id')
-    .eq('user_id', user.id)
-    .limit(1)
-    .maybeSingle()
-
-  if (existing) return NextResponse.redirect(new URL(next, origin))
-
-  // First-time-Google-OAuth welcome email. Three gates that must all
-  // pass for the email to fire:
-  //   1. user.identities[] contains a 'google' provider entry
-  //   2. user.created_at is within the last FRESH_SIGNUP_WINDOW_MS
-  //      (so a returning Google user who hasn't completed /consent yet
-  //       doesn't trigger duplicate sends)
-  //   3. legal_acks doesn't exist yet (the `existing` check above)
-  // Repeat OAuth logins after consent skip this entire block because
-  // they short-circuit at the `existing` check above.
+  // First-signup welcome email. Fires on the moment of email
+  // verification regardless of provider:
+  //   * Google OAuth — the OAuth callback IS the verification (Google
+  //     attests to the email, Supabase populates email_confirmed_at).
+  //   * Email + password — verification happens when the user clicks
+  //     the confirmation link and /auth/confirm runs verifyOtp(),
+  //     which sets email_confirmed_at at that moment.
   //
-  // Send is fire-and-forget on the failure path — the welcome email
-  // is non-essential, and we never want a Resend outage to block the
-  // user's auth flow.
-  if (isFreshGoogleSignup(user)) {
+  // Gate is "email_confirmed_at within FRESH_SIGNUP_WINDOW_MS." Repeat
+  // sign-ins skip naturally because email_confirmed_at stops updating
+  // after the first verification — a returning user's timestamp is
+  // hours/days old.
+  //
+  // Sits ABOVE the existing legal_acks short-circuit because for
+  // email/password users the legal_acks row already exists by the
+  // time they click the confirmation link (it's written in /signup
+  // action right after auth.signUp succeeds). Below the short-circuit
+  // would never fire for that flow.
+  //
+  // Send is fire-and-forget — the welcome email is non-essential, and
+  // we never want a Resend outage to block the user's auth flow.
+  if (isFreshSignup(user)) {
     const homeUrl = `${origin}/home`
-    sendGoogleWelcomeEmail({
+    sendWelcomeEmail({
       toEmail: user.email ?? '',
       fullName:
         (user.user_metadata?.full_name as string | undefined) ??
@@ -75,21 +73,31 @@ export async function postAuthRedirectResponse(
       .then((result) => {
         if (!result.ok) {
           console.warn(
-            `[post-auth-redirect] google welcome email failed for ${user.email}: ${result.error}`,
+            `[post-auth-redirect] welcome email failed for ${user.email}: ${result.error}`,
           )
         } else {
           console.log(
-            `[post-auth-redirect] google welcome email sent to ${user.email} (resend id=${result.id ?? 'unknown'})`,
+            `[post-auth-redirect] welcome email sent to ${user.email} (resend id=${result.id ?? 'unknown'})`,
           )
         }
       })
       .catch((err: unknown) => {
         console.warn(
-          '[post-auth-redirect] google welcome email threw:',
+          '[post-auth-redirect] welcome email threw:',
           err instanceof Error ? err.message : String(err),
         )
       })
   }
+
+  const admin = createSupabaseAdminClient()
+  const { data: existing } = await admin
+    .from('legal_acks')
+    .select('id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+
+  if (existing) return NextResponse.redirect(new URL(next, origin))
 
   const intent = parseConsentIntent(
     request.cookies.get(CONSENT_INTENT_COOKIE)?.value,
@@ -126,22 +134,18 @@ export async function postAuthRedirectResponse(
   return response
 }
 
-// Detect "this user just completed their first Google OAuth signup."
-// Required for the welcome email gate — repeat sign-ins via Google are
-// not signup events and shouldn't trigger another welcome.
-function isFreshGoogleSignup(user: {
+// Detect "this user just verified their email for the first time."
+// Works for both providers — Google OAuth users get email_confirmed_at
+// set to the OAuth callback moment (Google attests), email/password
+// users get it set when they click the confirmation link. Returning
+// sign-ins have an old email_confirmed_at, so they fall outside the
+// window and we skip.
+function isFreshSignup(user: {
   email?: string | null
-  created_at?: string
-  identities?:
-    | Array<{ provider?: string | null }>
-    | null
+  email_confirmed_at?: string | null
 }): boolean {
   if (!user.email) return false
-  if (!user.created_at) return false
-  const ageMs = Date.now() - new Date(user.created_at).getTime()
-  if (ageMs > FRESH_SIGNUP_WINDOW_MS) return false
-  const hasGoogle = (user.identities ?? []).some(
-    (i) => i?.provider === 'google',
-  )
-  return hasGoogle
+  if (!user.email_confirmed_at) return false
+  const ageMs = Date.now() - new Date(user.email_confirmed_at).getTime()
+  return ageMs <= FRESH_SIGNUP_WINDOW_MS
 }
