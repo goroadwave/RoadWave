@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="color-scheme" content="dark light" />
-    <meta name="supported-color-schemes" content="dark light" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
     <title>Welcome to RoadWave</title>
   </head>
   <body
     style="margin:0; padding:0; background:#0a0f1c; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"
   >
-    <!-- Preview text in inbox previews. Hidden in body. -->
+    <!-- Inbox-preview text. Hidden in the body. -->
     <div
       style="display:none; max-height:0; overflow:hidden; mso-hide:all; visibility:hidden; opacity:0; color:transparent; height:0; width:0;"
     >
@@ -35,41 +35,44 @@
             border="0"
             style="max-width:560px; width:100%; background:#0a0f1c;"
           >
-            <!-- Logo -->
+            <!-- Logo (sans-serif to match the site's Bricolage Grotesque
+                 wordmark — Road in white, Wave in amber). -->
             <tr>
               <td align="center" style="padding:8px 0 28px;">
                 <span
-                  style="font-family:Georgia,'Times New Roman',serif; font-weight:800; font-size:34px; letter-spacing:-0.02em; line-height:1; white-space:nowrap;"
+                  style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-weight:800; font-size:34px; letter-spacing:-0.02em; line-height:1; white-space:nowrap;"
                 >
-                  <span style="color:#f5ecd9;">Road</span><span style="color:#f59e0b;">Wave</span>
+                  <span style="color:#ffffff;">Road</span><span style="color:#f59e0b;">Wave</span>
                   <span style="font-size:32px;" aria-hidden="true">👋</span>
                 </span>
               </td>
             </tr>
 
-            <!-- Card -->
+            <!-- Card. Amber-tinted hairline border picks up the same
+                 flame/30 treatment as the site's owner-card on /. -->
             <tr>
               <td
-                style="background:#111a2e; border:1px solid rgba(255,255,255,0.06); border-radius:18px; padding:36px 32px;"
+                style="background:#111a2e; border:1px solid rgba(245,158,11,0.18); border-radius:18px; padding:36px 32px;"
               >
                 <p
-                  style="margin:0 0 6px; color:#f59e0b; font-size:11px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase;"
+                  style="margin:0 0 6px; color:#f59e0b; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:11px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase;"
                 >
                   Welcome to RoadWave
                 </p>
                 <h1
-                  style="margin:0 0 18px; color:#f5ecd9; font-size:28px; font-weight:800; line-height:1.15; letter-spacing:-0.01em;"
+                  style="margin:0 0 18px; color:#f59e0b; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:30px; font-weight:800; line-height:1.1; letter-spacing:-0.02em;"
                 >
                   You're one step away.
                 </h1>
                 <p
-                  style="margin:0 0 24px; color:#f5ecd9; font-size:16px; line-height:1.55;"
+                  style="margin:0 0 24px; color:#ffffff; font-size:16px; line-height:1.55;"
                 >
                   You're one step away from finding your people on the road.
                   Click the button below to confirm your email and get started.
                 </p>
 
-                <!-- CTA -->
+                <!-- CTA. Amber bg + dark text matches the .bg-flame/.text-night
+                     primary button used across the marketing site. -->
                 <table
                   role="presentation"
                   cellpadding="0"
@@ -87,7 +90,7 @@
                         href="{{ .ConfirmationURL }}"
                         target="_blank"
                         rel="noopener"
-                        style="display:inline-block; padding:14px 26px; font-size:15px; font-weight:700; color:#0a0f1c; text-decoration:none; border-radius:12px; background:#f59e0b;"
+                        style="display:inline-block; padding:14px 26px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; font-size:15px; font-weight:700; color:#0a0f1c; text-decoration:none; border-radius:12px; background:#f59e0b;"
                       >
                         Confirm my email
                       </a>
@@ -96,7 +99,7 @@
                 </table>
 
                 <p
-                  style="margin:0 0 6px; color:#94a3b8; font-size:13px; line-height:1.5;"
+                  style="margin:0 0 6px; color:#ffffff; font-size:13px; line-height:1.5;"
                 >
                   Or paste this link into your browser:
                 </p>
@@ -115,13 +118,13 @@
                 />
 
                 <p
-                  style="margin:0 0 8px; color:#94a3b8; font-size:12px; line-height:1.55;"
+                  style="margin:0 0 8px; color:#ffffff; font-size:12px; line-height:1.55;"
                 >
-                  If you didn't sign up for RoadWave, you can safely ignore this
-                  email — no account will be created.
+                  If you didn't sign up for RoadWave, you can safely ignore
+                  this email — no account will be created.
                 </p>
                 <p
-                  style="margin:0; color:#94a3b8; font-size:12px; line-height:1.55;"
+                  style="margin:0; color:#ffffff; font-size:12px; line-height:1.55;"
                 >
                   Questions? Reply to this email or write us at
                   <a href="mailto:hello@getroadwave.com" style="color:#f59e0b; text-decoration:underline;">hello@getroadwave.com</a>.
