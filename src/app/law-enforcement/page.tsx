@@ -137,7 +137,7 @@ export default function LawEnforcementPage() {
                 "Account info: email on file, account creation date, last sign-in time. No real names; we don't collect them.",
                 'Profile fields the user chose to enter (display name, hometown, rig type, interests) — but only if not deleted by the user.',
                 "Check-in records: which campground, when, and when the 24-hour window expired or was cancelled. No exact site number — we don't collect it.",
-                'Wave records — who waved at whom, when, and which campground. Retained for the lifetime of the account; deleted when the user deletes their account. Same retention rule applies to mutual matches (Crossed Paths).',
+                'Mutual waves and crossed paths — who waved at whom, when, and which campground. Retained while the account remains active. Unmatched wave attempts are not shown to the other person and are not retained longer than needed to operate the feature, prevent abuse, and maintain system integrity.',
                 'Message records: text content of messages between mutually-matched users. RoadWave is end-to-server (not end-to-end) encrypted, so plaintext is recoverable.',
                 'Consent records (legal_acks): per-field timestamps for age/terms/privacy/community-rules acceptance + the version strings in force at the time, plus IP and user-agent at signup.',
                 'Trust & Safety records: reports the user filed or that were filed against them, with reviewing notes.',

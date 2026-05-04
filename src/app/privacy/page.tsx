@@ -105,12 +105,12 @@ export default function PrivacyPolicyPage() {
           <Section title="How long we keep it">
             <p>
               Check-ins automatically expire 24 hours after you scan in.
-              Wave records — who you waved at, who waved back, when, and
-              which campground — persist for the lifetime of your account;
-              that&apos;s how Crossed Paths remembers people you&apos;ve met
-              before. Wave records are deleted when you delete your
-              account. See &ldquo;Deleting your data&rdquo; below for how
-              to remove your account.
+              Mutual waves and crossed paths are retained while your
+              account remains active. Unmatched wave attempts are not
+              shown to the other person and are not retained longer than
+              needed to operate the feature, prevent abuse, and maintain
+              system integrity. See &ldquo;Deleting your data&rdquo;
+              below for how to remove your account.
             </p>
           </Section>
 
@@ -125,8 +125,23 @@ export default function PrivacyPolicyPage() {
               </a>{' '}
               from the email address tied to your account and request
               deletion. We&apos;ll confirm the request and delete your
-              account data within 7 business days. An in-app delete button
-              is planned.
+              account data within 7 business days. You can delete your
+              account by emailing{' '}
+              <a
+                href="mailto:hello@getroadwave.com"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                hello@getroadwave.com
+              </a>{' '}
+              from the email address tied to your account, or, if signed
+              in, by using the{' '}
+              <Link
+                href="/account/delete"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                in-app account deletion page
+              </Link>
+              .
             </p>
           </Section>
 

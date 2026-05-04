@@ -575,13 +575,6 @@ export default function OwnersPage() {
         </section>
       </main>
 
-      <footer className="px-4 py-8 text-center text-xs text-mist/70 border-t border-white/5">
-        <p>
-          RoadWave — A private way to see campground updates, find shared
-          interests, and say hello only when you want to.
-        </p>
-      </footer>
-
       <CampgroundRileyButton />
     </>
   )
