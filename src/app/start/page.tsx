@@ -94,7 +94,7 @@ export default function StartPage({
             <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-center">
               <Link
                 href="/owner/signup"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-500 text-night px-6 py-3 font-semibold shadow-lg shadow-green-500/20 hover:bg-green-600 transition-colors"
               >
                 Start My Campground Pilot
               </Link>
@@ -199,7 +199,7 @@ export default function StartPage({
             </p>
             <Link
               href="/owner/signup"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-500 text-night px-6 py-3 font-semibold shadow-lg shadow-green-500/20 hover:bg-green-600 transition-colors"
             >
               Start My Campground Pilot
             </Link>

@@ -1,19 +1,11 @@
 import Link from 'next/link'
 import { Logo } from '@/components/ui/logo'
-import { OwnerInfoModal } from '@/components/ui/owner-info-modal'
 
 // Single shared footer for guest, marketing, AND owner-facing pages.
 //
 // Five-column layout on >=sm: logo + tagline, Guests, Campground
-// Owners (modal trigger + supporting links), Legal, Contact.
-// Two-column on phone (logo + tagline span the full row, then the
-// four link columns wrap into 2x2).
-//
-// Campground Owners column is consolidated around the OwnerInfoModal
-// trigger. The trigger replaces the column header, so the headline
-// itself opens the owner pitch + Start CTA. The supporting list
-// underneath keeps direct URLs to assets that aren't part of the
-// modal pitch (Partner Terms, Safety Overview, Contact).
+// Owners, Legal, Contact. Two-column on phone (logo + tagline span
+// the full row, then the four link columns wrap into 2x2).
 
 const GUEST_LINKS: { label: string; href: string }[] = [
   { label: 'See a sample campground page', href: '/demo' },
@@ -22,10 +14,12 @@ const GUEST_LINKS: { label: string; href: string }[] = [
   { label: 'Account Deletion', href: '/account-deletion' },
 ]
 
-const OWNER_SUB_LINKS: { label: string; href: string }[] = [
-  { label: 'Partner Terms', href: '/campground-partner-terms' },
-  { label: 'Safety Overview', href: '/campground-safety' },
-  { label: 'Contact', href: '/contact' },
+const OWNER_LINKS: { label: string; href: string }[] = [
+  { label: 'For Campgrounds', href: '/owners' },
+  { label: 'Start a Campground Pilot', href: '/start' },
+  { label: 'Campground Safety Overview', href: '/campground-safety' },
+  { label: 'Campground Partner Terms', href: '/campground-partner-terms' },
+  { label: 'Contact RoadWave', href: '/contact' },
 ]
 
 const LEGAL_LINKS: { label: string; href: string }[] = [
@@ -50,7 +44,7 @@ export function SiteFooter() {
           </div>
 
           <Column title="Guests" links={GUEST_LINKS} />
-          <OwnerColumn />
+          <Column title="Campground Owners" links={OWNER_LINKS} />
           <Column title="Legal" links={LEGAL_LINKS} />
           <ContactColumn />
         </div>
@@ -62,26 +56,6 @@ export function SiteFooter() {
         </div>
       </div>
     </footer>
-  )
-}
-
-function OwnerColumn() {
-  return (
-    <div className="space-y-3">
-      <OwnerInfoModal variant="footer-link" />
-      <ul className="space-y-2">
-        {OWNER_SUB_LINKS.map((l) => (
-          <li key={l.label}>
-            <Link
-              href={l.href}
-              className="text-sm text-cream/90 hover:text-flame transition-colors"
-            >
-              {l.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
   )
 }
 
