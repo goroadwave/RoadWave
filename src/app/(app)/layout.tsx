@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { AppLantern } from '@/components/lantern/app-lantern'
+import { GuestSupportChat } from '@/components/support/guest-support-chat'
 import { AppNav } from '@/components/ui/app-nav'
 import { Logo } from '@/components/ui/logo'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -57,6 +58,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect(`/checkin?token=${pendingCheckin}`)
   }
 
+  // Surface the floating Guest support chat only for visitors who have
+  // an active, non-expired check-in. Spec: it's specifically for "in-
+  // session" guests, not the broader logged-in pool. (app) is the right
+  // place to gate this — every (app) page inherits the result.
+  const { data: activeCheckIn } = await supabase
+    .from('check_ins')
+    .select('id')
+    .eq('profile_id', user.id)
+    .eq('status', 'active')
+    .gt('expires_at', new Date().toISOString())
+    .limit(1)
+    .maybeSingle()
+  const showGuestSupport = activeCheckIn !== null
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-white/5 bg-night/80 backdrop-blur sticky top-0 z-20">
@@ -87,6 +102,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </header>
       <AppNav />
       <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-6">{children}</main>
+      {showGuestSupport && <GuestSupportChat />}
     </div>
   )
 }
