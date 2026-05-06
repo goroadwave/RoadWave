@@ -83,7 +83,7 @@ async function maybeSendWelcomeEmail(campgroundId: string): Promise<void> {
   const admin = createSupabaseAdminClient()
   const { data: cg } = await admin
     .from('campgrounds')
-    .select('id, name, owner_email, welcome_email_sent_at')
+    .select('id, name, slug, owner_email, welcome_email_sent_at')
     .eq('id', campgroundId)
     .single()
   if (!cg || cg.welcome_email_sent_at || !cg.owner_email) return
@@ -121,7 +121,7 @@ async function maybeSendWelcomeEmail(campgroundId: string): Promise<void> {
     toEmail: cg.owner_email,
     ownerName,
     campgroundName: cg.name,
-    qrCheckInUrl: `${siteUrl}/checkin?token=${token.token}`,
+    qrCheckInUrl: `${siteUrl}/campground/${cg.slug}?token=${token.token}`,
     dashboardUrl: `${siteUrl}/owner/dashboard`,
   })
 

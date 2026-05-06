@@ -192,8 +192,8 @@ async function handleCheckoutCompleted(
     .eq('campground_id', cg.id)
     .maybeSingle()
   const qrCheckInUrl = tokenRow
-    ? `${origin}/checkin?token=${tokenRow.token}`
-    : `${origin}/checkin`
+    ? `${origin}/campground/${cg.slug}?token=${tokenRow.token}`
+    : `${origin}/campground/${cg.slug}`
 
   // 6. Send the onboarding kit email.
   await sendOwnerOnboardingKitEmail({

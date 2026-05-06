@@ -24,7 +24,9 @@ export default async function CampgroundsAdminPage() {
   const rows = await Promise.all(
     (campgrounds ?? []).map(async (cg) => {
       const token = tokenMap.get(cg.id)
-      const url = token ? `${origin}/checkin?token=${token}` : null
+      const url = token
+        ? `${origin}/campground/${cg.slug}?token=${token}`
+        : null
       const dataUrl = url
         ? await QRCode.toDataURL(url, {
             width: 256,

@@ -37,7 +37,11 @@ export default async function OwnerQrPage() {
         campgroundName={campground.name}
         token={tokenRow?.token ?? null}
         rotatedAt={tokenRow?.rotated_at ?? null}
-        checkInUrl={tokenRow ? `${siteUrl}/checkin?token=${tokenRow.token}` : null}
+        checkInUrl={
+          tokenRow
+            ? `${siteUrl}/campground/${campground.slug}?token=${tokenRow.token}`
+            : null
+        }
       />
     </div>
   )

@@ -1,9 +1,19 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { AppLantern } from '@/components/lantern/app-lantern'
 import { AppNav } from '@/components/ui/app-nav'
 import { Logo } from '@/components/ui/logo'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+
+// Pending check-in bridge — set by the proxy when a guest opens
+// /campground/<slug>?token=<uuid>. After the auth + consent gates pass,
+// route them straight to /checkin so the welcome → signup → check-in
+// flow doesn't drop the token. The proxy clears the cookie when /checkin
+// is reached, so this layout-level redirect doesn't loop.
+const PENDING_CHECKIN_COOKIE = 'pending_checkin_token'
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient()
@@ -37,6 +47,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .limit(1)
     .maybeSingle()
   if (!ackRow) redirect('/consent?next=/home')
+
+  // Resume the camper's pending check-in if they came in via a campground
+  // welcome page. The proxy clears this cookie on /checkin so we won't
+  // loop here; we still validate the value before trusting it.
+  const jar = await cookies()
+  const pendingCheckin = jar.get(PENDING_CHECKIN_COOKIE)?.value
+  if (pendingCheckin && UUID_RE.test(pendingCheckin)) {
+    redirect(`/checkin?token=${pendingCheckin}`)
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
