@@ -7,6 +7,7 @@ const TABS: { href: string; label: string }[] = [
   { href: '/owner/dashboard', label: 'Home' },
   { href: '/owner/profile', label: 'Profile' },
   { href: '/owner/qr', label: 'QR' },
+  { href: '/owner/marketing', label: 'Marketing' },
   { href: '/owner/bulletin', label: 'Bulletin' },
   { href: '/owner/meetups', label: 'Meetups' },
   { href: '/owner/analytics', label: 'Stats' },
@@ -18,7 +19,7 @@ export function OwnerNav() {
   return (
     <nav className="border-b border-white/5 bg-night/60 backdrop-blur sticky top-[56px] z-10">
       <div className="mx-auto max-w-3xl px-3 py-2">
-        <ul className="grid grid-cols-4 sm:grid-cols-7 gap-1 text-[11px] sm:text-xs">
+        <ul className="grid grid-cols-4 sm:grid-cols-8 gap-1 text-[11px] sm:text-xs">
           {TABS.map((t) => {
             const active = pathname === t.href
             return (
