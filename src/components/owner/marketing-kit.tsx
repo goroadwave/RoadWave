@@ -61,6 +61,12 @@ export function MarketingKit({
   checkInUrl,
 }: Props) {
   const [qrPngDataUrl, setQrPngDataUrl] = useState<string | null>(null)
+  // 👋 rasterised to a PNG via the browser canvas + system emoji font.
+  // jsPDF's built-in fonts can't render emoji glyphs, so the wave next
+  // to the RoadWave wordmark inside every PDF goes in as an embedded
+  // image instead. Generated once on mount and reused across every
+  // PDF download.
+  const [waveDataUrl, setWaveDataUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
@@ -97,6 +103,15 @@ export function MarketingKit({
       cancelled = true
     }
   }, [checkInUrl])
+
+  // Pre-render the 👋 emoji to a transparent PNG once on mount. Each
+  // OS/browser uses its own color emoji font (Apple Color Emoji on
+  // macOS/iOS, Segoe UI Emoji on Windows, Noto Color Emoji on Android/
+  // Linux), so the look matches what the owner sees in their own
+  // system everywhere else.
+  useEffect(() => {
+    setWaveDataUrl(renderEmojiToPng('👋', 192))
+  }, [])
 
   function flashCopied(label: string) {
     setCopied(label)
@@ -156,6 +171,7 @@ export function MarketingKit({
     try {
       const blob = await buildCounterCardPdf({
         qrDataUrl: qrPngDataUrl,
+        waveDataUrl,
         campgroundName,
         location,
       })
@@ -173,6 +189,7 @@ export function MarketingKit({
     try {
       const blob = await buildSimpleQrPdf({
         qrDataUrl: qrPngDataUrl,
+        waveDataUrl,
         campgroundName,
       })
       downloadBlob(blob, `${baseFilename}-qr-print.pdf`)
@@ -189,6 +206,7 @@ export function MarketingKit({
     try {
       const blob = await buildSiteCardPdf({
         qrDataUrl: qrPngDataUrl,
+        waveDataUrl,
         campgroundName,
         location,
       })
@@ -538,6 +556,7 @@ function SignaturePreview({
 
 type CardArgs = {
   qrDataUrl: string
+  waveDataUrl: string | null
   campgroundName: string
   location: string
 }
@@ -560,14 +579,12 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Top-left wordmark — Road white, Wave amber. We deliberately do
-  // NOT append the 👋 emoji here even though it appears next to the
-  // wordmark everywhere on screen. jsPDF's built-in fonts
-  // (helvetica/courier/times) ship without emoji glyphs, so passing
-  // the codepoint to doc.text() renders an empty tofu box on the
-  // PDF. Embedding a color-emoji font (~1MB) just for one glyph
-  // isn't worth it. The on-screen previews + HTML email outputs
-  // still include the emoji.
+  // Top-left wordmark — Road white, Wave amber. The 👋 to the right of
+  // the wordmark is drawn separately as an embedded PNG (rasterised on
+  // the client from the system emoji font); jsPDF's built-in
+  // helvetica/courier/times fonts have no emoji glyphs, so embedding
+  // the rendered image is the only way to get a recognisable wave on
+  // the PDF.
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(22)
   setText(doc, BRAND.white)
@@ -575,6 +592,18 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
   const roadW = doc.getTextWidth('Road')
   setText(doc, BRAND.amber)
   doc.text('Wave', PAD + roadW, PAD + 18)
+  const waveW = doc.getTextWidth('Wave')
+  if (args.waveDataUrl) {
+    const waveSize = 22
+    doc.addImage(
+      args.waveDataUrl,
+      'PNG',
+      PAD + roadW + waveW + 5,
+      PAD - 1,
+      waveSize,
+      waveSize,
+    )
+  }
 
   // "WELCOME TO" eyebrow
   doc.setFontSize(8)
@@ -653,12 +682,14 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
   const pillW = (W - PAD * 2 - pillGap) / 2
   const pillH = 26
 
-  // Amber: Check In & Connect with Campers
+  // Amber: Check In & Connect with Campers. The label is wide for the
+  // 124pt pill at 8pt helvetica-bold (clipped on the left edge), so we
+  // size both pill labels at 7pt for guaranteed fit.
   setFill(doc, BRAND.amber)
   doc.roundedRect(PAD, pillsY, pillW, pillH, 6, 6, 'F')
   setText(doc, BRAND.night)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
+  doc.setFontSize(7)
   doc.text(
     'Check In & Connect with Campers',
     PAD + pillW / 2,
@@ -666,7 +697,7 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
     { align: 'center' },
   )
 
-  // Green: Campground Updates Only
+  // Green: Campground Updates Only — same 7pt for symmetry.
   setFill(doc, BRAND.green)
   doc.roundedRect(
     PAD + pillW + pillGap,
@@ -729,6 +760,7 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
 // 8.5×11 portrait, single page, centered QR with label + name.
 async function buildSimpleQrPdf(args: {
   qrDataUrl: string
+  waveDataUrl: string | null
   campgroundName: string
 }): Promise<Blob> {
   const { default: JsPDF } = await import('jspdf')
@@ -743,17 +775,32 @@ async function buildSimpleQrPdf(args: {
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Wordmark centered top
+  // Wordmark centered top, with the 👋 image next to it. Layout
+  // accounts for the wave's width when computing horizontal centering
+  // so the whole wordmark+wave block stays centered.
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(36)
   const roadW = doc.getTextWidth('Road')
   const waveW = doc.getTextWidth('Wave')
-  const totalW = roadW + waveW
+  const waveImgSize = args.waveDataUrl ? 36 : 0
+  const waveImgGap = args.waveDataUrl ? 10 : 0
+  const totalW = roadW + waveW + waveImgGap + waveImgSize
   const wmY = 96
+  const wmX = (W - totalW) / 2
   setText(doc, BRAND.white)
-  doc.text('Road', (W - totalW) / 2, wmY)
+  doc.text('Road', wmX, wmY)
   setText(doc, BRAND.amber)
-  doc.text('Wave', (W - totalW) / 2 + roadW, wmY)
+  doc.text('Wave', wmX + roadW, wmY)
+  if (args.waveDataUrl) {
+    doc.addImage(
+      args.waveDataUrl,
+      'PNG',
+      wmX + roadW + waveW + waveImgGap,
+      wmY - waveImgSize + 4,
+      waveImgSize,
+      waveImgSize,
+    )
+  }
 
   // Centered QR
   const qrSize = 360
@@ -801,17 +848,30 @@ async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Wordmark center top
+  // Wordmark center top, with the 👋 image next to it.
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(26)
   const roadW = doc.getTextWidth('Road')
   const waveW = doc.getTextWidth('Wave')
-  const totalW = roadW + waveW
+  const waveImgSize = args.waveDataUrl ? 26 : 0
+  const waveImgGap = args.waveDataUrl ? 6 : 0
+  const totalW = roadW + waveW + waveImgGap + waveImgSize
   const wmY = 56
+  const wmX = (W - totalW) / 2
   setText(doc, BRAND.white)
-  doc.text('Road', (W - totalW) / 2, wmY)
+  doc.text('Road', wmX, wmY)
   setText(doc, BRAND.amber)
-  doc.text('Wave', (W - totalW) / 2 + roadW, wmY)
+  doc.text('Wave', wmX + roadW, wmY)
+  if (args.waveDataUrl) {
+    doc.addImage(
+      args.waveDataUrl,
+      'PNG',
+      wmX + roadW + waveW + waveImgGap,
+      wmY - waveImgSize + 3,
+      waveImgSize,
+      waveImgSize,
+    )
+  }
 
   // "WELCOME TO" + name + location
   doc.setFontSize(8)
@@ -1010,6 +1070,31 @@ function slugify(s: string): string {
       .replace(/^-+|-+$/g, '')
       .slice(0, 40) || 'campground'
   )
+}
+
+// Rasterise a single emoji glyph to a transparent-background PNG data
+// URL via an offscreen canvas. Used to embed 👋 in jsPDF documents,
+// where the built-in fonts can't render emoji codepoints. Falls back
+// to an empty string if the canvas API isn't available (server-side
+// render of this file shouldn't happen — the component is 'use client'
+// — but the guard keeps tooling happy).
+function renderEmojiToPng(emoji: string, sizePx: number): string {
+  if (typeof document === 'undefined') return ''
+  const canvas = document.createElement('canvas')
+  canvas.width = sizePx
+  canvas.height = sizePx
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return ''
+  // Slightly under-fill so the glyph isn't clipped at the edges by
+  // browsers that render emoji larger than the nominal font size.
+  const fontPx = Math.round(sizePx * 0.82)
+  ctx.font =
+    `${fontPx}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", ` +
+    `"Twemoji Mozilla", "EmojiOne Color", "Android Emoji", system-ui, sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(emoji, sizePx / 2, sizePx / 2 + sizePx * 0.04)
+  return canvas.toDataURL('image/png')
 }
 
 function escapeHtml(s: string): string {
