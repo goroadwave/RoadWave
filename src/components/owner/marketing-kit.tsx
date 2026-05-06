@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { splitAmenities } from '@/lib/campgrounds/amenities'
 
 // Owner-facing Marketing Kit. Generates every brand-correct, auto-
 // populated promotional asset on demand: PDFs are built client-side
@@ -50,6 +51,10 @@ type Props = {
   slug: string
   siteUrl: string
   checkInUrl: string | null
+  /** Saved campgrounds.amenities (mix of standard labels and custom).
+   *  Embedded into the printable Counter Card and Site Card PDFs as a
+   *  small pill row — solid border for standard, dashed for custom. */
+  amenities: string[]
 }
 
 export function MarketingKit({
@@ -59,6 +64,7 @@ export function MarketingKit({
   slug,
   siteUrl,
   checkInUrl,
+  amenities,
 }: Props) {
   const [qrPngDataUrl, setQrPngDataUrl] = useState<string | null>(null)
   // 👋 rasterised to a PNG via the browser canvas + system emoji font.
@@ -174,6 +180,7 @@ export function MarketingKit({
         waveDataUrl,
         campgroundName,
         location,
+        amenities,
       })
       downloadBlob(blob, `${baseFilename}-counter-card-4x6.pdf`)
     } catch (e) {
@@ -209,6 +216,7 @@ export function MarketingKit({
         waveDataUrl,
         campgroundName,
         location,
+        amenities,
       })
       downloadBlob(blob, `${baseFilename}-site-card-4x9.pdf`)
     } catch (e) {
@@ -586,6 +594,102 @@ type CardArgs = {
   waveDataUrl: string | null
   campgroundName: string
   location: string
+  amenities: string[]
+}
+
+// Render a horizontal row of amenity pills centered at `centerX, y`.
+// Solid amber border for standard amenities, dashed amber border for
+// custom (matches the welcome page's solid-vs-dashed treatment).
+// Packs left-to-right and silently drops any that won't fit within
+// `maxWidth`. The full list lives on the welcome page; the PDFs are
+// constrained real estate so we just surface what fits.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsPDF
+function drawAmenityRow(
+  doc: any,
+  amenities: string[],
+  centerX: number,
+  y: number,
+  maxWidth: number,
+) {
+  if (amenities.length === 0) return
+  // Standard amenities first so the most recognisable labels (Pool,
+  // WiFi, Dog-Friendly, etc.) appear before owner-typed customs.
+  const { standard, custom } = splitAmenities(amenities)
+  const ordered: { text: string; isStandard: boolean }[] = [
+    ...standard.map((t) => ({ text: t, isStandard: true })),
+    ...custom.map((t) => ({ text: t, isStandard: false })),
+  ]
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(6.5)
+  const padX = 6
+  const pillH = 13
+  const gap = 4
+
+  const measured = ordered.map((m) => ({
+    ...m,
+    label: m.text.toUpperCase(),
+    width: doc.getTextWidth(m.text.toUpperCase()) + padX * 2,
+  }))
+
+  // Pack left-to-right.
+  const fit: typeof measured = []
+  let total = 0
+  for (const m of measured) {
+    const inc = (fit.length === 0 ? 0 : gap) + m.width
+    if (total + inc > maxWidth) break
+    fit.push(m)
+    total += inc
+  }
+  if (fit.length === 0) return
+
+  let startX = centerX - total / 2
+  for (const m of fit) {
+    drawAmenityPill(doc, m.label, startX, y, m.width, pillH, m.isStandard)
+    startX += m.width + gap
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsPDF
+function drawAmenityPill(
+  doc: any,
+  label: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  isStandard: boolean,
+) {
+  doc.setLineWidth(0.6)
+  // jsPDF v2+ exposes setLineDashPattern; older builds expose
+  // setLineDash. Try both so this doesn't blow up if the bundled
+  // version drifts.
+  if (!isStandard) {
+    if (typeof doc.setLineDashPattern === 'function') {
+      doc.setLineDashPattern([2, 2], 0)
+    } else if (typeof doc.setLineDash === 'function') {
+      doc.setLineDash([2, 2], 0)
+    }
+  }
+  // Border + faint amber fill for standards; transparent fill +
+  // dashed border for customs.
+  doc.setDrawColor(BRAND.amber[0], BRAND.amber[1], BRAND.amber[2])
+  if (isStandard) {
+    // Approximate the welcome page's amber/[0.06] with a near-navy
+    // tinted fill so the pill reads "filled" without overpowering.
+    doc.setFillColor(0x2a, 0x20, 0x10)
+    doc.roundedRect(x, y, w, h, 3, 3, 'FD')
+  } else {
+    doc.roundedRect(x, y, w, h, 3, 3, 'S')
+  }
+  // Reset dash pattern so it doesn't leak into subsequent draws.
+  if (typeof doc.setLineDashPattern === 'function') {
+    doc.setLineDashPattern([], 0)
+  } else if (typeof doc.setLineDash === 'function') {
+    doc.setLineDash([], 0)
+  }
+  setText(doc, BRAND.amber)
+  doc.text(label, x + w / 2, y + 9, { align: 'center' })
 }
 
 // 4×6 portrait, 288×432pt. Matches the spec layout: brand wordmark
@@ -741,6 +845,19 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
     PAD + pillW + pillGap + pillW / 2,
     pillsY + 16,
     { align: 'center' },
+  )
+
+  // Amenity pill row — sits between the action pills and the footer.
+  // Solid border for standard amenities, dashed for custom. Packs
+  // left-to-right and silently drops anything that won't fit on the
+  // 4×6 width; the welcome page is the canonical full list.
+  const amenityRowY = pillsY + pillH + 14
+  drawAmenityRow(
+    doc,
+    args.amenities,
+    W / 2,
+    amenityRowY,
+    W - PAD * 2,
   )
 
   // Footer — privacy line left + FREE FOR GUESTS pill right
@@ -986,6 +1103,17 @@ async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
   doc.text('Updates Only', PAD + pillW + pillGap + pillW / 2, pillsY + 14, {
     align: 'center',
   })
+
+  // Amenity pill row (4×9 has more horizontal room than the 4×6
+  // counter card — same render, just at the spot below the action
+  // pills).
+  drawAmenityRow(
+    doc,
+    args.amenities,
+    W / 2,
+    pillsY + pillH + 14,
+    W - PAD * 2,
+  )
 
   // Footer privacy line
   doc.setFont('helvetica', 'normal')

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
+import { splitAmenities } from '@/lib/campgrounds/amenities'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { isUuid } from '@/lib/validators/checkin'
@@ -119,9 +120,14 @@ export default async function CampgroundLandingPage({
   const where = [campground.city, campground.region]
     .filter(Boolean)
     .join(', ')
-  const amenities = (campground.amenities ?? []).filter(
-    (a): a is string => typeof a === 'string' && a.trim().length > 0,
-  )
+  // Saved campgrounds.amenities mixes brand-curated labels (saved when
+  // the owner ticks a checkbox) with owner-typed custom strings from
+  // the "Add Your Own" section. Render them in the same row but with
+  // distinct tag styles per spec — solid amber for standard, dashed
+  // outlined for custom.
+  const { standard: standardAmenities, custom: customAmenities } =
+    splitAmenities(campground.amenities)
+  const hasAmenities = standardAmenities.length + customAmenities.length > 0
 
   // CTA targets. Primary routes the camper through signup with the
   // post-auth landing already pointing at /checkin so the post-Stripe-
@@ -184,12 +190,20 @@ export default async function CampgroundLandingPage({
               )}
             </div>
 
-            {amenities.length > 0 && (
+            {hasAmenities && (
               <ul className="flex flex-wrap justify-center gap-2 pt-1">
-                {amenities.map((a) => (
+                {standardAmenities.map((a) => (
                   <li
-                    key={a}
+                    key={`s-${a}`}
                     className="rounded-full border border-flame/30 bg-flame/[0.06] px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-flame font-semibold"
+                  >
+                    {a}
+                  </li>
+                ))}
+                {customAmenities.map((a) => (
+                  <li
+                    key={`c-${a}`}
+                    className="rounded-full border border-dashed border-flame/50 bg-transparent px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-flame font-semibold"
                   >
                     {a}
                   </li>

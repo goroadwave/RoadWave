@@ -5,21 +5,22 @@ import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { sendOwnerWelcomeEmail } from '@/lib/email/owner-welcome'
+import { MAX_CUSTOM_AMENITY_CHARS } from '@/lib/campgrounds/amenities'
 
 export type ProfileSaveState = { error: string | null; ok: boolean }
 
-const AMENITIES = [
-  'full_hookups',
-  'water_electric',
-  'tent_sites',
-  'wifi',
-  'pool',
-  'dog_friendly',
-  'laundry',
-  'store',
-  'restrooms',
-  'showers',
-] as const
+// Amenities are now stored as display labels (e.g. "Heated Pool",
+// "Dog-Friendly") rather than the older internal slugs, AND owners can
+// add free-form custom amenities. The schema therefore validates each
+// entry as a trimmed, sane-length string and de-duplicates the array.
+// Cap is 80 entries — comfortably above the curated standard list
+// length (~45) plus the 20-custom-per-spec ceiling.
+const AMENITIES_CAP = 80
+const amenityString = z
+  .string()
+  .trim()
+  .min(1)
+  .max(MAX_CUSTOM_AMENITY_CHARS)
 
 const schema = z.object({
   campground_id: z.string().uuid(),
@@ -28,7 +29,12 @@ const schema = z.object({
   phone: z.string().max(60).optional().nullable(),
   website: z.string().max(300).optional().nullable(),
   timezone: z.string().min(1).max(60),
-  amenities: z.array(z.enum(AMENITIES)).max(20),
+  amenities: z
+    .array(amenityString)
+    .max(AMENITIES_CAP)
+    // De-dupe (case-sensitive — labels are case-stable; custom
+    // amenities the owner repeats on accident shouldn't double-up).
+    .transform((arr) => Array.from(new Set(arr))),
   logo_url: z.string().max(500).optional().nullable(),
 })
 
