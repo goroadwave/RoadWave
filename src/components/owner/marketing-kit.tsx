@@ -506,13 +506,21 @@ function SignaturePreview({
   campgroundName: string
   checkInUrl: string
 }) {
+  // The on-screen signature preview keeps the 👋 — modern browsers
+  // render emoji glyphs fine via the system emoji font. The downloaded
+  // PDFs and the brand wordmark inside the printed Counter Card / Site
+  // Card / QR PDF do NOT include the emoji because jsPDF's built-in
+  // fonts (helvetica/courier/times) don't ship with emoji glyphs and
+  // would render the codepoint as a tofu box. See comment in
+  // buildCounterCardPdf.
   return (
     <div className="rounded-lg bg-white text-night p-3 text-[11px] flex items-center gap-3">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={qrDataUrl} alt="" className="h-12 w-12" />
       <div>
         <p className="font-bold">
-          Road<span className="text-amber-500">Wave</span>
+          Road<span className="text-amber-500">Wave</span>{' '}
+          <span aria-hidden>👋</span>
         </p>
         <p>
           Scan to connect with fellow campers at{' '}
@@ -552,7 +560,14 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Top-left wordmark — Road white, Wave amber
+  // Top-left wordmark — Road white, Wave amber. We deliberately do
+  // NOT append the 👋 emoji here even though it appears next to the
+  // wordmark everywhere on screen. jsPDF's built-in fonts
+  // (helvetica/courier/times) ship without emoji glyphs, so passing
+  // the codepoint to doc.text() renders an empty tofu box on the
+  // PDF. Embedding a color-emoji font (~1MB) just for one glyph
+  // isn't worth it. The on-screen previews + HTML email outputs
+  // still include the emoji.
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(22)
   setText(doc, BRAND.white)
@@ -908,6 +923,10 @@ function buildEmailSignatureHtml(args: {
   campgroundName: string
   checkInUrl: string
 }): string {
+  // HTML emails render the 👋 emoji fine via the recipient's system
+  // font stack (Apple Color Emoji on macOS/iOS, Segoe UI Emoji on
+  // Windows, Noto Color Emoji on Android/Linux). Safe to include in
+  // the wordmark here even though the PDFs intentionally skip it.
   const safeName = escapeHtml(args.campgroundName)
   const safeUrl = escapeHtml(args.checkInUrl)
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
@@ -917,7 +936,7 @@ function buildEmailSignatureHtml(args: {
     </td>
     <td style="vertical-align:top;font-size:12px;line-height:1.45;color:#111827;">
       <p style="margin:0;font-weight:700;font-size:14px;">
-        <span style="color:#111827;">Road</span><span style="color:#F5A623;">Wave</span>
+        <span style="color:#111827;">Road</span><span style="color:#F5A623;">Wave</span> <span aria-hidden="true">👋</span>
       </p>
       <p style="margin:4px 0 0;color:#374151;">
         Scan to connect with fellow campers at <strong>${safeName}</strong>
