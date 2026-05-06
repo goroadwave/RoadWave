@@ -1,6 +1,6 @@
 import { MarketingKit } from '@/components/owner/marketing-kit'
 import { PageHeading } from '@/components/ui/page-heading'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { loadOwnerCampground } from '../_helpers'
 
 // Owner Marketing Kit. Bundles every brand-correct, owner-customised
@@ -21,11 +21,12 @@ export default async function OwnerMarketingPage() {
     )
   }
 
-  // Same shape as /owner/qr — pull the active QR token via the RLS
-  // server client so a campground that doesn't have one yet renders the
-  // empty-state nudge in MarketingKit instead of a broken QR.
-  const supabase = await createSupabaseServerClient()
-  const { data: tokenRow } = await supabase
+  // campground_qr_tokens has RLS enabled with no policies — only
+  // service_role can read it. Ownership has already been verified by
+  // loadOwnerCampground (campground_admins join), so it's safe to use
+  // the admin client here to fetch the token. Same fix as /owner/qr.
+  const admin = createSupabaseAdminClient()
+  const { data: tokenRow } = await admin
     .from('campground_qr_tokens')
     .select('token')
     .eq('campground_id', campground.id)

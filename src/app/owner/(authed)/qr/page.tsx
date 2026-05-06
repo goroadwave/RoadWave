@@ -1,6 +1,6 @@
 import { OwnerQrPanel } from '@/components/owner/owner-qr-panel'
 import { PageHeading } from '@/components/ui/page-heading'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { loadOwnerCampground } from '../_helpers'
 
 export default async function OwnerQrPage() {
@@ -15,8 +15,12 @@ export default async function OwnerQrPage() {
     )
   }
 
-  const supabase = await createSupabaseServerClient()
-  const { data: tokenRow } = await supabase
+  // campground_qr_tokens has RLS enabled with no policies — only
+  // service_role can read/write it (see migration 0002). Ownership has
+  // already been verified by loadOwnerCampground via the
+  // campground_admins join, so it's safe to use the admin client here.
+  const admin = createSupabaseAdminClient()
+  const { data: tokenRow } = await admin
     .from('campground_qr_tokens')
     .select('token, rotated_at')
     .eq('campground_id', campground.id)
