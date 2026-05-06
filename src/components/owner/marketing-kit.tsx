@@ -223,14 +223,21 @@ export function MarketingKit({
     downloadDataUrl(qrPngDataUrl, `${baseFilename}-qr-1000.png`)
   }
 
+  // The clean, shareable campground welcome URL — the canonical place
+  // for guests to land when an owner sends a link in email or pastes
+  // their signature into Gmail. No token query: tokens are for
+  // QR-scan validation; the welcome page picks up the active token
+  // from the DB on its own when one isn't in the URL.
+  const campgroundPageUrl = `${siteUrl}/campground/${slug}`
+
   async function copyEmailSignature() {
     if (!qrPngDataUrl) return
     const html = buildEmailSignatureHtml({
       qrDataUrl: qrPngDataUrl,
       campgroundName,
-      checkInUrl: checkInUrl as string,
+      campgroundUrl: campgroundPageUrl,
     })
-    const plain = `Scan to connect with fellow campers at ${campgroundName} — ${checkInUrl}`
+    const plain = `Scan to connect with fellow campers at ${campgroundName} — ${campgroundPageUrl}`
     await copyHtmlToClipboard(html, plain)
     flashCopied('signature')
   }
@@ -240,7 +247,7 @@ export function MarketingKit({
     const html = buildWelcomeEmailHtml({
       qrDataUrl: qrPngDataUrl,
       campgroundName,
-      checkInUrl: checkInUrl as string,
+      campgroundUrl: campgroundPageUrl,
     })
     const plain = buildWelcomeEmailText({
       campgroundName,
@@ -251,9 +258,11 @@ export function MarketingKit({
   }
 
   async function copyWelcomeEmailText() {
+    // Plain-text version still uses the bare URL since plain text has
+    // no anchor concept; recipients' email clients auto-link it.
     const plain = buildWelcomeEmailText({
       campgroundName,
-      checkInUrl: checkInUrl as string,
+      checkInUrl: campgroundPageUrl,
     })
     await navigator.clipboard.writeText(plain)
     flashCopied('welcome-text')
@@ -347,7 +356,7 @@ export function MarketingKit({
               <SignaturePreview
                 qrDataUrl={qrPngDataUrl}
                 campgroundName={campgroundName}
-                checkInUrl={checkInUrl}
+                campgroundUrl={campgroundPageUrl}
               />
             )
           }
@@ -518,23 +527,28 @@ function QrThumb({ dataUrl }: { dataUrl: string }) {
 function SignaturePreview({
   qrDataUrl,
   campgroundName,
-  checkInUrl,
+  campgroundUrl,
 }: {
   qrDataUrl: string
   campgroundName: string
-  checkInUrl: string
+  campgroundUrl: string
 }) {
-  // The on-screen signature preview keeps the 👋 — modern browsers
-  // render emoji glyphs fine via the system emoji font. The downloaded
-  // PDFs and the brand wordmark inside the printed Counter Card / Site
-  // Card / QR PDF do NOT include the emoji because jsPDF's built-in
-  // fonts (helvetica/courier/times) don't ship with emoji glyphs and
-  // would render the codepoint as a tofu box. See comment in
-  // buildCounterCardPdf.
+  // Mirrors the same anchor structure the copied HTML signature uses:
+  // QR image is wrapped in a clickable <a>, the URL never appears as
+  // raw text — Gmail's plain-text fallback heuristic was kicking in
+  // when the visible URL got pasted as text and indexing it as a
+  // search query instead of a hyperlink.
   return (
     <div className="rounded-lg bg-white text-night p-3 text-[11px] flex items-center gap-3">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={qrDataUrl} alt="" className="h-12 w-12" />
+      <a
+        href={campgroundUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block shrink-0"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={qrDataUrl} alt={`${campgroundName} check-in QR`} className="h-12 w-12" />
+      </a>
       <div>
         <p className="font-bold">
           Road<span className="text-amber-500">Wave</span>{' '}
@@ -544,7 +558,16 @@ function SignaturePreview({
           Scan to connect with fellow campers at{' '}
           <span className="font-semibold">{campgroundName}</span>
         </p>
-        <p className="text-blue-700 underline break-all">{checkInUrl}</p>
+        <p>
+          <a
+            href={campgroundUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#F5A623', fontWeight: 600 }}
+          >
+            View our campground page →
+          </a>
+        </p>
       </div>
     </div>
   )
@@ -981,18 +1004,27 @@ async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
 function buildEmailSignatureHtml(args: {
   qrDataUrl: string
   campgroundName: string
-  checkInUrl: string
+  campgroundUrl: string
 }): string {
   // HTML emails render the 👋 emoji fine via the recipient's system
   // font stack (Apple Color Emoji on macOS/iOS, Segoe UI Emoji on
   // Windows, Noto Color Emoji on Android/Linux). Safe to include in
   // the wordmark here even though the PDFs intentionally skip it.
+  //
+  // Both the QR image AND the friendly link are wrapped in real <a
+  // href> tags. The visible text never includes the URL string —
+  // some email clients (Gmail in particular) treat a pasted plain
+  // URL as a search query when the surrounding HTML looks ambiguous,
+  // dropping the hyperlink. Replacing the raw URL with "View our
+  // campground page →" sidesteps that completely.
   const safeName = escapeHtml(args.campgroundName)
-  const safeUrl = escapeHtml(args.checkInUrl)
+  const safeHref = escapeHtml(args.campgroundUrl)
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <tr>
     <td style="padding-right:14px;vertical-align:top;">
-      <img src="${args.qrDataUrl}" alt="${safeName} check-in QR" width="84" height="84" style="display:block;border:1px solid #e5e7eb;border-radius:6px;background:#ffffff;" />
+      <a href="${safeHref}" target="_blank" rel="noopener" style="display:block;text-decoration:none;border:0;">
+        <img src="${args.qrDataUrl}" alt="${safeName} check-in QR" width="84" height="84" style="display:block;border:1px solid #e5e7eb;border-radius:6px;background:#ffffff;" />
+      </a>
     </td>
     <td style="vertical-align:top;font-size:12px;line-height:1.45;color:#111827;">
       <p style="margin:0;font-weight:700;font-size:14px;">
@@ -1002,7 +1034,7 @@ function buildEmailSignatureHtml(args: {
         Scan to connect with fellow campers at <strong>${safeName}</strong>
       </p>
       <p style="margin:6px 0 0;">
-        <a href="${safeUrl}" style="color:#F5A623;text-decoration:underline;">${safeUrl}</a>
+        <a href="${safeHref}" target="_blank" rel="noopener" style="color:#F5A623;font-weight:600;text-decoration:none;">View our campground page &rarr;</a>
       </p>
     </td>
   </tr>
@@ -1012,16 +1044,22 @@ function buildEmailSignatureHtml(args: {
 function buildWelcomeEmailHtml(args: {
   qrDataUrl: string
   campgroundName: string
-  checkInUrl: string
+  campgroundUrl: string
 }): string {
+  // Same anchor-friendly approach as the signature builder: visible
+  // text never carries the URL string, both the inline link and the
+  // QR image are real anchors so a recipient can click either one to
+  // open the welcome page.
   const safeName = escapeHtml(args.campgroundName)
-  const safeUrl = escapeHtml(args.checkInUrl)
+  const safeHref = escapeHtml(args.campgroundUrl)
   return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#111827;line-height:1.6;font-size:15px;max-width:560px;">
   <p>Welcome to <strong>${safeName}</strong>!</p>
-  <p>We use RoadWave so our guests can see campground updates, find activities, and optionally connect with fellow campers — privately and without sharing exact site numbers.</p>
-  <p>Scan the QR code below or visit <a href="${safeUrl}" style="color:#F5A623;text-decoration:underline;">${safeUrl}</a> to get started. It&rsquo;s free and takes 30 seconds.</p>
+  <p>We use RoadWave so our guests can see campground updates, find activities, and optionally connect with fellow campers &mdash; privately and without sharing exact site numbers.</p>
+  <p>Scan the QR code below or <a href="${safeHref}" target="_blank" rel="noopener" style="color:#F5A623;font-weight:600;text-decoration:none;">view our campground page &rarr;</a> to get started. It&rsquo;s free and takes 30 seconds.</p>
   <p style="text-align:center;padding:18px 0;">
-    <img src="${args.qrDataUrl}" alt="${safeName} RoadWave QR" width="220" height="220" style="display:inline-block;border:1px solid #e5e7eb;border-radius:8px;background:#ffffff;" />
+    <a href="${safeHref}" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;border:0;">
+      <img src="${args.qrDataUrl}" alt="${safeName} RoadWave QR" width="220" height="220" style="display:inline-block;border:1px solid #e5e7eb;border-radius:8px;background:#ffffff;" />
+    </a>
   </p>
   <p style="font-size:12px;color:#6b7280;">
     Private by design. No exact site numbers. No public group chats. No pressure.
