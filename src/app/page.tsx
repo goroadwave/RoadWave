@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { HomePhonePreview } from '@/components/home/home-phone-preview'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Logo } from '@/components/ui/logo'
+import { getPostAuthDestination } from '@/lib/auth/post-auth-destination'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 const STEPS: { emoji: string; title: string; body: string }[] = [
@@ -99,16 +100,11 @@ export default async function RootPage() {
 
   if (user) {
     if (!user.email_confirmed_at) redirect('/verify')
-    // Owners and super-admins go straight to their dashboard.
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    if (profile?.role === 'owner' || profile?.role === 'super_admin') {
-      redirect('/owner/dashboard')
-    }
-    redirect('/home')
+    // Same helper that /login + /owner/login + the OAuth callback use.
+    // Routes owners (by profiles.role OR campground_admins membership)
+    // to /owner/dashboard, everyone else to /home.
+    const dest = await getPostAuthDestination(supabase, user.id, '/home')
+    redirect(dest)
   }
 
   return (

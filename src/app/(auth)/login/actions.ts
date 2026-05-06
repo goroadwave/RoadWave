@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { getPostAuthDestination } from '@/lib/auth/post-auth-destination'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loginSchema } from '@/lib/validators/auth'
 
@@ -22,8 +23,13 @@ export async function loginAction(
   }
 
   const supabase = await createSupabaseServerClient()
-  const { error } = await supabase.auth.signInWithPassword(parsed.data)
-  if (error) return { error: error.message }
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data)
+  if (error || !data.user) return { error: error?.message ?? 'Could not sign in.' }
 
-  redirect('/')
+  // Route by role + admin membership — owners go straight to the
+  // dashboard, guests to /home. Same helper is used by /owner/login
+  // and the OAuth callback so the destination is consistent across
+  // every entry point.
+  const dest = await getPostAuthDestination(supabase, data.user.id, '/home')
+  redirect(dest)
 }
