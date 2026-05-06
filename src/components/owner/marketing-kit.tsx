@@ -249,20 +249,24 @@ export function MarketingKit({
       campgroundName,
       campgroundUrl: campgroundPageUrl,
     })
+    // Plain-text clipboard companion. MUST use campgroundPageUrl (no
+    // token) — the previous version passed checkInUrl, which carries
+    // ?token=…, and that token URL was leaking into clipboard pastes
+    // that landed on the text/plain MIME type instead of text/html.
     const plain = buildWelcomeEmailText({
       campgroundName,
-      checkInUrl: checkInUrl as string,
+      campgroundUrl: campgroundPageUrl,
     })
     await copyHtmlToClipboard(html, plain)
     flashCopied('welcome-html')
   }
 
   async function copyWelcomeEmailText() {
-    // Plain-text version still uses the bare URL since plain text has
-    // no anchor concept; recipients' email clients auto-link it.
+    // Plain-text version's URL has no token either — the welcome page
+    // looks up the active token from the DB on its own.
     const plain = buildWelcomeEmailText({
       campgroundName,
-      checkInUrl: campgroundPageUrl,
+      campgroundUrl: campgroundPageUrl,
     })
     await navigator.clipboard.writeText(plain)
     flashCopied('welcome-text')
@@ -1069,14 +1073,18 @@ function buildWelcomeEmailHtml(args: {
 
 function buildWelcomeEmailText(args: {
   campgroundName: string
-  checkInUrl: string
+  campgroundUrl: string
 }): string {
+  // Renamed from checkInUrl → campgroundUrl on purpose: the only URL
+  // a guest-facing template should ever surface is the clean
+  // /campground/<slug> welcome URL, not the token-bearing
+  // /checkin?token=… variant. Tokens belong inside QR-image data only.
   return [
     `Welcome to ${args.campgroundName}!`,
     '',
     'We use RoadWave so our guests can see campground updates, find activities, and optionally connect with fellow campers — privately and without sharing exact site numbers.',
     '',
-    `Scan the QR code on our welcome card or visit ${args.checkInUrl} to get started. It's free and takes 30 seconds.`,
+    `Scan the QR code on our welcome card or visit ${args.campgroundUrl} to get started. It's free and takes 30 seconds.`,
     '',
     'Private by design. No exact site numbers. No public group chats. No pressure.',
   ].join('\n')
