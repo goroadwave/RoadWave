@@ -110,7 +110,7 @@ export default function OwnersPage() {
             <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-center">
               <Link
                 href="/start"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-leaf text-night px-6 py-3 font-semibold shadow-lg shadow-leaf/20 hover:bg-leaf/85 transition-colors"
               >
                 Start My Campground Pilot
               </Link>
@@ -296,7 +296,7 @@ export default function OwnersPage() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
               <Link
                 href="/start"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-leaf text-night px-6 py-3 font-semibold shadow-lg shadow-leaf/20 hover:bg-leaf/85 transition-colors"
               >
                 Start My Campground Pilot
               </Link>

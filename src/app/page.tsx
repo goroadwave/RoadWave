@@ -7,17 +7,18 @@ import { getPostAuthDestination } from '@/lib/auth/post-auth-destination'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 // Public homepage. Phase 3 simplification (April 2026):
-//   - 5 sections total: Hero, two choice cards, How It Works,
-//     Privacy promise, final CTA.
-//   - Removed the redundant "Three ways to use it", "Who it's for",
-//     and "Different on purpose" sections — each repeated material
-//     already covered by Hero + Privacy.
+//   - Camper-focused. The homepage no longer pitches owners at all —
+//     owner content lives at /owners and the footer's Campground
+//     Owners column. Two-cards row was removed: the owner card was
+//     selling owners in the camper flow, and the camper card just
+//     mirrored the hero.
+//   - 4 sections total: Hero, How It Works, Privacy promise, final
+//     CTA.
 //   - Privacy bullets are stated once on the homepage, in the
-//     Privacy section. Per the public-site polish brief, repeated
-//     privacy lists across many sections were the main source of
-//     fatigue.
-//   - The "For Campgrounds" choice card was added so owners have a
-//     visible entry point on the homepage without dominating it.
+//     Privacy section.
+//   - "Get Started" is filled-green (bg-leaf) as the brand's primary
+//     action color. "Try the Demo" stays amber/flame so the camper
+//     still has the demo as a clearly secondary path.
 
 const STEPS: { emoji: string; title: string; body: string }[] = [
   {
@@ -87,16 +88,16 @@ export default async function RootPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 pt-2 items-center sm:items-stretch lg:items-stretch lg:justify-start justify-center">
                 <Link
-                  href="/demo"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 text-base font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
-                >
-                  Try the Demo <span aria-hidden>👋</span>
-                </Link>
-                <Link
                   href="/signup"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-6 py-3 text-base font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-leaf text-night px-6 py-3 text-base font-semibold shadow-lg shadow-leaf/20 hover:bg-leaf/85 transition-colors"
                 >
                   Get Started
+                </Link>
+                <Link
+                  href="/demo"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-6 py-3 text-base font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
+                >
+                  Try the Demo <span aria-hidden>👋</span>
                 </Link>
               </div>
             </div>
@@ -106,29 +107,6 @@ export default async function RootPage() {
                 Sample campground preview — demo data shown
               </p>
             </div>
-          </div>
-        </section>
-
-        {/* Two choice cards — For Campers / For Campgrounds */}
-        <section className="px-4 pb-14 sm:pb-20">
-          <div className="mx-auto max-w-4xl grid gap-4 sm:grid-cols-2">
-            <ChoiceCard
-              eyebrow="For campers"
-              title="Scan a campground QR to check in"
-              body="See campground updates and find campers who share your interests. Wave hello only when both people opt in."
-              ctaLabel="Try the Demo"
-              ctaHref="/demo"
-              ctaIcon="👋"
-            />
-            <ChoiceCard
-              eyebrow="For campgrounds"
-              title="A QR guest engagement hub for your campground"
-              body="Help guests leave reviews, book again, find your updates, and reach the office — without an app download or front-desk system."
-              ctaLabel="See how it works"
-              ctaHref="/owners"
-              ctaIcon="🏕️"
-              accent
-            />
           </div>
         </section>
 
@@ -190,11 +168,11 @@ export default async function RootPage() {
           </div>
         </section>
 
-        {/* Final CTA */}
+        {/* Final CTA — camper-flavored, mirrors the hero pair */}
         <section className="px-4 py-16 border-t border-flame/30 bg-flame/[0.06]">
           <div className="mx-auto max-w-xl text-center space-y-5">
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              See what your campground feels like on RoadWave.
+              See it for yourself.
             </h2>
             <p className="text-mist text-base sm:text-lg leading-relaxed">
               No download. No public group chat. Try a sample campground
@@ -202,8 +180,14 @@ export default async function RootPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
               <Link
+                href="/signup"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-leaf text-night px-6 py-3 font-semibold shadow-lg shadow-leaf/20 hover:bg-leaf/85 transition-colors"
+              >
+                Get Started
+              </Link>
+              <Link
                 href="/demo"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-6 py-3 font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
               >
                 Try the Demo <span aria-hidden>👋</span>
               </Link>
@@ -215,50 +199,3 @@ export default async function RootPage() {
   )
 }
 
-function ChoiceCard({
-  eyebrow,
-  title,
-  body,
-  ctaLabel,
-  ctaHref,
-  ctaIcon,
-  accent = false,
-}: {
-  eyebrow: string
-  title: string
-  body: string
-  ctaLabel: string
-  ctaHref: string
-  ctaIcon?: string
-  accent?: boolean
-}) {
-  return (
-    <article
-      className={
-        accent
-          ? 'rounded-2xl border border-flame/40 bg-flame/[0.06] p-6 space-y-3'
-          : 'rounded-2xl border border-white/10 bg-card p-6 space-y-3'
-      }
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-flame">
-        {eyebrow}
-      </p>
-      <h2 className="font-display text-xl sm:text-2xl font-extrabold text-cream leading-tight">
-        {title}
-      </h2>
-      <p className="text-sm text-mist leading-relaxed">{body}</p>
-      <div className="pt-1">
-        <Link
-          href={ctaHref}
-          className={
-            accent
-              ? 'inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-5 py-2.5 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors'
-              : 'inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-5 py-2.5 text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors'
-          }
-        >
-          {ctaLabel} {ctaIcon && <span aria-hidden>{ctaIcon}</span>}
-        </Link>
-      </div>
-    </article>
-  )
-}

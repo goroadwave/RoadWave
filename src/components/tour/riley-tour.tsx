@@ -397,7 +397,7 @@ function CtaRow() {
     <div className="flex flex-col sm:flex-row gap-2 flex-1 sm:flex-initial">
       <Link
         href="/signup"
-        className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-4 py-2 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
+        className="inline-flex items-center justify-center gap-2 rounded-xl bg-leaf text-night px-4 py-2 text-sm font-semibold shadow-lg shadow-leaf/15 hover:bg-leaf/85 transition-colors"
       >
         Get Started <span aria-hidden>👋</span>
       </Link>

@@ -244,4 +244,4 @@ const inputClass =
   'w-full rounded-lg border border-white/10 bg-white/5 text-cream placeholder:text-mist/60 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-flame focus:border-flame'
 
 const primaryButtonClass =
-  'inline-flex w-full items-center justify-center gap-2 rounded-lg bg-flame text-night px-4 py-2.5 font-semibold shadow-lg shadow-flame/10 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+  'inline-flex w-full items-center justify-center gap-2 rounded-lg bg-leaf text-night px-4 py-2.5 font-semibold shadow-lg shadow-leaf/10 hover:bg-leaf/85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'

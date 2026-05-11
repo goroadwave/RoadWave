@@ -211,7 +211,7 @@ export function OwnerSignupForm() {
       <button
         type="submit"
         disabled={pending || !allAcks}
-        className="w-full rounded-xl bg-flame text-night px-4 py-3 text-base font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full rounded-xl bg-leaf text-night px-4 py-3 text-base font-semibold shadow-lg shadow-leaf/20 hover:bg-leaf/85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {pending ? 'Saving…' : 'Start My Campground Pilot'}
       </button>
