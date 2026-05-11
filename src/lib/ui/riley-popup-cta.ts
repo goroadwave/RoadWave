@@ -21,7 +21,7 @@ export function rileyPopupCtaForPath(pathname: string | null): RileyPopupCta {
   ) {
     return {
       label: 'Start My Campground Pilot',
-      href: '/start',
+      href: '/owners/start',
       kind: 'start',
     }
   }

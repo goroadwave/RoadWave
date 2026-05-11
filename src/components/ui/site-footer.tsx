@@ -15,8 +15,13 @@ const GUEST_LINKS: { label: string; href: string }[] = [
 ]
 
 const OWNER_LINKS: { label: string; href: string }[] = [
+  // For Campgrounds → the explanation page (/owners).
+  // Start a Campground Pilot → the short action-focused intake
+  // form (/owners/start). These two are intentionally separate
+  // destinations so the footer flow doesn't loop back to the same
+  // marketing copy.
   { label: 'For Campgrounds', href: '/owners' },
-  { label: 'Start a Campground Pilot', href: '/start' },
+  { label: 'Start a Campground Pilot', href: '/owners/start' },
   { label: 'Campground Safety Overview', href: '/campground-safety' },
   { label: 'Campground Partner Terms', href: '/campground-partner-terms' },
   { label: 'Contact RoadWave', href: '/contact' },

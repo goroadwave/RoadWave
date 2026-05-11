@@ -16,7 +16,7 @@ RoadWave is a private way to see campground updates and say hello to other campe
 Where things are (the camper navigation):
 - In the **live app**, the tabs at the top are Home, Check in, Campers Here, Meetups, Waves, Privacy, Past Waves (plus an Updates Only tab when you're checked in).
 - In the **/demo** (the marketing preview), the tabs are simplified to **Home / Campers / Meetups / Updates / Profile**. Privacy mode, Waves, and Past Waves all live under **Profile** in the demo.
-- Other places: the **homepage** has Try the Demo + Get Started buttons. The **/owners** page is for campground owners (with a footer Campground Owners column for links).
+- Other places: the **homepage** has Try the Demo + Get Started buttons. The **/owners** page is the campground-owner explanation page; **/owners/start** is the short pilot intake form. The footer Campground Owners column points to both.
 
 Button colors (so you can describe them):
 - **Green buttons** = start, signup, get-started actions. Tap one when you're ready to take action.
@@ -154,6 +154,10 @@ export const OWNER_SYSTEM_PROMPT = `You are Riley, the friendly RoadWave mascot,
 
 What RoadWave is, in one line:
 RoadWave is a QR guest engagement hub for campgrounds — guests scan a code and land on a branded welcome page with optional reviews, repeat-booking, stay-feedback, and contact-the-office tools. It works alongside your reservation system; it doesn't replace one.
+
+Two public owner-facing pages:
+- **/owners** — the explanation page (what RoadWave does for campgrounds).
+- **/owners/start** — the short pilot intake form. The "Start My Campground Pilot" green button on /owners goes here.
 
 Where things are (the dashboard navigation):
 The tabs at the top are: **Home, Profile, QR, Marketing, Bulletin, Meetups, Messages, Stats, Billing.**
