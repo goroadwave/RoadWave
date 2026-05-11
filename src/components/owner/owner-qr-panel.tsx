@@ -5,6 +5,10 @@ import {
   rotateQrTokenAction,
   type RotateState,
 } from '@/app/owner/(authed)/qr/actions'
+import {
+  drawBrandWordmark,
+  renderEmojiToPng,
+} from '@/lib/owner/qr-card-brand'
 
 // Brand colors — kept in sync with tailwind theme tokens.
 const NIGHT: [number, number, number] = [10, 15, 28] // #0a0f1c
@@ -23,6 +27,8 @@ type SignFormat = 'letter' | '5x7'
 // Layout scales from the page width: same hierarchy at 5×7 and 8.5×11.
 async function buildBrandedQrPdf(args: {
   qrDataUrl: string
+  /** Pre-rasterised 👋 PNG; pass null to fall back to text-only wordmark. */
+  waveDataUrl: string | null
   campgroundName: string
   format: SignFormat
 }): Promise<Blob> {
@@ -52,20 +58,20 @@ async function buildBrandedQrPdf(args: {
   const safetySize = W * 0.0225
   const footerSize = W * 0.02
 
-  // 1) RoadWave wordmark — two-tone "Road" (cream) + "Wave" (amber).
-  // jsPDF's default WinAnsi fonts don't include emoji, so the wave glyph
-  // is omitted in print to keep this rendering reliably across viewers.
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(wordmarkSize)
+  // 1) Canonical RoadWave wordmark — cream "Road", flame "Wave", 👋
+  // PNG flush against "Wave". The shared helper handles the emoji
+  // rasterisation; jsPDF's built-in fonts can't render the emoji
+  // codepoint directly so we pre-render it to a transparent PNG on
+  // the client and embed it as an image.
   const yWordmark = pad + wordmarkSize
-  const roadWidth = doc.getTextWidth('Road')
-  const waveWidth = doc.getTextWidth('Wave')
-  const wordmarkTotal = roadWidth + waveWidth
-  const wordmarkStart = (W - wordmarkTotal) / 2
-  doc.setTextColor(CREAM[0], CREAM[1], CREAM[2])
-  doc.text('Road', wordmarkStart, yWordmark)
-  doc.setTextColor(FLAME[0], FLAME[1], FLAME[2])
-  doc.text('Wave', wordmarkStart + roadWidth, yWordmark)
+  drawBrandWordmark({
+    doc,
+    fontSize: wordmarkSize,
+    waveDataUrl: args.waveDataUrl,
+    y: yWordmark,
+    align: 'center',
+    x: W / 2,
+  })
 
   // 2) Campground name headline.
   doc.setFontSize(headlineSize)
@@ -148,6 +154,12 @@ export function OwnerQrPanel({
   checkInUrl,
 }: Props) {
   const [dataUrl, setDataUrl] = useState<string | null>(null)
+  // 👋 rasterised to a transparent PNG via the browser canvas + the
+  // OS's color-emoji font. jsPDF's built-in helvetica can't render
+  // emoji codepoints, so the wave next to the wordmark inside every
+  // generated PDF gets embedded as this PNG image instead. Rendered
+  // once on mount and reused across both PDF sizes.
+  const [waveDataUrl, setWaveDataUrl] = useState<string | null>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [state, formAction, pending] = useActionState(
@@ -186,6 +198,14 @@ export function OwnerQrPanel({
     }
   }, [checkInUrl])
 
+  // Pre-render the 👋 emoji to a transparent PNG once on mount so
+  // buildBrandedQrPdf can embed it as part of the canonical RoadWave
+  // wordmark. 192px is high enough that the PDF re-scaling down to
+  // ~48pt looks crisp on print.
+  useEffect(() => {
+    setWaveDataUrl(renderEmojiToPng('👋', 192))
+  }, [])
+
   if (!token || !checkInUrl) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 bg-card p-6 text-center text-sm text-mist">
@@ -210,6 +230,7 @@ export function OwnerQrPanel({
     try {
       const blob = await buildBrandedQrPdf({
         qrDataUrl: dataUrl,
+        waveDataUrl,
         campgroundName,
         format,
       })

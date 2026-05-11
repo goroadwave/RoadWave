@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import {
+  drawBrandWordmark,
+  renderEmojiToPng as renderEmojiToPngShared,
+} from '@/lib/owner/qr-card-brand'
 
 // Owner-facing Marketing Kit. Generates every brand-correct, auto-
 // populated promotional asset on demand: PDFs are built client-side
@@ -115,7 +119,7 @@ export function MarketingKit({
   // Linux), so the look matches what the owner sees in their own
   // system everywhere else.
   useEffect(() => {
-    setWaveDataUrl(renderEmojiToPng('👋', 192))
+    setWaveDataUrl(renderEmojiToPngShared('👋', 192))
   }, [])
 
   function flashCopyResult(label: string, ok: boolean) {
@@ -646,32 +650,18 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Wordmark centered at the top. "Road" white, "Wave" amber, with
-  // the 👋 PNG rendered to the right (jsPDF can't render emoji from
-  // its built-in fonts, so the parent component rasterises it).
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(20)
-  const roadW = doc.getTextWidth('Road')
-  const waveW = doc.getTextWidth('Wave')
-  const waveImgSize = args.waveDataUrl ? 20 : 0
-  const waveGap = args.waveDataUrl ? 5 : 0
-  const wordmarkTotalW = roadW + waveW + waveGap + waveImgSize
-  const wordmarkX = (W - wordmarkTotalW) / 2
+  // Canonical RoadWave wordmark, centered at the top. Cream "Road",
+  // flame "Wave", 👋 PNG flush against "Wave" — matches the site
+  // Logo component byte-for-byte.
   const wordmarkY = PAD + 16
-  setText(doc, BRAND.white)
-  doc.text('Road', wordmarkX, wordmarkY)
-  setText(doc, BRAND.amber)
-  doc.text('Wave', wordmarkX + roadW, wordmarkY)
-  if (args.waveDataUrl) {
-    doc.addImage(
-      args.waveDataUrl,
-      'PNG',
-      wordmarkX + roadW + waveW + waveGap,
-      wordmarkY - waveImgSize + 3,
-      waveImgSize,
-      waveImgSize,
-    )
-  }
+  drawBrandWordmark({
+    doc,
+    fontSize: 20,
+    waveDataUrl: args.waveDataUrl,
+    y: wordmarkY,
+    align: 'center',
+    x: W / 2,
+  })
 
   // "WELCOME TO" eyebrow
   doc.setFontSize(7.5)
@@ -780,32 +770,16 @@ async function buildSimpleQrPdf(args: {
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Wordmark centered top, with the 👋 image next to it. Layout
-  // accounts for the wave's width when computing horizontal centering
-  // so the whole wordmark+wave block stays centered.
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(36)
-  const roadW = doc.getTextWidth('Road')
-  const waveW = doc.getTextWidth('Wave')
-  const waveImgSize = args.waveDataUrl ? 36 : 0
-  const waveImgGap = args.waveDataUrl ? 10 : 0
-  const totalW = roadW + waveW + waveImgGap + waveImgSize
+  // Canonical RoadWave wordmark, centered at the top.
   const wmY = 96
-  const wmX = (W - totalW) / 2
-  setText(doc, BRAND.white)
-  doc.text('Road', wmX, wmY)
-  setText(doc, BRAND.amber)
-  doc.text('Wave', wmX + roadW, wmY)
-  if (args.waveDataUrl) {
-    doc.addImage(
-      args.waveDataUrl,
-      'PNG',
-      wmX + roadW + waveW + waveImgGap,
-      wmY - waveImgSize + 4,
-      waveImgSize,
-      waveImgSize,
-    )
-  }
+  drawBrandWordmark({
+    doc,
+    fontSize: 36,
+    waveDataUrl: args.waveDataUrl,
+    y: wmY,
+    align: 'center',
+    x: W / 2,
+  })
 
   // Centered QR
   const qrSize = 360
@@ -855,30 +829,16 @@ async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Wordmark centered top.
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(26)
-  const roadW = doc.getTextWidth('Road')
-  const waveW = doc.getTextWidth('Wave')
-  const waveImgSize = args.waveDataUrl ? 26 : 0
-  const waveImgGap = args.waveDataUrl ? 6 : 0
-  const totalW = roadW + waveW + waveImgGap + waveImgSize
+  // Canonical RoadWave wordmark, centered at the top.
   const wmY = PAD + 30
-  const wmX = (W - totalW) / 2
-  setText(doc, BRAND.white)
-  doc.text('Road', wmX, wmY)
-  setText(doc, BRAND.amber)
-  doc.text('Wave', wmX + roadW, wmY)
-  if (args.waveDataUrl) {
-    doc.addImage(
-      args.waveDataUrl,
-      'PNG',
-      wmX + roadW + waveW + waveImgGap,
-      wmY - waveImgSize + 3,
-      waveImgSize,
-      waveImgSize,
-    )
-  }
+  drawBrandWordmark({
+    doc,
+    fontSize: 26,
+    waveDataUrl: args.waveDataUrl,
+    y: wmY,
+    align: 'center',
+    x: W / 2,
+  })
 
   // "WELCOME TO" eyebrow
   doc.setFontSize(8)
@@ -1084,24 +1044,6 @@ function slugify(s: string): string {
 // to an empty string if the canvas API isn't available (server-side
 // render of this file shouldn't happen — the component is 'use client'
 // — but the guard keeps tooling happy).
-function renderEmojiToPng(emoji: string, sizePx: number): string {
-  if (typeof document === 'undefined') return ''
-  const canvas = document.createElement('canvas')
-  canvas.width = sizePx
-  canvas.height = sizePx
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return ''
-  // Slightly under-fill so the glyph isn't clipped at the edges by
-  // browsers that render emoji larger than the nominal font size.
-  const fontPx = Math.round(sizePx * 0.82)
-  ctx.font =
-    `${fontPx}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", ` +
-    `"Twemoji Mozilla", "EmojiOne Color", "Android Emoji", system-ui, sans-serif`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(emoji, sizePx / 2, sizePx / 2 + sizePx * 0.04)
-  return canvas.toDataURL('image/png')
-}
 
 function escapeHtml(s: string): string {
   return s

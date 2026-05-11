@@ -1,6 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import {
+  drawBrandWordmark,
+  renderEmojiToPng,
+} from '@/lib/owner/qr-card-brand'
 
 // Promo Kit. Three downloadable, print-ready PDFs for any campground —
 // each embedding the campground's unique QR code, the RoadWave wordmark,
@@ -68,6 +72,10 @@ type Props = {
 
 export function PromoKit({ campgroundName, checkInUrl }: Props) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  // 👋 rasterised to a transparent PNG via the OS color-emoji font;
+  // see qr-card-brand.ts for why jsPDF needs the image rather than
+  // the codepoint.
+  const [waveDataUrl, setWaveDataUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<Format | null>(null)
 
@@ -99,12 +107,19 @@ export function PromoKit({ campgroundName, checkInUrl }: Props) {
     }
   }, [checkInUrl])
 
+  // Pre-render the 👋 emoji to a transparent PNG once on mount so
+  // each promo PDF can embed it as part of the canonical wordmark.
+  useEffect(() => {
+    setWaveDataUrl(renderEmojiToPng('👋', 192))
+  }, [])
+
   async function download(format: FormatSpec) {
     if (!qrDataUrl) return
     setBusy(format.id)
     try {
       const blob = await buildPdf({
         qrDataUrl,
+        waveDataUrl,
         campgroundName,
         format,
       })
@@ -178,6 +193,8 @@ export function PromoKit({ campgroundName, checkInUrl }: Props) {
 
 async function buildPdf(args: {
   qrDataUrl: string
+  /** Pre-rasterised 👋 PNG; pass null to fall back to text-only wordmark. */
+  waveDataUrl: string | null
   campgroundName: string
   format: FormatSpec
 }): Promise<Blob> {
@@ -198,9 +215,9 @@ async function buildPdf(args: {
   doc.rect(0, 0, W, H, 'F')
 
   if (args.format.id === 'desk-card') {
-    drawDeskCard(doc, W, H, args.qrDataUrl, args.campgroundName)
+    drawDeskCard(doc, W, H, args.qrDataUrl, args.waveDataUrl, args.campgroundName)
   } else {
-    drawPoster(doc, W, H, args.qrDataUrl, args.campgroundName)
+    drawPoster(doc, W, H, args.qrDataUrl, args.waveDataUrl, args.campgroundName)
   }
 
   return doc.output('blob')
@@ -215,6 +232,7 @@ function drawPoster(
   W: number,
   H: number,
   qrDataUrl: string,
+  waveDataUrl: string | null,
   campgroundName: string,
 ) {
   const pad = W * 0.07
@@ -242,16 +260,17 @@ function drawPoster(
       : campgroundName
   doc.text(printedName, W / 2, yHeadline, { align: 'center' })
 
-  // 3) RoadWave wordmark below the name — two-tone Road/Wave.
-  doc.setFontSize(wordmarkSize)
+  // 3) Canonical RoadWave wordmark below the name — cream Road,
+  // flame Wave, 👋 PNG flush against Wave.
   const yWordmark = yHeadline + wordmarkSize * 1.1
-  const roadWidth = doc.getTextWidth('Road')
-  const waveWidth = doc.getTextWidth('Wave')
-  const wordmarkStart = (W - (roadWidth + waveWidth)) / 2
-  doc.setTextColor(CREAM[0], CREAM[1], CREAM[2])
-  doc.text('Road', wordmarkStart, yWordmark)
-  doc.setTextColor(FLAME[0], FLAME[1], FLAME[2])
-  doc.text('Wave', wordmarkStart + roadWidth, yWordmark)
+  drawBrandWordmark({
+    doc,
+    fontSize: wordmarkSize,
+    waveDataUrl,
+    y: yWordmark,
+    align: 'center',
+    x: W / 2,
+  })
 
   // 4) QR card.
   const qrCardSize = Math.min(W - pad * 2, H * 0.5)
@@ -297,6 +316,7 @@ function drawDeskCard(
   W: number,
   H: number,
   qrDataUrl: string,
+  waveDataUrl: string | null,
   campgroundName: string,
 ) {
   const pad = H * 0.08
@@ -321,16 +341,17 @@ function drawDeskCard(
   const textX = qrX + qrSize + pad * 0.8
   const textW = W - textX - pad
 
-  // Wordmark.
+  // Canonical RoadWave wordmark, left-aligned to the text column.
   const wordmarkSize = H * 0.13
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(wordmarkSize)
   let y = pad + wordmarkSize
-  doc.setTextColor(CREAM[0], CREAM[1], CREAM[2])
-  const roadWidth = doc.getTextWidth('Road')
-  doc.text('Road', textX, y)
-  doc.setTextColor(FLAME[0], FLAME[1], FLAME[2])
-  doc.text('Wave', textX + roadWidth, y)
+  drawBrandWordmark({
+    doc,
+    fontSize: wordmarkSize,
+    waveDataUrl,
+    y,
+    align: 'left',
+    x: textX,
+  })
 
   // Campground name (truncated to fit the right column).
   const nameSize = H * 0.075
