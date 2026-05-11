@@ -106,8 +106,25 @@ try {
   console.log(`✓ seeded legal_acks`)
 
   // ---- 3. Drive Playwright through /login ----
+  // When the target is a Vercel preview URL, the project's Deployment
+  // Protection blocks anonymous traffic with a Vercel SSO login page.
+  // VERCEL_AUTOMATION_BYPASS_SECRET (configured in Vercel project
+  // settings → Deployment Protection → Protection Bypass for
+  // Automation) lets us bypass that gate by sending the header on
+  // every request. The header is harmless when hitting production
+  // (getroadwave.com isn't protected).
   const browser = await chromium.launch()
-  const ctx = await browser.newContext()
+  const extraHTTPHeaders = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+    ? {
+        'x-vercel-protection-bypass':
+          process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+        // Tell Vercel to set a cookie so client-side fetches /api/*
+        // stay authenticated through redirects without re-checking
+        // the header every hop.
+        'x-vercel-set-bypass-cookie': 'true',
+      }
+    : undefined
+  const ctx = await browser.newContext({ extraHTTPHeaders })
   const page = await ctx.newPage()
 
   await page.goto(`${SITE}/login`, { waitUntil: 'networkidle' })
