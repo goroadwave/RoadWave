@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { sendOwnerWeeklyReportEmail } from '@/lib/email/owner-weekly-report'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { getSiteOrigin } from '@/lib/utils'
 
 // Weekly Monday-morning owner report. Vercel cron hits this every
 // Monday at 13:00 UTC (configured in vercel.json — that's ~9 AM ET /
@@ -93,8 +92,17 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const origin = getSiteOrigin(request.headers)
-  const dashboardUrl = `${origin}/owner/dashboard`
+  // Build the dashboard URL from NEXT_PUBLIC_SITE_URL (set in Vercel)
+  // with a hardcoded production fallback. getSiteOrigin() reads the
+  // request headers, which is the right call for user-driven requests
+  // but the wrong call for Vercel cron — the cron infrastructure
+  // forwards an internal host (vercel.com / a Vercel deploy URL),
+  // not the public domain, so the link would land on the wrong host.
+  // Same fallback pattern used in profile/actions.ts and the dashboard.
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.getroadwave.com'
+  ).replace(/\/$/, '')
+  const dashboardUrl = `${siteUrl}/owner/dashboard`
   const windowLabel = formatWindowLabel(cutoff, now)
 
   let sent = 0
