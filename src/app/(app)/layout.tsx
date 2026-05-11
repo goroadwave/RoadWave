@@ -32,11 +32,32 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // link can be conditionally rendered in the header.
   const { data: profileRow } = await supabase
     .from('profiles')
-    .select('suspended_at, is_admin')
+    .select('suspended_at, is_admin, privacy_mode')
     .eq('id', user.id)
     .maybeSingle()
   if (profileRow?.suspended_at) redirect('/suspended')
   const isAdmin = profileRow?.is_admin === true
+  const currentPrivacyMode = (profileRow?.privacy_mode ?? 'visible') as
+    | 'visible'
+    | 'quiet'
+    | 'invisible'
+    | 'campground_updates_only'
+
+  // Active-check-in flag for the AppNav's "Updates Only" 8th tab. The
+  // tab is a one-tap privacy flip into Campground Updates Only mode and
+  // only makes sense for a guest who's currently checked into a
+  // campground (otherwise there's nothing for the mode to gate updates
+  // from). Same canonical "active and not expired" shape used in /home,
+  // /nearby, and /meetups.
+  const { data: activeCheckIn } = await supabase
+    .from('check_ins')
+    .select('id')
+    .eq('profile_id', user.id)
+    .eq('status', 'active')
+    .gt('expires_at', new Date().toISOString())
+    .limit(1)
+    .maybeSingle()
+  const hasActiveCheckIn = !!activeCheckIn
 
   // Consent gate: every user must have a legal_acks row before reaching
   // the app. Email signups land one at signup; OAuth users go through
@@ -95,7 +116,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </header>
-      <AppNav />
+      <AppNav
+        showUpdatesOnly={hasActiveCheckIn}
+        currentPrivacyMode={currentPrivacyMode}
+      />
       <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-6">{children}</main>
       <GuestSupportChat />
       <TourOverlay />
