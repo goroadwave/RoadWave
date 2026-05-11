@@ -21,6 +21,8 @@
 //   5. Tear everything down in finally{}.
 //
 // Run: node scripts/test-riley-popup-on-home.mjs
+// CI:  triggered by .github/workflows/smoke-riley.yml on every
+//      successful non-Production Vercel deployment_status.
 
 import path from 'node:path'
 import crypto from 'node:crypto'
