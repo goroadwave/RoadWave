@@ -67,7 +67,7 @@
             SMOKE_SITE_URL: ${{ github.event.deployment_status.target_url }}
             NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
             SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          run: node scripts/test-riley-popup-on-home.mjs
+          run: node scripts/test-riley-popup-on-home.mjs VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
         - name: Upload screenshots on failure
           if: failure()
