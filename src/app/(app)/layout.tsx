@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { AppLantern } from '@/components/lantern/app-lantern'
 import { GuestSupportChat } from '@/components/support/guest-support-chat'
+import { GuestSupportProvider } from '@/components/support/guest-support-context'
 import { AppNav } from '@/components/ui/app-nav'
 import { Logo } from '@/components/ui/logo'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -73,36 +74,44 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const showGuestSupport = activeCheckIn !== null
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-white/5 bg-night/80 backdrop-blur sticky top-0 z-20">
-        <div className="mx-auto max-w-3xl flex items-center justify-between px-4 py-3 h-14">
-          <Link href="/home" className="inline-block">
-            <Logo className="text-2xl" />
-          </Link>
-          <div className="flex items-center gap-3">
-            <AppLantern />
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
-              >
-                Admin
-              </Link>
-            )}
-            <form action="/auth/sign-out?next=/" method="post">
-              <button
-                type="submit"
-                className="text-sm text-mist hover:text-cream underline-offset-2 hover:underline"
-              >
-                Sign out
-              </button>
-            </form>
+    // Wrap everything below the auth gates in GuestSupportProvider so
+    // AppNav's "Help" tab and the GuestSupportChat panel can share
+    // open/close state. enabled is bound to the active-check-in check
+    // — the nav tab and the chat mount are both gated by the same
+    // condition, so the AppNav never renders a Help tab that opens
+    // nothing.
+    <GuestSupportProvider enabled={showGuestSupport}>
+      <div className="min-h-screen flex flex-col">
+        <header className="border-b border-white/5 bg-night/80 backdrop-blur sticky top-0 z-20">
+          <div className="mx-auto max-w-3xl flex items-center justify-between px-4 py-3 h-14">
+            <Link href="/home" className="inline-block">
+              <Logo className="text-2xl" />
+            </Link>
+            <div className="flex items-center gap-3">
+              <AppLantern />
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="text-xs font-semibold text-flame underline-offset-2 hover:underline"
+                >
+                  Admin
+                </Link>
+              )}
+              <form action="/auth/sign-out?next=/" method="post">
+                <button
+                  type="submit"
+                  className="text-sm text-mist hover:text-cream underline-offset-2 hover:underline"
+                >
+                  Sign out
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-      </header>
-      <AppNav />
-      <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-6">{children}</main>
-      {showGuestSupport && <GuestSupportChat />}
-    </div>
+        </header>
+        <AppNav />
+        <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-6">{children}</main>
+        {showGuestSupport && <GuestSupportChat />}
+      </div>
+    </GuestSupportProvider>
   )
 }

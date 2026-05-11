@@ -39,6 +39,14 @@ type Props = {
   /** Owner: `true` so the current pathname is forwarded to the API for
    *  page-aware context. Guest: omit. */
   includePathname?: boolean
+  /** When true, the default floating trigger button is NOT rendered.
+   *  Used by the guest variant, where the trigger lives in AppNav. */
+  hideDefaultTrigger?: boolean
+  /** Optional external open-state. When provided, this overrides the
+   *  internal open/setOpen — letting a parent component (e.g. a nav
+   *  tab) drive when the panel opens and closes. */
+  externalOpen?: boolean
+  setExternalOpen?: (open: boolean) => void
 }
 
 const MAX_USER_MESSAGES_PER_SESSION = 20
@@ -46,7 +54,16 @@ const REPORT_AFTER_EXCHANGES = 3
 
 export function SupportChat(props: Props) {
   const pathname = usePathname()
-  const [open, setOpen] = useState(false)
+  // open / setOpen come from props when an external controller is
+  // provided (guest variant routes through GuestSupportContext so the
+  // AppNav "Help" tab can open the panel); otherwise the component
+  // owns its own open state and the floating trigger toggles it.
+  const useExternal =
+    typeof props.externalOpen === 'boolean' &&
+    typeof props.setExternalOpen === 'function'
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = useExternal ? props.externalOpen! : internalOpen
+  const setOpen = useExternal ? props.setExternalOpen! : setInternalOpen
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -159,7 +176,11 @@ export function SupportChat(props: Props) {
   return (
     <>
       {/* ---- Floating trigger ---- */}
-      {!open && (
+      {/* Owner variant uses the default floating button. Guest variant
+          passes hideDefaultTrigger so the trigger can live in AppNav
+          and the bottom-right corner stays free for the Riley
+          mascot. */}
+      {!open && !props.hideDefaultTrigger && (
         <button
           type="button"
           onClick={() => setOpen(true)}
