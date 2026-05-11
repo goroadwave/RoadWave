@@ -641,15 +641,13 @@ function GuestApp({ campgroundName, onReset }) {
       </div>
 
       {screen !== 'chat' && screen !== 'matchchoice' && screen !== 'crossedchat' && (
-        <nav className="grid grid-cols-4 gap-1 px-3 pb-2 pt-2 text-[11px]">
+        <nav className="grid grid-cols-5 gap-1 px-3 pb-2 pt-2 text-[11px]">
           {[
             ['home', 'Home'],
-            ['checkin', 'Check in'],
-            ['nearby', 'Campers Here'],
+            ['nearby', 'Campers'],
             ['meetups', 'Meetups'],
-            ['waves', 'Waves'],
-            ['privacy', 'Privacy'],
-            ['paths', 'Past Waves'],
+            ['updates', 'Updates'],
+            ['profile', 'Profile'],
           ].map(([id, label]) => (
             <button
               key={id}
@@ -665,23 +663,6 @@ function GuestApp({ campgroundName, onReset }) {
               {label}
             </button>
           ))}
-          {/* 8th slot is an action button, not a nav tab — flips the
-              user into Campground Updates Only privacy mode in one tap.
-              Lives here because grid-cols-4 leaves a hole after Past
-              Waves, and the user wants the CUO shortcut visible without
-              scrolling past the Home content. */}
-          <button
-            type="button"
-            data-tour="tab-updates-only"
-            onClick={() => setPrivacy('campground_updates_only')}
-            className={
-              privacy === 'campground_updates_only'
-                ? 'rounded-md bg-flame/15 text-flame px-2 py-1.5 font-semibold'
-                : 'rounded-md text-mist px-2 py-1.5 hover:text-cream'
-            }
-          >
-            Updates Only
-          </button>
         </nav>
       )}
       <div
@@ -723,26 +704,21 @@ function GuestApp({ campgroundName, onReset }) {
             onDismissToast={() => setToast(null)}
             viewerInterests={chosenInterests}
             privacy={privacy}
-            onChangePrivacy={() => setScreen('privacy')}
+            onChangePrivacy={() => setScreen('profile')}
           />
         )}
         {screen === 'meetups' && <MeetupsScreen campgroundName={campgroundName} />}
-        {screen === 'waves' && (
-          <WavesScreen
+        {screen === 'updates' && <UpdatesScreen campgroundName={campgroundName} />}
+        {screen === 'profile' && (
+          <ProfileScreen
+            privacy={privacy}
+            onPrivacy={setPrivacy}
             waved={waved}
             onMessage={handleMessage}
             onRemove={removeWave}
             blocked={blocked}
-          />
-        )}
-        {screen === 'privacy' && (
-          <PrivacyScreen mode={privacy} onChange={setPrivacy} />
-        )}
-        {screen === 'paths' && (
-          <CrossedPathsScreen
-            waved={waved}
             campgroundName={campgroundName}
-            onOpen={openCrossedPath}
+            onOpenCrossedPath={openCrossedPath}
           />
         )}
         {screen === 'crossedchat' && crossedChatWith && (
@@ -750,7 +726,7 @@ function GuestApp({ campgroundName, onReset }) {
             path={crossedChatWith}
             onBack={() => {
               setCrossedChatWith(null)
-              setScreen('paths')
+              setScreen('profile')
             }}
           />
         )}
@@ -1480,7 +1456,7 @@ function HomeScreen({ privacyMode, onScreen, campgroundName }) {
         </div>
         <button
           type="button"
-          onClick={() => onScreen('privacy')}
+          onClick={() => onScreen('profile')}
           className="shrink-0 text-xs font-semibold text-flame underline-offset-2 hover:underline"
         >
           Change
@@ -1492,7 +1468,7 @@ function HomeScreen({ privacyMode, onScreen, campgroundName }) {
         <Tile title="Check in" description="Scan the campground QR." onClick={() => onScreen('checkin')} />
         <Tile title="Campers checked in here" description="Who shares your interests?" onClick={() => onScreen('nearby')} />
         <Tile title="Meetup spots" description="Activities posted by your campground." onClick={() => onScreen('meetups')} />
-        <Tile title="Crossed paths" description="Mutual waves you've made." onClick={() => onScreen('paths')} />
+        <Tile title="Campground updates" description="Bulletins, weather, quiet hours." onClick={() => onScreen('updates')} />
       </div>
 
       {/* Prominent next-action CTA. The Nearby tab is the heart of the
@@ -2091,6 +2067,130 @@ function MeetupsScreen({ campgroundName }) {
         <span aria-hidden className="text-base leading-none">＋</span>
         Post Your Own Meetup
       </button>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Updates screen — campground bulletins, weather notices, and reminders.
+// Mirrors the real /campground/[slug]/updates surface guests reach without
+// signing in. Mock data is inlined so the demo stays self-contained.
+// ----------------------------------------------------------------------------
+
+const DEMO_BULLETINS = [
+  {
+    id: 'b1',
+    category: 'alert',
+    message: 'Storm cells expected after 9 PM. Lower your awnings and stake down anything loose.',
+    when: 'just now',
+  },
+  {
+    id: 'b2',
+    category: 'event',
+    message: 'Coffee at the clubhouse — 8 AM tomorrow. Bring your own mug if you can.',
+    when: '2h ago',
+  },
+  {
+    id: 'b3',
+    category: 'general',
+    message: 'Quiet hours are 10 PM – 7 AM. Generators off during quiet hours please.',
+    when: 'yesterday',
+  },
+  {
+    id: 'b4',
+    category: 'special',
+    message: 'Food truck (BBQ) Friday 5–8 PM at the pavilion. Cash or Venmo.',
+    when: '2d ago',
+  },
+]
+
+function categoryLabel(c) {
+  if (c === 'event') return 'Event'
+  if (c === 'special') return 'Special'
+  if (c === 'alert') return 'Alert'
+  return 'Update'
+}
+
+function categoryColor(c) {
+  return c === 'alert' ? 'text-red-300' : 'text-flame'
+}
+
+function UpdatesScreen({ campgroundName }) {
+  return (
+    <div className="space-y-4 py-3">
+      <header>
+        <Eyebrow>Campground updates</Eyebrow>
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
+          What&apos;s new at {campgroundName}
+        </h1>
+        <p className="font-serif italic text-flame text-sm leading-snug">
+          Bulletins, weather, and reminders from the office.
+        </p>
+      </header>
+      <ul className="space-y-2">
+        {DEMO_BULLETINS.map((b) => (
+          <li
+            key={b.id}
+            className="rounded-2xl border border-white/5 bg-card p-3 shadow-lg shadow-black/20"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span
+                className={`text-[10px] uppercase tracking-[0.18em] font-semibold ${categoryColor(b.category)}`}
+              >
+                {categoryLabel(b.category)}
+              </span>
+              <span className="text-[11px] text-mist/70">{b.when}</span>
+            </div>
+            <p className="mt-2 text-sm text-cream leading-relaxed">{b.message}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Profile screen — visibility controls + active waves + past waves
+// consolidated into one settings surface. Replaces the old Privacy /
+// Waves / Past Waves top-level tabs from before the Phase 3 nav cleanup.
+// ----------------------------------------------------------------------------
+
+function ProfileScreen({
+  privacy,
+  onPrivacy,
+  waved,
+  onMessage,
+  onRemove,
+  blocked,
+  campgroundName,
+  onOpenCrossedPath,
+}) {
+  return (
+    <div className="space-y-6 py-3">
+      <header>
+        <Eyebrow>Your profile</Eyebrow>
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-cream leading-tight">
+          Settings &amp; activity
+        </h1>
+        <p className="font-serif italic text-flame text-sm leading-snug">
+          Visibility, current waves, and crossed paths — all in one place.
+        </p>
+      </header>
+
+      <PrivacyScreen mode={privacy} onChange={onPrivacy} />
+
+      <WavesScreen
+        waved={waved}
+        onMessage={onMessage}
+        onRemove={onRemove}
+        blocked={blocked}
+      />
+
+      <CrossedPathsScreen
+        waved={waved}
+        campgroundName={campgroundName}
+        onOpen={onOpenCrossedPath}
+      />
     </div>
   )
 }

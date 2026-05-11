@@ -6,90 +6,42 @@ import { Logo } from '@/components/ui/logo'
 import { getPostAuthDestination } from '@/lib/auth/post-auth-destination'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
+// Public homepage. Phase 3 simplification (April 2026):
+//   - 5 sections total: Hero, two choice cards, How It Works,
+//     Privacy promise, final CTA.
+//   - Removed the redundant "Three ways to use it", "Who it's for",
+//     and "Different on purpose" sections — each repeated material
+//     already covered by Hero + Privacy.
+//   - Privacy bullets are stated once on the homepage, in the
+//     Privacy section. Per the public-site polish brief, repeated
+//     privacy lists across many sections were the main source of
+//     fatigue.
+//   - The "For Campgrounds" choice card was added so owners have a
+//     visible entry point on the homepage without dominating it.
+
 const STEPS: { emoji: string; title: string; body: string }[] = [
   {
     emoji: '📷',
-    title: 'Scan the campground QR code',
-    body: 'Find RoadWave on the welcome card, front desk sign, check-in email, or activity board.',
+    title: 'Scan the campground QR',
+    body: 'On the welcome card, front desk sign, check-in email, or activity board.',
   },
   {
     emoji: '👁',
-    title: 'Choose how visible you want to be',
-    body: 'Be visible, stay quiet, go invisible, or just see campground updates. You control whether other campers can see you.',
-  },
-  {
-    emoji: '🎯',
-    title: 'See shared interests',
-    body: 'Find campers open to dog walks, coffee, cards, pickleball, campfires, fishing, hiking, kayaking, or local exploring.',
+    title: 'Pick your visibility',
+    body: 'Visible, Quiet, Invisible, or Campground Updates Only. Change it any time.',
   },
   {
     emoji: '👋',
-    title: 'Wave first',
-    body: 'If they wave back, a private hello opens. If they don’t, nothing awkward happens.',
+    title: 'Wave only if you want',
+    body: 'A private hello opens only when both campers wave back. No public posts.',
   },
 ]
 
-const PRIVACY_BULLETS: string[] = [
+const PRIVACY_PROMISE: string[] = [
   'No exact site numbers',
-  'No public campground chat',
-  'No pressure to participate',
-  'No one sees you unless you choose to be visible',
-  'Check-ins are temporary',
-  'You can go Invisible anytime',
-  'Switch to Campground Updates Only whenever you just want updates',
-]
-
-const USE_OPTIONS: { emoji: string; title: string; body: string }[] = [
-  {
-    emoji: '👋',
-    title: 'Use it socially',
-    body: 'Be Visible, browse campers checked in here, and wave at folks who share your interests.',
-  },
-  {
-    emoji: '🤫',
-    title: 'Use it quietly',
-    body: 'Stay Quiet or Invisible. Look around without showing up — wave first only if someone catches your eye.',
-  },
-  {
-    emoji: '📍',
-    title: 'Use it for updates only',
-    body: 'Campground Updates Only — see bulletins, weather, quiet hours, and meetups, hidden from other campers.',
-  },
-]
-
-const WHO_ITS_FOR: { title: string; body: string }[] = [
-  {
-    title: 'Solo travelers',
-    body: 'Solo travelers who want a safer way to connect.',
-  },
-  {
-    title: 'Couples',
-    body: 'Couples open to meeting other campers.',
-  },
-  {
-    title: 'Families',
-    body: 'Families looking for activities.',
-  },
-  {
-    title: 'Snowbirds + long-term guests',
-    body: 'Snowbirds and long-term guests.',
-  },
-  {
-    title: 'Weekend campers',
-    body: 'Weekend campers who want to find friendly people checked in at the same campground.',
-  },
-  {
-    title: 'Campers who prefer quiet',
-    body: 'Campers who prefer quiet but still want the option.',
-  },
-]
-
-const FB_DIFF_BULLETS: string[] = [
-  'Campground-specific',
-  'Temporary check-ins',
-  'Mutual waves before private hellos',
-  'No exact site numbers',
-  'No public posting required',
+  'No public campground-wide chat',
+  'Guests control their visibility',
+  'Connection is always optional',
 ]
 
 export default async function RootPage() {
@@ -120,25 +72,20 @@ export default async function RootPage() {
       </header>
 
       <main>
-        {/* Hero — spec §7 */}
-        <section className="px-4 pt-6 pb-10 sm:pt-16 sm:pb-14">
+        {/* Hero — core idea, single CTA pair */}
+        <section className="px-4 pt-6 pb-12 sm:pt-16 sm:pb-16">
           <div className="mx-auto max-w-5xl grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:gap-12 items-center">
             <div className="space-y-4 sm:space-y-5 text-center lg:text-left">
-              <Eyebrow>A private way to meet campers who share your interests</Eyebrow>
+              <Eyebrow>RoadWave</Eyebrow>
               <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
-                Curious who else here shares your interests?
+                Campground guests, connected on their terms.
               </h1>
               <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0">
-                RoadWave helps campers find friendly people at the same
-                campground — without exact site numbers, public group chats,
-                or pressure.
+                RoadWave helps campground guests see updates, connect
+                around shared interests, and say hello only when they
+                want to.
               </p>
-              <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
-                Wave when you want. Stay quiet when you don&apos;t. Go
-                invisible anytime — or just keep an eye on campground
-                updates.
-              </p>
-              <div className="flex flex-col gap-3 pt-2 items-center lg:items-start">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2 items-center sm:items-stretch lg:items-stretch lg:justify-start justify-center">
                 <Link
                   href="/demo"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 text-base font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
@@ -147,16 +94,11 @@ export default async function RootPage() {
                 </Link>
                 <Link
                   href="/signup"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4caf82] text-night px-6 py-3 text-base font-semibold shadow-lg shadow-[#4caf82]/20 hover:bg-[#3f9d72] transition-colors"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-6 py-3 text-base font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
                 >
                   Get Started
                 </Link>
               </div>
-              <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] text-flame/90 font-semibold pt-2">
-                No exact site numbers. No public group chats. No pressure.
-                Visible, Quiet, Invisible, or Campground Updates Only — your
-                call. No download required.
-              </p>
             </div>
             <div className="lg:pl-4 space-y-2">
               <HomePhonePreview />
@@ -167,45 +109,39 @@ export default async function RootPage() {
           </div>
         </section>
 
-        {/* Camper-focused recap card. The owner trigger lived here
-            previously; owners now reach the pitch via the footer
-            Campground Owners trigger and the dedicated /owners page. */}
-        <section className="px-4 pb-10 sm:pb-14">
-          <div className="mx-auto max-w-xl">
-            <article className="rounded-2xl border border-white/10 bg-card p-6 space-y-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-flame">
-                For campers
-              </p>
-              <h2 className="font-display text-xl sm:text-2xl font-extrabold text-cream leading-tight">
-                Scan a campground QR to check in
-              </h2>
-              <p className="text-sm text-mist leading-relaxed">
-                Find shared interests and wave hello — only when both
-                people choose to. No exact site numbers, no public group
-                chat, no download required.
-              </p>
-              <div className="pt-1">
-                <Link
-                  href="/demo"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-5 py-2.5 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
-                >
-                  Try the Demo <span aria-hidden>👋</span>
-                </Link>
-              </div>
-            </article>
+        {/* Two choice cards — For Campers / For Campgrounds */}
+        <section className="px-4 pb-14 sm:pb-20">
+          <div className="mx-auto max-w-4xl grid gap-4 sm:grid-cols-2">
+            <ChoiceCard
+              eyebrow="For campers"
+              title="Scan a campground QR to check in"
+              body="See campground updates and find campers who share your interests. Wave hello only when both people opt in."
+              ctaLabel="Try the Demo"
+              ctaHref="/demo"
+              ctaIcon="👋"
+            />
+            <ChoiceCard
+              eyebrow="For campgrounds"
+              title="A QR guest engagement hub for your campground"
+              body="Help guests leave reviews, book again, find your updates, and reach the office — without an app download or front-desk system."
+              ctaLabel="See how it works"
+              ctaHref="/owners"
+              ctaIcon="🏕️"
+              accent
+            />
           </div>
         </section>
 
-        {/* How it works — spec §8 */}
+        {/* How it works — 3 steps */}
         <section className="px-4 py-14 border-t border-white/5">
           <div className="mx-auto max-w-4xl">
             <div className="text-center mb-10 space-y-2">
               <Eyebrow>How it works</Eyebrow>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                A simple way to find campers who like what you like.
+                Three steps. No app store.
               </h2>
             </div>
-            <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <ol className="grid gap-4 sm:grid-cols-3">
               {STEPS.map((s, i) => (
                 <li
                   key={s.title}
@@ -227,48 +163,19 @@ export default async function RootPage() {
           </div>
         </section>
 
-        {/* Choose how you want to use RoadWave */}
-        <section className="px-4 py-14 border-t border-white/5">
-          <div className="mx-auto max-w-4xl">
-            <div className="text-center mb-10 space-y-2">
-              <Eyebrow>Three ways to use it</Eyebrow>
-              <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                Choose how you want to use RoadWave.
-              </h2>
-              <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-                Same app, three different vibes. Switch any time.
-              </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              {USE_OPTIONS.map((o) => (
-                <div
-                  key={o.title}
-                  className="rounded-2xl border border-white/5 bg-card p-5"
-                >
-                  <div className="text-2xl mb-2" aria-hidden>
-                    {o.emoji}
-                  </div>
-                  <h3 className="font-semibold text-cream mb-1">{o.title}</h3>
-                  <p className="text-sm text-mist leading-snug">{o.body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Privacy — spec §9 */}
+        {/* Privacy promise — one canonical place */}
         <section className="px-4 py-14 border-t border-white/5 bg-flame/[0.03]">
           <div className="mx-auto max-w-3xl text-center space-y-5">
-            <Eyebrow>You stay in control</Eyebrow>
+            <Eyebrow>Privacy promise</Eyebrow>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              You control the whole experience.
+              You stay in control.
             </h2>
             <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
               RoadWave is designed for campground comfort, not public
               broadcasting.
             </p>
             <ul className="text-left grid gap-3 sm:grid-cols-2 max-w-2xl mx-auto pt-2">
-              {PRIVACY_BULLETS.map((p) => (
+              {PRIVACY_PROMISE.map((p) => (
                 <li
                   key={p}
                   className="rounded-xl border border-white/5 bg-card px-4 py-3 text-sm text-cream flex items-start gap-2"
@@ -280,7 +187,20 @@ export default async function RootPage() {
                 </li>
               ))}
             </ul>
-            <div className="pt-2">
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <section className="px-4 py-16 border-t border-flame/30 bg-flame/[0.06]">
+          <div className="mx-auto max-w-xl text-center space-y-5">
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
+              See what your campground feels like on RoadWave.
+            </h2>
+            <p className="text-mist text-base sm:text-lg leading-relaxed">
+              No download. No public group chat. Try a sample campground
+              page in seconds.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
               <Link
                 href="/demo"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 font-semibold shadow-lg shadow-flame/20 hover:bg-amber-400 transition-colors"
@@ -290,59 +210,55 @@ export default async function RootPage() {
             </div>
           </div>
         </section>
-
-        {/* Who it's for — spec §10 */}
-        <section className="px-4 py-14 border-t border-white/5">
-          <div className="mx-auto max-w-4xl">
-            <div className="text-center mb-10 space-y-2">
-              <Eyebrow>Who it&apos;s for</Eyebrow>
-              <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                For campers who want the option — not the obligation.
-              </h2>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {WHO_ITS_FOR.map((c) => (
-                <div
-                  key={c.title}
-                  className="rounded-2xl border border-white/5 bg-card p-5"
-                >
-                  <h3 className="font-semibold text-cream mb-1">{c.title}</h3>
-                  <p className="text-sm text-mist leading-snug">{c.body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Better than Facebook — spec §11 */}
-        <section className="px-4 py-14 border-t border-white/5 bg-flame/[0.03]">
-          <div className="mx-auto max-w-3xl text-center space-y-5">
-            <Eyebrow>Different on purpose</Eyebrow>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              Not another noisy group chat.
-            </h2>
-            <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-              Unlike Facebook groups or open campground chats, RoadWave is
-              only for the campground you&apos;re staying in — and only works
-              when both people choose to wave.
-            </p>
-            <ul className="text-left grid gap-3 sm:grid-cols-2 max-w-2xl mx-auto pt-2">
-              {FB_DIFF_BULLETS.map((p) => (
-                <li
-                  key={p}
-                  className="rounded-xl border border-white/5 bg-card px-4 py-3 text-sm text-cream flex items-start gap-2"
-                >
-                  <span className="text-flame mt-0.5" aria-hidden>
-                    ✓
-                  </span>
-                  <span>{p}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
       </main>
     </>
+  )
+}
+
+function ChoiceCard({
+  eyebrow,
+  title,
+  body,
+  ctaLabel,
+  ctaHref,
+  ctaIcon,
+  accent = false,
+}: {
+  eyebrow: string
+  title: string
+  body: string
+  ctaLabel: string
+  ctaHref: string
+  ctaIcon?: string
+  accent?: boolean
+}) {
+  return (
+    <article
+      className={
+        accent
+          ? 'rounded-2xl border border-flame/40 bg-flame/[0.06] p-6 space-y-3'
+          : 'rounded-2xl border border-white/10 bg-card p-6 space-y-3'
+      }
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-flame">
+        {eyebrow}
+      </p>
+      <h2 className="font-display text-xl sm:text-2xl font-extrabold text-cream leading-tight">
+        {title}
+      </h2>
+      <p className="text-sm text-mist leading-relaxed">{body}</p>
+      <div className="pt-1">
+        <Link
+          href={ctaHref}
+          className={
+            accent
+              ? 'inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-5 py-2.5 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors'
+              : 'inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-5 py-2.5 text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors'
+          }
+        >
+          {ctaLabel} {ctaIcon && <span aria-hidden>{ctaIcon}</span>}
+        </Link>
+      </div>
+    </article>
   )
 }

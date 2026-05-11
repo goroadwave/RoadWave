@@ -6,10 +6,59 @@ import { InteractiveDemo } from '@/components/campgrounds/interactive-demo'
 import { CampgroundRileyButton } from '@/components/campgrounds/riley-campground-button'
 
 export const metadata: Metadata = {
-  title: 'RoadWave for Campgrounds — Help guests feel welcome faster',
+  title: 'RoadWave for Campgrounds — A QR guest engagement hub',
   description:
-    'A simple QR-code guest amenity that helps campers find friendly people, shared activities, and familiar faces — without public group chats, exact site numbers, or extra work for your staff.',
+    'A QR-code guest engagement hub for campgrounds — more reviews, repeat bookings, campground updates, contact the office, private stay feedback, and optional camper connection. Complements your reservation system.',
 }
+
+// Phase 3 owner-page rewrite. Repositions RoadWave as a QR guest
+// engagement hub (not a "find friendly campers" app) with the six
+// engagement value props leading: more reviews, repeat bookings,
+// campground updates, contact the office, private stay feedback,
+// optional camper connection. Removes the duplicate
+// privacy/bulletins/updates-only sections that were all saying the
+// same thing in different framings.
+
+const VALUE_PROPS: { emoji: string; title: string; body: string }[] = [
+  {
+    emoji: '⭐',
+    title: 'More Google reviews',
+    body: 'A built-in "Leave a Google Review" button on the welcome page — point it at your Google listing and let happy guests boost your ranking.',
+  },
+  {
+    emoji: '🛎️',
+    title: 'Repeat bookings',
+    body: 'A "Book Your Next Stay" button with an optional message and promo code. Convert your best moment — checking out — into a return guest.',
+  },
+  {
+    emoji: '📌',
+    title: 'Campground updates',
+    body: 'Post bulletins and meetup prompts (quiet hours, food trucks, weather notices, coffee hours) once — every checked-in guest sees them.',
+  },
+  {
+    emoji: '📨',
+    title: 'Contact the office',
+    body: 'A categorized form (Wi-Fi, Laundry, Propane, Maintenance, Quiet hours, and more) that lands in your dashboard inbox with optional email alerts.',
+  },
+  {
+    emoji: '🩺',
+    title: 'Private stay feedback',
+    body: '"How\'s your stay?" pulse check on the welcome page. The "Something needs attention" follow-up reaches you before it reaches a public review.',
+  },
+  {
+    emoji: '👋',
+    title: 'Optional camper connection',
+    body: 'Guests who want to can find shared-interest neighbors. Guests who don\'t can pick "Updates Only" and never appear to other campers.',
+  },
+]
+
+const STAFF_PROMISE: string[] = [
+  'No public group chat to moderate',
+  'No exact site numbers',
+  'No app download required',
+  'No guest data selling',
+  'No extra front-desk system to manage',
+]
 
 export default function OwnersPage() {
   return (
@@ -21,34 +70,22 @@ export default function OwnersPage() {
         <nav>
           <ul className="flex items-center gap-4 sm:gap-6 text-sm">
             <li>
-              <Link
-                href="/"
-                className="text-mist hover:text-cream transition-colors"
-              >
+              <Link href="/" className="text-mist hover:text-cream transition-colors">
                 Home
               </Link>
             </li>
             <li>
-              <Link
-                href="/demo"
-                className="text-mist hover:text-cream transition-colors"
-              >
+              <Link href="/demo" className="text-mist hover:text-cream transition-colors">
                 Demo
               </Link>
             </li>
             <li>
-              <Link
-                href="/about"
-                className="text-mist hover:text-cream transition-colors"
-              >
+              <Link href="/about" className="text-mist hover:text-cream transition-colors">
                 About
               </Link>
             </li>
             <li>
-              <Link
-                href="/contact"
-                className="text-mist hover:text-cream transition-colors"
-              >
+              <Link href="/contact" className="text-mist hover:text-cream transition-colors">
                 Contact
               </Link>
             </li>
@@ -57,22 +94,18 @@ export default function OwnersPage() {
       </header>
 
       <main>
-        {/* Hero — spec §13 */}
-        <section className="px-4 pt-12 pb-16 sm:pt-20 sm:pb-24">
-          <div className="mx-auto max-w-2xl text-center space-y-6">
+        {/* Hero — leads with the QR engagement-hub framing */}
+        <section className="px-4 pt-10 pb-14 sm:pt-16 sm:pb-20">
+          <div className="mx-auto max-w-2xl text-center space-y-5">
             <Eyebrow>For campground owners</Eyebrow>
             <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
-              Help guests feel welcome faster.
+              A QR guest engagement hub for your campground.
             </h1>
             <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-              RoadWave is a simple QR-code guest amenity that helps campers
-              find friendly people, shared activities, and familiar faces
-              inside your campground — without public group chats, exact
-              site numbers, or extra work for your staff.
-            </p>
-            <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-flame font-semibold">
-              No exact site numbers. No public group chat. No app download required.
-              Guests control their visibility.
+              RoadWave turns your check-in QR into the place guests go for
+              reviews, repeat bookings, your latest updates, office
+              messages, and private stay feedback — without replacing your
+              reservation system.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-center">
               <Link
@@ -81,155 +114,80 @@ export default function OwnersPage() {
               >
                 Start My Campground Pilot
               </Link>
+              <Link
+                href="#request-demo"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-6 py-3 font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
+              >
+                See the live demo
+              </Link>
             </div>
           </div>
         </section>
 
-        {/* Problem — spec §17 copy replacements applied */}
+        {/* Six value props — the heart of the new positioning */}
         <section className="px-4 py-14 border-t border-white/5">
-          <div className="mx-auto max-w-3xl text-center space-y-4">
-            <Eyebrow>The problem</Eyebrow>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              Your guests want connection. The current options were not built for campground connection.
-            </h2>
-            <p className="font-serif italic text-flame text-lg sm:text-xl leading-snug">
-              Facebook groups. Site-number swaps. Awkward small talk around the park.
-            </p>
-            <div className="grid sm:grid-cols-3 gap-4 pt-6 text-left">
-              {[
-                {
-                  emoji: '😬',
-                  title: 'Facebook groups are messy',
-                  body: 'Public posts, drama, ads. Half your guests refuse to join.',
-                },
-                {
-                  emoji: '📍',
-                  title: 'Sharing site numbers feels off',
-                  body: 'Guests should not have to share their exact site number just to say hello.',
-                },
-                {
-                  emoji: '🤐',
-                  title: 'Open group chats get noisy fast.',
-                  body: 'Notifications all night. Nobody actually meets anybody.',
-                },
-              ].map((p) => (
-                <div
-                  key={p.title}
-                  className="rounded-2xl border border-white/5 bg-card p-5"
+          <div className="mx-auto max-w-5xl">
+            <div className="text-center mb-10 space-y-2">
+              <Eyebrow>What RoadWave does for your campground</Eyebrow>
+              <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
+                Six tools, one QR code.
+              </h2>
+              <p className="text-mist text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+                Each one runs on the same welcome page guests land on
+                after scanning. Turn any of them on or off from your
+                dashboard.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {VALUE_PROPS.map((v) => (
+                <article
+                  key={v.title}
+                  className="rounded-2xl border border-flame/30 bg-card p-5 space-y-2"
                 >
-                  <p className="text-3xl mb-2" aria-hidden>
-                    {p.emoji}
+                  <p className="text-3xl" aria-hidden>
+                    {v.emoji}
                   </p>
-                  <h3 className="font-semibold text-cream mb-1">{p.title}</h3>
-                  <p className="text-sm text-mist leading-snug">{p.body}</p>
-                </div>
+                  <h3 className="font-semibold text-cream leading-snug">
+                    {v.title}
+                  </h3>
+                  <p className="text-sm text-mist leading-snug">{v.body}</p>
+                </article>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Staff workload — spec §14 (NEW) */}
+        {/* Complements, doesn't replace */}
         <section className="px-4 py-14 border-t border-white/5 bg-flame/[0.03]">
+          <div className="mx-auto max-w-3xl text-center space-y-4">
+            <Eyebrow>Not a reservation system</Eyebrow>
+            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
+              Works alongside what you already use.
+            </h2>
+            <p className="text-mist text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+              RoadWave doesn&apos;t replace Campspot, Newbook, Bonfire,
+              your spreadsheet, or your phone. It&apos;s the layer that
+              makes your campground feel modern after a guest pulls in —
+              the one place they go for everything that isn&apos;t a
+              reservation.
+            </p>
+          </div>
+        </section>
+
+        {/* What your staff has to do (already short, clear) */}
+        <section className="px-4 py-14 border-t border-white/5">
           <div className="mx-auto max-w-3xl space-y-5">
             <div className="text-center space-y-2">
               <Eyebrow>Built like an amenity, not another job</Eyebrow>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                What your staff has to do
+                What your staff has to do.
               </h2>
               <p className="font-serif italic text-flame text-lg sm:text-xl leading-snug">
                 Print the QR code. Place it where guests already look. That&apos;s it.
               </p>
             </div>
             <ul className="grid gap-3 sm:grid-cols-2 max-w-2xl mx-auto">
-              {[
-                'No public group chat to moderate',
-                'No exact site numbers',
-                'No guest data selling',
-                'No app download required',
-                'No extra front-desk system to manage',
-              ].map((p) => (
-                <li
-                  key={p}
-                  className="rounded-xl border border-white/5 bg-card px-4 py-3 text-sm text-cream flex items-start gap-2"
-                >
-                  <span className="text-flame mt-0.5" aria-hidden>
-                    ✓
-                  </span>
-                  <span>{p}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-center text-mist text-sm sm:text-base leading-relaxed pt-2">
-              RoadWave is designed to feel like an amenity, not another job
-              for your staff.
-            </p>
-          </div>
-        </section>
-
-        {/* QR placement — spec §15 (NEW) */}
-        <section className="px-4 py-14 border-t border-white/5">
-          <div className="mx-auto max-w-3xl space-y-5">
-            <div className="text-center space-y-2">
-              <Eyebrow>Where the code lives</Eyebrow>
-              <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                Where the QR code goes
-              </h2>
-            </div>
-            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                'Welcome packet',
-                'Front desk sign',
-                'Activity board',
-                'Laundry room sign',
-                'Clubhouse sign',
-                'Check-in email',
-                'Rules handout',
-              ].map((p) => (
-                <li
-                  key={p}
-                  className="rounded-xl border border-white/10 bg-card/40 px-3 py-2 text-sm text-cream"
-                >
-                  <span className="text-flame mr-2" aria-hidden>
-                    📌
-                  </span>
-                  {p}
-                </li>
-              ))}
-            </ul>
-            <div className="rounded-2xl border border-flame/30 bg-flame/[0.06] p-5 sm:p-6 max-w-2xl mx-auto">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-                Suggested QR code copy
-              </p>
-              <p className="mt-2 text-cream text-base sm:text-lg leading-relaxed">
-                Curious who else here shares your interests? Scan to see
-                campers checked in here — or just see campground bulletins and
-                meetups. No exact site numbers. No public group chat. Visible,
-                Quiet, Invisible, or Campground Updates Only — your call.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Solution — branded guest page */}
-        <section className="px-4 py-14 border-t border-white/5 bg-flame/[0.03]">
-          <div className="mx-auto max-w-3xl text-center space-y-4">
-            <Eyebrow>The fix</Eyebrow>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              A branded campground guest page powered by your QR code.
-            </h2>
-            <p className="text-mist max-w-2xl mx-auto leading-relaxed">
-              Guests scan your QR code and land on a page that feels
-              connected to your campground. They can:
-            </p>
-            <ul className="text-left grid gap-2 sm:grid-cols-2 max-w-2xl mx-auto pt-2">
-              {[
-                'See campground bulletins',
-                'Find meetup prompts',
-                'Choose Visible, Quiet, Invisible, or Campground Updates Only',
-                'Browse campers who share their interests',
-                'Send a wave',
-                'Open a private hello only when both people wave',
-              ].map((p) => (
+              {STAFF_PROMISE.map((p) => (
                 <li
                   key={p}
                   className="rounded-xl border border-white/5 bg-card px-4 py-3 text-sm text-cream flex items-start gap-2"
@@ -244,274 +202,45 @@ export default function OwnersPage() {
           </div>
         </section>
 
-        {/* How it works — 4 steps */}
-        <section className="px-4 py-14 border-t border-white/5">
-          <div className="mx-auto max-w-4xl">
-            <div className="text-center mb-10 space-y-2">
-              <Eyebrow>How it works</Eyebrow>
-              <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                From QR code to friendly hello in a few taps.
-              </h2>
-            </div>
-            <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                {
-                  emoji: '📷',
-                  title: 'Scan the QR',
-                  body: 'Guests scan from your welcome sign. They are in for 24 hours.',
-                },
-                {
-                  emoji: '👁',
-                  title: 'Set visibility',
-                  body: 'Visible, Quiet, Invisible, or Campground Updates Only. Per-field sharing toggles.',
-                },
-                {
-                  emoji: '📍',
-                  title: 'Stay in the loop',
-                  body: 'Even guests who pick Campground Updates Only still see your bulletins, weather, quiet hours, and meetups.',
-                },
-                {
-                  emoji: '👋',
-                  title: 'Wave & meet',
-                  body: 'Mutual wave unlocks a private hello — no public messages, no group chat. Quiet means no one sees the miss.',
-                },
-              ].map((s, i) => (
-                <li
-                  key={s.title}
-                  className="rounded-2xl border border-white/5 bg-card p-5"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <span
-                      className="grid h-9 w-9 place-items-center rounded-lg bg-flame text-night font-display text-base font-extrabold"
-                      aria-hidden
-                    >
-                      {i + 1}
-                    </span>
-                    <span className="text-2xl" aria-hidden>
-                      {s.emoji}
-                    </span>
-                  </div>
-                  <h3 className="font-semibold text-cream mb-1">{s.title}</h3>
-                  <p className="text-sm text-mist leading-snug">{s.body}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        {/* Privacy */}
-        <section className="px-4 py-14 border-t border-white/5">
-          <div className="mx-auto max-w-3xl text-center space-y-5">
-            <Eyebrow>Privacy promise</Eyebrow>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              No site numbers. No public posts. No open group chat.
-            </h2>
-            <p className="font-serif italic text-flame text-lg sm:text-xl leading-snug">
-              Total opt-in. Wave-back required before any private hello opens.
-            </p>
-            <ul className="text-left grid gap-3 sm:grid-cols-2 max-w-2xl mx-auto pt-4">
-              {[
-                'Nothing posted publicly. Ever.',
-                'Site numbers are not shared in the app.',
-                'A wave is private until both sides wave back.',
-                'Four privacy modes — Visible, Quiet, Invisible, or Campground Updates Only.',
-                'Campground check-ins expire after 24 hours.',
-                'No ads. No scraping. No selling guest data.',
-              ].map((p) => (
-                <li
-                  key={p}
-                  className="rounded-xl border border-white/5 bg-card px-4 py-3 text-sm text-cream flex items-start gap-2"
-                >
-                  <span className="text-flame mt-0.5" aria-hidden>
-                    ✓
-                  </span>
-                  <span>{p}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* Benefits — 4 cards */}
+        {/* Owner dashboard — what you see vs don't */}
         <section className="px-4 py-14 border-t border-white/5 bg-flame/[0.03]">
-          <div className="mx-auto max-w-4xl">
-            <div className="text-center mb-10 space-y-2">
-              <Eyebrow>What you get</Eyebrow>
-              <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                A small amenity. A big return.
-              </h2>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                {
-                  emoji: '🏕️',
-                  title: 'Branded campground guest page',
-                  body: 'A QR code that lands guests on a page that feels connected to your campground — not a generic app.',
-                },
-                {
-                  emoji: '📌',
-                  title: 'Campground bulletins and meetup prompts',
-                  body: 'Coffee hours, food trucks, dog walks, pickleball, campfires, weather notices, quiet-hour reminders — one place to share what is happening.',
-                },
-                {
-                  emoji: '📍',
-                  title: 'Campground Updates Only for private guests',
-                  body: 'Quiet guests still see your bulletins and meetups while staying invisible to other campers.',
-                },
-                {
-                  emoji: '📊',
-                  title: 'Privacy-safe owner dashboard',
-                  body: 'Aggregate engagement stats — check-ins, bulletin views, mutual waves — never private messages or personal data.',
-                },
-              ].map((b) => (
-                <div
-                  key={b.title}
-                  className="rounded-2xl border border-flame/30 bg-card p-5"
-                >
-                  <p className="text-3xl mb-2" aria-hidden>
-                    {b.emoji}
-                  </p>
-                  <h3 className="font-semibold text-cream mb-1">{b.title}</h3>
-                  <p className="text-sm text-mist leading-snug">{b.body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Some guests want to meet, others just want updates */}
-        <section className="px-4 py-14 border-t border-white/5">
-          <div className="mx-auto max-w-3xl text-center space-y-4">
-            <Eyebrow>Two kinds of guests, one amenity</Eyebrow>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-              Some guests want to meet. Others just want updates.
-            </h2>
-            <p className="text-mist text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
-              Guests can choose Campground Updates Only to see official
-              campground bulletins, activity reminders, weather notices, food
-              truck updates, quiet-hour reminders, and meetup prompts —
-              without appearing to other campers or participating in waves.
-            </p>
-          </div>
-        </section>
-
-        {/* Keep guests in the loop */}
-        <section className="px-4 py-14 border-t border-white/5 bg-flame/[0.03]">
-          <div className="mx-auto max-w-3xl space-y-5">
-            <div className="text-center space-y-2">
-              <Eyebrow>Bulletins &amp; meetups</Eyebrow>
-              <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                Keep guests in the loop without starting a noisy group chat.
-              </h2>
-              <p className="text-mist text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
-                RoadWave helps your campground share simple bulletins,
-                activity reminders, and meetup prompts with checked-in
-                guests — things like coffee hours, food trucks, dog walks,
-                pickleball, campfires, weather notices, quiet-hour
-                reminders. Guests get one easy place to see what&apos;s
-                happening without creating an open public group chat your staff
-                has to moderate.
-              </p>
-            </div>
-            <ul className="grid gap-3 sm:grid-cols-2 max-w-2xl mx-auto">
-              {[
-                'Coffee at the clubhouse, 8 AM',
-                'Food truck tonight, 5–8 PM',
-                'Quiet hours reminder',
-                'Weather notice or storm prep',
-                'Office closures and check-out reminders',
-                'Hosted meetups and activities',
-              ].map((p) => (
-                <li
-                  key={p}
-                  className="rounded-xl border border-white/5 bg-card px-4 py-3 text-sm text-cream flex items-start gap-2"
-                >
-                  <span className="text-flame mt-0.5" aria-hidden>
-                    📌
-                  </span>
-                  <span>{p}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        {/* Owner dashboard — what owners see and don't see */}
-        <section className="px-4 py-14 border-t border-white/5">
           <div className="mx-auto max-w-4xl space-y-6">
             <div className="text-center space-y-2">
               <Eyebrow>Owner dashboard</Eyebrow>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                See guest engagement without seeing private guest details.
+                See engagement. Not private guest details.
               </h2>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 max-w-3xl mx-auto">
               <div className="rounded-2xl border border-flame/30 bg-card p-5">
-                <h3 className="font-semibold text-cream mb-2">What owners can see</h3>
+                <h3 className="font-semibold text-cream mb-2">
+                  What you see
+                </h3>
                 <ul className="text-sm text-mist leading-snug list-disc list-inside space-y-1">
-                  <li>QR code scans</li>
-                  <li>Guest check-ins</li>
-                  <li>Bulletin views</li>
-                  <li>Meetup interest</li>
-                  <li>Waves sent</li>
-                  <li>Mutual waves</li>
-                  <li>Popular guest interests</li>
+                  <li>QR scans, check-ins, bulletin views</li>
+                  <li>Review and Book Again click counts</li>
+                  <li>Office messages and pulse-check alerts</li>
+                  <li>Popular guest interests (aggregate)</li>
+                  <li>Weekly summary email every Monday</li>
                 </ul>
               </div>
               <div className="rounded-2xl border border-white/10 bg-card p-5">
-                <h3 className="font-semibold text-cream mb-2">What owners cannot see</h3>
+                <h3 className="font-semibold text-cream mb-2">
+                  What you don&apos;t see
+                </h3>
                 <ul className="text-sm text-mist leading-snug list-disc list-inside space-y-1">
                   <li>Exact site numbers</li>
-                  <li>Private messages</li>
+                  <li>Private guest messages</li>
                   <li>Who waved at whom</li>
-                  <li>Guest-to-guest conversations</li>
-                  <li>Exact guest locations</li>
-                  <li>Private profile details</li>
+                  <li>Real names or emails</li>
+                  <li>Anything sold to third parties</li>
                 </ul>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Campground Updates Only feature block */}
-        <section className="px-4 py-14 border-t border-white/5 bg-flame/[0.03]">
-          <div className="mx-auto max-w-3xl space-y-5">
-            <div className="text-center space-y-2">
-              <Eyebrow>New privacy mode</Eyebrow>
-              <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
-                Campground Updates Only.
-              </h2>
-              <p className="font-serif italic text-flame text-lg sm:text-xl leading-snug">
-                For guests who want the campground&apos;s info — and nothing else.
-              </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 max-w-3xl mx-auto">
-              <div className="rounded-2xl border border-flame/30 bg-card p-5">
-                <h3 className="font-semibold text-cream mb-1">What they still see</h3>
-                <ul className="text-sm text-mist leading-snug list-disc list-inside space-y-1">
-                  <li>Campground bulletins and notices</li>
-                  <li>Hosted meetups + activities</li>
-                  <li>Per-toggle control over both</li>
-                </ul>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-card p-5">
-                <h3 className="font-semibold text-cream mb-1">What other campers see</h3>
-                <ul className="text-sm text-mist leading-snug list-disc list-inside space-y-1">
-                  <li>Nothing. They&apos;re invisible to other guests.</li>
-                  <li>Can&apos;t send or receive waves.</li>
-                  <li>Still counts as a checked-in guest for your stats.</li>
-                </ul>
-              </div>
-            </div>
-            <p className="text-center text-mist text-sm sm:text-base leading-relaxed pt-2 max-w-xl mx-auto">
-              The same QR code works for everyone, whether they want to
-              connect with other guests or just keep tabs on what&apos;s
-              happening at your campground.
-            </p>
-          </div>
-        </section>
-
-        {/* Riley quote */}
+        {/* Riley — keep the friendly hook */}
         <section className="px-4 py-14 border-t border-white/5">
           <div className="mx-auto max-w-2xl flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
             <div className="h-32 w-32 sm:h-40 sm:w-40 rounded-full overflow-hidden border-2 border-flame/40 shadow-lg shadow-flame/15 shrink-0">
@@ -525,10 +254,11 @@ export default function OwnersPage() {
             <div className="text-center sm:text-left">
               <Eyebrow>Riley · Your campground host</Eyebrow>
               <p className="mt-2 font-serif italic text-flame text-xl sm:text-2xl leading-snug">
-                &ldquo;I help your guests feel welcome from the moment they pull in.&rdquo;
+                &ldquo;I help your guests feel welcome from the moment
+                they pull in.&rdquo;
               </p>
               <p className="mt-2 text-sm text-mist">
-                Built into every RoadWave-Friendly campground.
+                Built into every RoadWave-friendly campground.
               </p>
             </div>
           </div>
