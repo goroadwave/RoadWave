@@ -40,12 +40,15 @@ export default function DataBreachPolicyPage() {
 
           <Section title="Scope">
             <p>
-              This policy applies to any suspected unauthorized access to,
-              acquisition of, loss of, or disclosure of personal information
-              held by RoadWave — whether through external attack, internal
-              error, third-party vendor compromise, or lost / stolen device
-              or credential. It also covers near-miss incidents that did not
-              result in disclosure but warrant the same containment posture.
+              This policy is maintained by{' '}
+              <strong className="text-cream">RoadWave USA LLC</strong>{' '}
+              (&ldquo;RoadWave&rdquo;) and applies to any suspected
+              unauthorized access to, acquisition of, loss of, or disclosure
+              of personal information held by RoadWave — whether through
+              external attack, internal error, third-party vendor compromise,
+              or lost / stolen device or credential. It also covers near-miss
+              incidents that did not result in disclosure but warrant the
+              same containment posture.
             </p>
           </Section>
 

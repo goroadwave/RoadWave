@@ -40,8 +40,11 @@ export default function PartnerTermsPage() {
 
           <Section title="Who this applies to">
             <p>
-              These Campground Partner Terms (&ldquo;Partner Terms&rdquo;) cover
-              any campground, RV park, resort, or property
+              These Campground Partner Terms (&ldquo;Partner Terms&rdquo;) are
+              a binding agreement between{' '}
+              <strong className="text-cream">RoadWave USA LLC</strong>{' '}
+              (&ldquo;RoadWave,&rdquo; &ldquo;we,&rdquo; or &ldquo;us&rdquo;)
+              and any campground, RV park, resort, or property
               (&ldquo;Campground Partner&rdquo;) that has been onboarded to
               RoadWave and given access to the partner dashboard, QR code, or
               other partner functionality. They are in addition to RoadWave&apos;s

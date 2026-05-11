@@ -51,7 +51,7 @@ export function SiteFooter() {
 
         <div className="mt-10 pt-6 border-t border-white/10">
           <p className="text-xs text-mist/70 text-center">
-            © {new Date().getUTCFullYear()} RoadWave. All rights reserved.
+            © {new Date().getUTCFullYear()} RoadWave USA LLC. All rights reserved.
           </p>
         </div>
       </div>

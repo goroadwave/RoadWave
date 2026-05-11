@@ -38,6 +38,16 @@ export default function PrivacyPolicyPage() {
             <p className="text-xs text-mist/70">Last updated: April 2026</p>
           </div>
 
+          <Section title="Who we are">
+            <p>
+              The RoadWave service is operated by{' '}
+              <strong className="text-cream">RoadWave USA LLC</strong> (referred
+              to in this Policy as &ldquo;RoadWave,&rdquo; &ldquo;we,&rdquo; or
+              &ldquo;us&rdquo;). RoadWave USA LLC is the data controller
+              responsible for the personal information described below.
+            </p>
+          </Section>
+
           <Section title="The short version">
             <p>
               We collect the minimum we need to make a wave work. We never sell

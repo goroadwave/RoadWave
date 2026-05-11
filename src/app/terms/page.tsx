@@ -38,6 +38,17 @@ export default function TermsPage() {
             <p className="text-xs text-mist/70">Last updated: April 2026</p>
           </div>
 
+          <Section title="Who we are">
+            <p>
+              The RoadWave service is operated by{' '}
+              <strong className="text-cream">RoadWave USA LLC</strong> (referred
+              to in these Terms as &ldquo;RoadWave,&rdquo; &ldquo;we,&rdquo; or
+              &ldquo;us&rdquo;). These Terms of Service are a binding agreement
+              between you and RoadWave USA LLC governing your use of the
+              RoadWave website, apps, and services.
+            </p>
+          </Section>
+
           <Section title="Your account">
             <p>
               To use RoadWave you create an account with an email and a

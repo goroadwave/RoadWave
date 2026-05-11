@@ -38,6 +38,16 @@ export default function LawEnforcementPage() {
             <p className="text-xs text-mist/70">Last updated: April 2026</p>
           </div>
 
+          <Section title="Who this policy applies to">
+            <p>
+              The RoadWave service is operated by{' '}
+              <strong className="text-cream">RoadWave USA LLC</strong>{' '}
+              (&ldquo;RoadWave&rdquo;). This Policy describes how RoadWave USA
+              LLC handles requests from law enforcement for user records,
+              account information, and content held by RoadWave.
+            </p>
+          </Section>
+
           <Section title="The default rule">
             <p>
               RoadWave does not voluntarily disclose user account information
@@ -168,6 +178,8 @@ export default function LawEnforcementPage() {
 
           <Section title="Service of process">
             <p>
+              Formal legal process should be directed to{' '}
+              <strong className="text-cream">RoadWave USA LLC</strong>.
               RoadWave does not accept service of process by phone, fax, or
               social media. Send written legal process to{' '}
               <a
