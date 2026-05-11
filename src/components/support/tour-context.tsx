@@ -1,23 +1,20 @@
 'use client'
 
-import { createContext, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 
-// Riley's in-page tour: a 5-step guided walkthrough of the (app) nav
-// (Check in, Campers Here, Meetups, Waves, Privacy). The provider
-// lives in the (app) layout; the floating Riley button reads
-// useTour() to decide whether to expose the "Take a Tour" entry, and
-// the TourOverlay component reads the active step to drive the UI.
-//
-// `mounted` lets a consumer outside the provider tell the difference
-// between "no tour is active" and "tour is not even available on this
-// surface." Riley uses that to fall back to a /tour route navigation
-// on marketing pages where the (app) nav doesn't exist.
+// Riley's in-page tour: a 5-step guided walkthrough of the (app) nav.
+// The Provider is mounted at the root layout so Riley's button (which
+// also lives at the root) can read state from it. The actual UI
+// (TourOverlay) is mounted inside the (app) layout and registers
+// itself via useTourRegister() so the button can tell whether the
+// overlay is available on the current surface or whether to fall back
+// to a /tour route navigation.
 
 export type TourCtx = {
-  /** True when the real provider is up the tree. False when reading
-   *  the default value because no provider is mounted (e.g. /demo,
-   *  /, marketing pages). */
+  /** True iff a TourOverlay is currently in the React tree. */
   mounted: boolean
+  /** Used internally by TourOverlay to register/unregister. */
+  setMounted: (mounted: boolean) => void
   /** 0-indexed step number, or null when the tour isn't running. */
   activeStep: number | null
   start: () => void
@@ -28,6 +25,7 @@ export type TourCtx = {
 
 const defaultCtx: TourCtx = {
   mounted: false,
+  setMounted: () => {},
   activeStep: null,
   start: () => {},
   next: () => {},
@@ -39,6 +37,14 @@ const TourContext = createContext<TourCtx>(defaultCtx)
 
 export function useTour(): TourCtx {
   return useContext(TourContext)
+}
+
+export function useTourRegister() {
+  const { setMounted } = useContext(TourContext)
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [setMounted])
 }
 
 export const TOUR_STEPS = [
@@ -70,11 +76,14 @@ export const TOUR_STEPS = [
 ] as const
 
 export function TourProvider({ children }: { children: React.ReactNode }) {
+  const [mounted, setMountedState] = useState(false)
   const [activeStep, setActiveStep] = useState<number | null>(null)
+  const setMounted = useCallback((m: boolean) => setMountedState(m), [])
   return (
     <TourContext.Provider
       value={{
-        mounted: true,
+        mounted,
+        setMounted,
         activeStep,
         start: () => setActiveStep(0),
         next: () =>

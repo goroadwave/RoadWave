@@ -1,6 +1,6 @@
 'use client'
 
-import { useGuestSupport } from './guest-support-context'
+import { useGuestSupport, useGuestSupportRegister } from './guest-support-context'
 import { SupportChat } from './support-chat'
 
 // Guest-facing chat widget — Riley's chat panel. The trigger is
@@ -11,6 +11,10 @@ import { SupportChat } from './support-chat'
 // button and conflict with Riley.
 
 export function GuestSupportChat() {
+  // Declare to the Provider (mounted in the root layout) that the
+  // chat panel is now available on this surface so Riley's button
+  // can open it directly instead of navigating away.
+  useGuestSupportRegister()
   const { open, setOpen } = useGuestSupport()
   return (
     <SupportChat

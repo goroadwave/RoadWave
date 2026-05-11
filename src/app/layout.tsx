@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, DM_Sans, Instrument_Serif } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { GuestSupportProvider } from '@/components/support/guest-support-context'
+import { TourProvider } from '@/components/support/tour-context'
 import { FloatingTourButton } from '@/components/ui/floating-tour-button'
 import { SiteFooter } from '@/components/ui/site-footer'
 import './globals.css'
@@ -45,9 +47,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${bricolage.variable} ${dmSans.variable} ${instrument.variable} antialiased`}
     >
       <body className="bg-night text-cream font-sans">
-        {children}
-        <SiteFooter />
-        <FloatingTourButton />
+        {/* Riley's tour + chat state lives at the root so the floating
+            Riley button (mounted here) and the actual chat panel +
+            tour overlay (mounted inside the (app) layout) share the
+            same context. The providers themselves are inert until
+            their UI components register on mount. */}
+        <GuestSupportProvider>
+          <TourProvider>
+            {children}
+            <SiteFooter />
+            <FloatingTourButton />
+          </TourProvider>
+        </GuestSupportProvider>
         <Analytics />
       </body>
     </html>

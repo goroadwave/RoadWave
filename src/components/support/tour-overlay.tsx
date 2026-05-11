@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { TOUR_STEPS, useTour } from './tour-context'
+import { TOUR_STEPS, useTour, useTourRegister } from './tour-context'
 
 // In-page tour overlay. Mounted once at the bottom of the (app)
 // layout; renders nothing until Riley's "Take a Tour" button starts
@@ -11,6 +11,10 @@ import { TOUR_STEPS, useTour } from './tour-context'
 // close it.
 
 export function TourOverlay() {
+  // Declare presence to the Provider (mounted in the root layout) so
+  // Riley's button can start the in-page tour directly instead of
+  // falling back to /tour.
+  useTourRegister()
   const { mounted, activeStep, next, prev, stop } = useTour()
 
   // Esc closes.
