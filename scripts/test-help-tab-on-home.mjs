@@ -181,6 +181,52 @@ try {
     fullPage: false,
   })
 
+  // ---- 6. Close chat, then exercise Riley alongside Help ----
+  await page.getByRole('button', { name: 'Close' }).click()
+  await page.waitForTimeout(300)
+
+  // Riley exists on guest /home (mounted from the root layout's
+  // FloatingTourButton — bottom-right, separate from the support
+  // chat). aria-label is "Ask Riley about this page" when closed.
+  const rileyBtn = page.locator('button[aria-label="Ask Riley about this page"]')
+  check('Riley mascot present in bottom-right', (await rileyBtn.count()) === 1)
+
+  // Tap Riley → popup opens.
+  await rileyBtn.click()
+  await page.waitForTimeout(400)
+  const rileyPopupVisible = await page
+    .locator('[role="dialog"][aria-label="Riley help menu"]')
+    .isVisible()
+  check('clicking Riley opens Riley popup', rileyPopupVisible)
+  await page.screenshot({
+    path: 'test-results/help-tab-home-with-riley.png',
+    fullPage: false,
+  })
+
+  // Tap Help while Riley's popup is open. Riley dismisses via its
+  // click-outside listener; the chat panel opens cleanly. This
+  // confirms the two surfaces don't deadlock state on each other.
+  await page.getByRole('button', { name: 'Help' }).first().click()
+  await page.waitForTimeout(500)
+  const rileyClosedAfterHelp = (await page
+    .locator('[role="dialog"][aria-label="Riley help menu"]')
+    .count()) === 0
+  const chatOpenAfterRiley = await page
+    .locator('[role="dialog"][aria-label="Ask RoadWave 👋"]')
+    .isVisible()
+  check(
+    'tapping Help while Riley popup is open → Riley closes',
+    rileyClosedAfterHelp,
+  )
+  check(
+    'tapping Help while Riley popup is open → chat panel opens',
+    chatOpenAfterRiley,
+  )
+  await page.screenshot({
+    path: 'test-results/help-tab-home-help-after-riley.png',
+    fullPage: false,
+  })
+
   await browser.close()
 } finally {
   // ---- 6. Cleanup ----
