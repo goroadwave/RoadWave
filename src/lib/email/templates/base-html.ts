@@ -116,6 +116,11 @@ export function buildBrandedHtml(parts: BrandedEmailParts): string {
             </tr>`
                 : ''
             }
+            <tr>
+              <td align="center" style="padding:0 12px 8px; color:${PALETTE.mistDim}; font-size:11px; line-height:1.5;">
+                © ${new Date().getUTCFullYear()} RoadWave USA LLC. All rights reserved.
+              </td>
+            </tr>
           </table>
         </td>
       </tr>
