@@ -42,6 +42,7 @@
     "jsqr": "^1.4.0",
     "mailosaur": "^11.1.0",
     "pg": "^8.20.0",
+    "playwright": "^1.59.1",
     "pngjs": "^7.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
