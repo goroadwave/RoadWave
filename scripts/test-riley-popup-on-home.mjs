@@ -187,6 +187,16 @@ try {
     fullPage: false,
   })
 
+  // While the chat panel is open, the Riley mascot button should be
+  // hidden — otherwise it overlaps the chat input area.
+  const rileyHiddenWhileChatOpen =
+    (await page.locator('button[aria-label="Open Riley menu"]').count()) === 0 &&
+    (await page.locator('button[aria-label="Close Riley menu"]').count()) === 0
+  check(
+    'Riley mascot is hidden while chat panel is open',
+    rileyHiddenWhileChatOpen,
+  )
+
   // Close the chat panel.
   await chatPanel.getByRole('button', { name: 'Close' }).click({ force: true })
   await chatPanel.waitFor({ state: 'hidden', timeout: 4000 }).catch(() => {})
@@ -194,6 +204,15 @@ try {
     'Chat panel dismisses on Close',
     (await chatPanel.count()) === 0 || !(await chatPanel.isVisible()),
   )
+
+  // After Close, Riley reappears in the bottom-right.
+  await page
+    .locator('button[aria-label="Open Riley menu"]')
+    .waitFor({ state: 'visible', timeout: 4000 })
+    .catch(() => {})
+  const rileyVisibleAfterClose =
+    (await page.locator('button[aria-label="Open Riley menu"]').count()) === 1
+  check('Riley mascot reappears after chat closes', rileyVisibleAfterClose)
 
   // ---- 8. "Take a Tour" opens the tour overlay ----
   // Re-open Riley popup, then click Take a Tour.

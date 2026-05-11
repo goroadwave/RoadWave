@@ -80,6 +80,12 @@ export function FloatingTourButton() {
   // overlap the step card. The TourOverlay handles closing.
   if (tour.activeStep !== null) return null
 
+  // While the Chat with Riley panel is open, hide the mascot — it
+  // sits in the same bottom-right corner as the chat input and would
+  // overlap it. The chat panel has its own Close (✕) button + Escape
+  // handler, so Riley reappears as soon as the panel is dismissed.
+  if (guestChat.open) return null
+
   function handleRileyTap() {
     setShowPopup((prev) => !prev)
   }
