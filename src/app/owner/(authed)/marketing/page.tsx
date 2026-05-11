@@ -56,7 +56,6 @@ export default async function OwnerMarketingPage() {
         slug={campground.slug}
         siteUrl={siteUrl}
         checkInUrl={checkInUrl}
-        amenities={campground.amenities ?? []}
       />
     </div>
   )

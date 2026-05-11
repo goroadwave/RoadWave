@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { splitAmenities } from '@/lib/campgrounds/amenities'
 
 // Owner-facing Marketing Kit. Generates every brand-correct, auto-
 // populated promotional asset on demand: PDFs are built client-side
@@ -30,19 +29,19 @@ const BRAND = {
   night: [0x0a, 0x0f, 0x1c] as const,
 }
 
-const TAGLINE =
-  'See campground updates, activities, and wave hello — only if you want.'
-
-const COUNTER_BULLETS: string[] = [
+// Trust points shown on every printable QR card. Kept to exactly four
+// short lines so the layout stays clean at 4×6 and 4×9.
+const TRUST_POINTS: string[] = [
   'No app download needed',
-  'No exact site numbers — ever',
-  'No public group chats',
+  'No exact site numbers',
+  'No public group chat',
   'You control your visibility',
-  'Free for all guests',
 ]
 
-const FOOTER_PRIVACY_LINE =
-  'Private by design. No exact site numbers. No public group chats. No pressure.'
+const CARD_HEADLINE = 'Scan for Campground Updates'
+const CARD_SUBTEXT =
+  'Check in, see activities, contact the office, and connect with nearby campers only if you want.'
+const CARD_FOOTER = 'Powered by RoadWave'
 
 type Props = {
   campgroundName: string
@@ -51,10 +50,6 @@ type Props = {
   slug: string
   siteUrl: string
   checkInUrl: string | null
-  /** Saved campgrounds.amenities (mix of standard labels and custom).
-   *  Embedded into the printable Counter Card and Site Card PDFs as a
-   *  small pill row — solid border for standard, dashed for custom. */
-  amenities: string[]
 }
 
 export function MarketingKit({
@@ -64,7 +59,6 @@ export function MarketingKit({
   slug,
   siteUrl,
   checkInUrl,
-  amenities,
 }: Props) {
   const [qrPngDataUrl, setQrPngDataUrl] = useState<string | null>(null)
   // 👋 rasterised to a PNG via the browser canvas + system emoji font.
@@ -74,7 +68,12 @@ export function MarketingKit({
   // PDF download.
   const [waveDataUrl, setWaveDataUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  const [copied, setCopied] = useState<string | null>(null)
+  // Track the most recent copy attempt's label + outcome. Buttons read
+  // both so they can show "Copied ✓" on success or
+  // "Copy failed — press and hold to select" on failure for 2 seconds.
+  const [copyResult, setCopyResult] = useState<
+    { label: string; ok: boolean } | null
+  >(null)
   const [renderError, setRenderError] = useState<string | null>(null)
   const copyResetTimer = useRef<number | null>(null)
 
@@ -119,10 +118,23 @@ export function MarketingKit({
     setWaveDataUrl(renderEmojiToPng('👋', 192))
   }, [])
 
-  function flashCopied(label: string) {
-    setCopied(label)
+  function flashCopyResult(label: string, ok: boolean) {
+    setCopyResult({ label, ok })
     if (copyResetTimer.current) window.clearTimeout(copyResetTimer.current)
-    copyResetTimer.current = window.setTimeout(() => setCopied(null), 2_000)
+    copyResetTimer.current = window.setTimeout(
+      () => setCopyResult(null),
+      2_000,
+    )
+  }
+
+  // UI helper — given a button's label key and its default label,
+  // returns the text to show: "Copied ✓" on success, "Copy failed" on
+  // failure, or the original label otherwise.
+  function copyButtonLabel(label: string, fallback: string): string {
+    if (copyResult?.label !== label) return fallback
+    return copyResult.ok
+      ? 'Copied ✓'
+      : 'Copy failed — press and hold to select'
   }
 
   function downloadBlob(blob: Blob, filename: string) {
@@ -180,7 +192,6 @@ export function MarketingKit({
         waveDataUrl,
         campgroundName,
         location,
-        amenities,
       })
       downloadBlob(blob, `${baseFilename}-counter-card-4x6.pdf`)
     } catch (e) {
@@ -216,7 +227,6 @@ export function MarketingKit({
         waveDataUrl,
         campgroundName,
         location,
-        amenities,
       })
       downloadBlob(blob, `${baseFilename}-site-card-4x9.pdf`)
     } catch (e) {
@@ -246,8 +256,8 @@ export function MarketingKit({
       campgroundUrl: campgroundPageUrl,
     })
     const plain = `Scan to connect with fellow campers at ${campgroundName} — ${campgroundPageUrl}`
-    await copyHtmlToClipboard(html, plain)
-    flashCopied('signature')
+    const ok = await copyHtmlToClipboard(html, plain)
+    flashCopyResult('signature', ok)
   }
 
   async function copyWelcomeEmailHtml() {
@@ -265,8 +275,8 @@ export function MarketingKit({
       campgroundName,
       campgroundUrl: campgroundPageUrl,
     })
-    await copyHtmlToClipboard(html, plain)
-    flashCopied('welcome-html')
+    const ok = await copyHtmlToClipboard(html, plain)
+    flashCopyResult('welcome-html', ok)
   }
 
   async function copyWelcomeEmailText() {
@@ -276,8 +286,8 @@ export function MarketingKit({
       campgroundName,
       campgroundUrl: campgroundPageUrl,
     })
-    await navigator.clipboard.writeText(plain)
-    flashCopied('welcome-text')
+    const ok = await copyPlainToClipboard(plain)
+    flashCopyResult('welcome-text', ok)
   }
 
   // ----------------------------------------------------------------
@@ -360,7 +370,7 @@ export function MarketingKit({
               onClick={copyEmailSignature}
               disabled={!qrReady}
             >
-              {copied === 'signature' ? 'Copied ✓' : 'Copy HTML'}
+              {copyButtonLabel('signature', 'Copy HTML')}
             </PrimaryButton>
           }
           preview={
@@ -384,14 +394,10 @@ export function MarketingKit({
                 onClick={copyWelcomeEmailHtml}
                 disabled={!qrReady}
               >
-                {copied === 'welcome-html'
-                  ? 'Copied ✓'
-                  : 'Copy HTML version'}
+                {copyButtonLabel('welcome-html', 'Copy HTML version')}
               </PrimaryButton>
               <SecondaryButton onClick={copyWelcomeEmailText}>
-                {copied === 'welcome-text'
-                  ? 'Copied ✓'
-                  : 'Copy plain text'}
+                {copyButtonLabel('welcome-text', 'Copy plain text')}
               </SecondaryButton>
             </div>
           }
@@ -594,108 +600,17 @@ type CardArgs = {
   waveDataUrl: string | null
   campgroundName: string
   location: string
-  amenities: string[]
-}
-
-// Render a horizontal row of amenity pills centered at `centerX, y`.
-// Solid amber border for standard amenities, dashed amber border for
-// custom (matches the welcome page's solid-vs-dashed treatment).
-// Packs left-to-right and silently drops any that won't fit within
-// `maxWidth`. The full list lives on the welcome page; the PDFs are
-// constrained real estate so we just surface what fits.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsPDF
-function drawAmenityRow(
-  doc: any,
-  amenities: string[],
-  centerX: number,
-  y: number,
-  maxWidth: number,
-) {
-  if (amenities.length === 0) return
-  // Standard amenities first so the most recognisable labels (Pool,
-  // WiFi, Dog-Friendly, etc.) appear before owner-typed customs.
-  const { standard, custom } = splitAmenities(amenities)
-  const ordered: { text: string; isStandard: boolean }[] = [
-    ...standard.map((t) => ({ text: t, isStandard: true })),
-    ...custom.map((t) => ({ text: t, isStandard: false })),
-  ]
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(6.5)
-  const padX = 6
-  const pillH = 13
-  const gap = 4
-
-  const measured = ordered.map((m) => ({
-    ...m,
-    label: m.text.toUpperCase(),
-    width: doc.getTextWidth(m.text.toUpperCase()) + padX * 2,
-  }))
-
-  // Pack left-to-right.
-  const fit: typeof measured = []
-  let total = 0
-  for (const m of measured) {
-    const inc = (fit.length === 0 ? 0 : gap) + m.width
-    if (total + inc > maxWidth) break
-    fit.push(m)
-    total += inc
-  }
-  if (fit.length === 0) return
-
-  let startX = centerX - total / 2
-  for (const m of fit) {
-    drawAmenityPill(doc, m.label, startX, y, m.width, pillH, m.isStandard)
-    startX += m.width + gap
-  }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsPDF
-function drawAmenityPill(
-  doc: any,
-  label: string,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  isStandard: boolean,
-) {
-  doc.setLineWidth(0.6)
-  // jsPDF v2+ exposes setLineDashPattern; older builds expose
-  // setLineDash. Try both so this doesn't blow up if the bundled
-  // version drifts.
-  if (!isStandard) {
-    if (typeof doc.setLineDashPattern === 'function') {
-      doc.setLineDashPattern([2, 2], 0)
-    } else if (typeof doc.setLineDash === 'function') {
-      doc.setLineDash([2, 2], 0)
-    }
-  }
-  // Border + faint amber fill for standards; transparent fill +
-  // dashed border for customs.
-  doc.setDrawColor(BRAND.amber[0], BRAND.amber[1], BRAND.amber[2])
-  if (isStandard) {
-    // Approximate the welcome page's amber/[0.06] with a near-navy
-    // tinted fill so the pill reads "filled" without overpowering.
-    doc.setFillColor(0x2a, 0x20, 0x10)
-    doc.roundedRect(x, y, w, h, 3, 3, 'FD')
-  } else {
-    doc.roundedRect(x, y, w, h, 3, 3, 'S')
-  }
-  // Reset dash pattern so it doesn't leak into subsequent draws.
-  if (typeof doc.setLineDashPattern === 'function') {
-    doc.setLineDashPattern([], 0)
-  } else if (typeof doc.setLineDash === 'function') {
-    doc.setLineDash([], 0)
-  }
-  setText(doc, BRAND.amber)
-  doc.text(label, x + w / 2, y + 9, { align: 'center' })
 }
 
 // 4×6 portrait, 288×432pt. Matches the spec layout: brand wordmark
 // top-left, "WELCOME TO" + name + location, two-column QR + bullet
 // area, two pill CTAs, dark footer with privacy line + green pill.
 async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
+  // Clean 4×6 counter card. Centered layout, no fake buttons, no
+  // amenity pills, no FREE FOR GUESTS badge. Hierarchy: wordmark →
+  // WELCOME TO eyebrow → campground name → city/state → centered QR →
+  // headline → subtext → four trust checkmarks → "Powered by
+  // RoadWave" footer.
   const { default: JsPDF } = await import('jspdf')
   const doc = new JsPDF({
     unit: 'pt',
@@ -704,67 +619,73 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
   })
   const W = 288
   const H = 432
-  const PAD = 16
+  const PAD = 20
 
   // Background
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Top-left wordmark — Road white, Wave amber. The 👋 to the right of
-  // the wordmark is drawn separately as an embedded PNG (rasterised on
-  // the client from the system emoji font); jsPDF's built-in
-  // helvetica/courier/times fonts have no emoji glyphs, so embedding
-  // the rendered image is the only way to get a recognisable wave on
-  // the PDF.
+  // Wordmark centered at the top. "Road" white, "Wave" amber, with
+  // the 👋 PNG rendered to the right (jsPDF can't render emoji from
+  // its built-in fonts, so the parent component rasterises it).
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(22)
-  setText(doc, BRAND.white)
-  doc.text('Road', PAD, PAD + 18)
+  doc.setFontSize(20)
   const roadW = doc.getTextWidth('Road')
-  setText(doc, BRAND.amber)
-  doc.text('Wave', PAD + roadW, PAD + 18)
   const waveW = doc.getTextWidth('Wave')
+  const waveImgSize = args.waveDataUrl ? 20 : 0
+  const waveGap = args.waveDataUrl ? 5 : 0
+  const wordmarkTotalW = roadW + waveW + waveGap + waveImgSize
+  const wordmarkX = (W - wordmarkTotalW) / 2
+  const wordmarkY = PAD + 16
+  setText(doc, BRAND.white)
+  doc.text('Road', wordmarkX, wordmarkY)
+  setText(doc, BRAND.amber)
+  doc.text('Wave', wordmarkX + roadW, wordmarkY)
   if (args.waveDataUrl) {
-    const waveSize = 22
     doc.addImage(
       args.waveDataUrl,
       'PNG',
-      PAD + roadW + waveW + 5,
-      PAD - 1,
-      waveSize,
-      waveSize,
+      wordmarkX + roadW + waveW + waveGap,
+      wordmarkY - waveImgSize + 3,
+      waveImgSize,
+      waveImgSize,
     )
   }
 
   // "WELCOME TO" eyebrow
-  doc.setFontSize(8)
+  doc.setFontSize(7.5)
   setText(doc, BRAND.amber)
-  doc.text('WELCOME TO', PAD, PAD + 50)
+  doc.text('WELCOME TO', W / 2, wordmarkY + 22, { align: 'center' })
 
-  // Campground name (wrap if long)
-  doc.setFontSize(20)
+  // Campground name — centered, may wrap onto 2 lines for long names.
+  doc.setFontSize(17)
   setText(doc, BRAND.white)
   const nameLines = doc.splitTextToSize(args.campgroundName, W - PAD * 2)
-  let nameY = PAD + 72
-  doc.text(nameLines, PAD, nameY)
-  nameY += nameLines.length * 22
+  let nameY = wordmarkY + 44
+  for (const ln of nameLines) {
+    doc.text(ln, W / 2, nameY, { align: 'center' })
+    nameY += 20
+  }
 
   // Location
   if (args.location) {
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(11)
+    doc.setFontSize(10)
     setText(doc, BRAND.mist)
-    doc.text(args.location, PAD, nameY + 4)
+    doc.text(args.location, W / 2, nameY + 2, { align: 'center' })
+    nameY += 14
   }
 
-  // Two-column QR + bullets
-  const qrSize = 110
-  const qrX = PAD
-  const qrY = 168
-  // White QR card with rounded corners
+  // Centered QR — balanced size (148pt = ~2 in on a 4-in wide card),
+  // large enough to scan from arm's length but not oversized. Reserve
+  // enough vertical space under it for the headline + subtext + four
+  // trust checkmarks + footer with comfortable margins.
+  const qrSize = 148
+  const qrX = (W - qrSize) / 2
+  const qrY = nameY + 16
   setFill(doc, BRAND.white)
-  doc.roundedRect(qrX, qrY, qrSize, qrSize, 6, 6, 'F')
-  const inset = 6
+  doc.roundedRect(qrX, qrY, qrSize, qrSize, 8, 8, 'F')
+  const inset = 8
   doc.addImage(
     args.qrDataUrl,
     'PNG',
@@ -774,129 +695,48 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
     qrSize - inset * 2,
   )
 
-  // QR labels — above + below
+  // Headline under QR
+  const belowQrY = qrY + qrSize + 22
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7)
+  doc.setFontSize(13)
   setText(doc, BRAND.amber)
-  doc.text('OPEN CAMERA & SCAN', qrX + qrSize / 2, qrY - 6, {
-    align: 'center',
-  })
-  doc.text('SCAN TO CHECK IN', qrX + qrSize / 2, qrY + qrSize + 12, {
-    align: 'center',
-  })
+  doc.text(CARD_HEADLINE, W / 2, belowQrY, { align: 'center' })
 
-  // Right column — italic tagline + bullets
-  const rightX = qrX + qrSize + 16
-  const rightW = W - rightX - PAD
-
-  doc.setFont('helvetica', 'italic')
-  doc.setFontSize(9)
-  setText(doc, BRAND.amber)
-  const taglineLines = doc.splitTextToSize(TAGLINE, rightW)
-  doc.text(taglineLines, rightX, qrY + 8)
-
-  // Bullets
-  let by = qrY + 8 + taglineLines.length * 12 + 6
+  // Subtext
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8.5)
-  for (const b of COUNTER_BULLETS) {
-    setText(doc, BRAND.green)
-    doc.text('✓', rightX, by)
-    setText(doc, BRAND.white)
-    doc.text(b, rightX + 10, by)
-    by += 12
+  doc.setFontSize(8)
+  setText(doc, BRAND.mist)
+  const subLines = doc.splitTextToSize(CARD_SUBTEXT, W - PAD * 2)
+  let subY = belowQrY + 12
+  for (const ln of subLines) {
+    doc.text(ln, W / 2, subY, { align: 'center' })
+    subY += 10
   }
 
-  // Action pills row
-  const pillsY = qrY + qrSize + 36
-  const pillGap = 8
-  const pillW = (W - PAD * 2 - pillGap) / 2
-  const pillH = 26
+  // Trust checkmarks — small green ✓, white label, two columns to
+  // keep the bottom of the card breathable.
+  const checksTop = subY + 8
+  const colGap = 12
+  const colW = (W - PAD * 2 - colGap) / 2
+  doc.setFontSize(8)
+  TRUST_POINTS.forEach((label, i) => {
+    const col = i % 2
+    const row = Math.floor(i / 2)
+    const x = PAD + col * (colW + colGap)
+    const y = checksTop + row * 14
+    setText(doc, BRAND.green)
+    doc.setFont('helvetica', 'bold')
+    doc.text('✓', x, y)
+    setText(doc, BRAND.white)
+    doc.setFont('helvetica', 'normal')
+    doc.text(label, x + 10, y)
+  })
 
-  // Amber: Check In & Connect with Campers. The label is wide for the
-  // 124pt pill at 8pt helvetica-bold (clipped on the left edge), so we
-  // size both pill labels at 7pt for guaranteed fit.
-  setFill(doc, BRAND.amber)
-  doc.roundedRect(PAD, pillsY, pillW, pillH, 6, 6, 'F')
-  setText(doc, BRAND.night)
+  // Footer — "Powered by RoadWave". Single line, centered, amber.
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7)
-  doc.text(
-    'Check In & Connect with Campers',
-    PAD + pillW / 2,
-    pillsY + 16,
-    { align: 'center' },
-  )
-
-  // Green: Campground Updates Only — same 7pt for symmetry.
-  setFill(doc, BRAND.green)
-  doc.roundedRect(
-    PAD + pillW + pillGap,
-    pillsY,
-    pillW,
-    pillH,
-    6,
-    6,
-    'F',
-  )
-  setText(doc, BRAND.night)
-  doc.text(
-    'Campground Updates Only',
-    PAD + pillW + pillGap + pillW / 2,
-    pillsY + 16,
-    { align: 'center' },
-  )
-
-  // Amenity pill row — sits between the action pills and the footer.
-  // Solid border for standard amenities, dashed for custom. Packs
-  // left-to-right and silently drops anything that won't fit on the
-  // 4×6 width; the welcome page is the canonical full list.
-  const amenityRowY = pillsY + pillH + 14
-  drawAmenityRow(
-    doc,
-    args.amenities,
-    W / 2,
-    amenityRowY,
-    W - PAD * 2,
-  )
-
-  // Footer — privacy line left + FREE FOR GUESTS pill right
-  const footerH = 44
-  const footerY = H - footerH
-  // Subtle darker stripe
-  setFill(doc, [0x08, 0x0c, 0x18])
-  doc.rect(0, footerY, W, footerH, 'F')
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7)
-  setText(doc, BRAND.mist)
-  const footerLines = doc.splitTextToSize(
-    FOOTER_PRIVACY_LINE,
-    W - PAD * 2 - 80,
-  )
-  doc.text(footerLines, PAD, footerY + 18)
-
-  const badgeW = 70
-  const badgeH = 18
-  setFill(doc, BRAND.green)
-  doc.roundedRect(
-    W - PAD - badgeW,
-    footerY + (footerH - badgeH) / 2,
-    badgeW,
-    badgeH,
-    4,
-    4,
-    'F',
-  )
-  setText(doc, BRAND.night)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7)
-  doc.text(
-    'FREE FOR GUESTS',
-    W - PAD - badgeW / 2,
-    footerY + footerH / 2 + 2.5,
-    { align: 'center' },
-  )
+  doc.setFontSize(8.5)
+  setText(doc, BRAND.amber)
+  doc.text(CARD_FOOTER, W / 2, H - PAD, { align: 'center' })
 
   return doc.output('blob')
 }
@@ -976,7 +816,9 @@ async function buildSimpleQrPdf(args: {
   return doc.output('blob')
 }
 
-// 4×9 portrait — door hanger / site card.
+// 4×9 portrait — door hanger / site card. Same clean centered
+// layout as the 4×6 counter card, just taller — bigger QR and more
+// breathing room.
 async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
   const { default: JsPDF } = await import('jspdf')
   // 4in × 9in = 288 × 648pt
@@ -987,12 +829,12 @@ async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
   })
   const W = 288
   const H = 648
-  const PAD = 18
+  const PAD = 22
 
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Wordmark center top, with the 👋 image next to it.
+  // Wordmark centered top.
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(26)
   const roadW = doc.getTextWidth('Road')
@@ -1000,7 +842,7 @@ async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
   const waveImgSize = args.waveDataUrl ? 26 : 0
   const waveImgGap = args.waveDataUrl ? 6 : 0
   const totalW = roadW + waveW + waveImgGap + waveImgSize
-  const wmY = 56
+  const wmY = PAD + 30
   const wmX = (W - totalW) / 2
   setText(doc, BRAND.white)
   doc.text('Road', wmX, wmY)
@@ -1017,34 +859,37 @@ async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
     )
   }
 
-  // "WELCOME TO" + name + location
+  // "WELCOME TO" eyebrow
   doc.setFontSize(8)
   setText(doc, BRAND.amber)
-  doc.text('WELCOME TO', W / 2, wmY + 30, { align: 'center' })
+  doc.text('WELCOME TO', W / 2, wmY + 28, { align: 'center' })
 
+  // Campground name
   doc.setFontSize(22)
   setText(doc, BRAND.white)
   const nameLines = doc.splitTextToSize(args.campgroundName, W - PAD * 2)
-  let nameY = wmY + 56
+  let nameY = wmY + 54
   for (const ln of nameLines) {
     doc.text(ln, W / 2, nameY, { align: 'center' })
     nameY += 26
   }
 
+  // Location
   if (args.location) {
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(11)
     setText(doc, BRAND.mist)
     doc.text(args.location, W / 2, nameY + 2, { align: 'center' })
+    nameY += 16
   }
 
-  // Big centered QR
-  const qrSize = 220
+  // Centered QR — large but not oversized for the 4×9 size.
+  const qrSize = 200
   const qrX = (W - qrSize) / 2
-  const qrY = nameY + 32
+  const qrY = nameY + 28
   setFill(doc, BRAND.white)
-  doc.roundedRect(qrX, qrY, qrSize, qrSize, 12, 12, 'F')
-  const inset = 12
+  doc.roundedRect(qrX, qrY, qrSize, qrSize, 10, 10, 'F')
+  const inset = 10
   doc.addImage(
     args.qrDataUrl,
     'PNG',
@@ -1054,77 +899,43 @@ async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
     qrSize - inset * 2,
   )
 
+  // Headline under QR
+  const belowQrY = qrY + qrSize + 30
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
+  doc.setFontSize(15)
   setText(doc, BRAND.amber)
-  doc.text('SCAN TO CHECK IN', W / 2, qrY + qrSize + 18, { align: 'center' })
+  doc.text(CARD_HEADLINE, W / 2, belowQrY, { align: 'center' })
 
-  // Italic tagline
-  doc.setFont('helvetica', 'italic')
+  // Subtext
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9.5)
+  setText(doc, BRAND.mist)
+  const subLines = doc.splitTextToSize(CARD_SUBTEXT, W - PAD * 2)
+  let subY = belowQrY + 16
+  for (const ln of subLines) {
+    doc.text(ln, W / 2, subY, { align: 'center' })
+    subY += 12
+  }
+
+  // Trust checkmarks — single column centered (more vertical room
+  // on the site card means we can stack them).
+  let by = subY + 14
+  doc.setFontSize(10)
+  for (const label of TRUST_POINTS) {
+    setText(doc, BRAND.green)
+    doc.setFont('helvetica', 'bold')
+    doc.text('✓', PAD + 16, by)
+    setText(doc, BRAND.white)
+    doc.setFont('helvetica', 'normal')
+    doc.text(label, PAD + 30, by)
+    by += 16
+  }
+
+  // Footer — "Powered by RoadWave"
+  doc.setFont('helvetica', 'bold')
   doc.setFontSize(10)
   setText(doc, BRAND.amber)
-  const taglineLines = doc.splitTextToSize(TAGLINE, W - PAD * 2)
-  let ty = qrY + qrSize + 42
-  for (const ln of taglineLines) {
-    doc.text(ln, W / 2, ty, { align: 'center' })
-    ty += 13
-  }
-
-  // 5 checkmark bullets centered as a column
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-  let by = ty + 10
-  for (const b of COUNTER_BULLETS) {
-    setText(doc, BRAND.green)
-    doc.text('✓', PAD + 8, by)
-    setText(doc, BRAND.white)
-    doc.text(b, PAD + 22, by)
-    by += 13
-  }
-
-  // Action pills at bottom
-  const pillsY = by + 16
-  const pillGap = 6
-  const pillW = (W - PAD * 2 - pillGap) / 2
-  const pillH = 22
-
-  setFill(doc, BRAND.amber)
-  doc.roundedRect(PAD, pillsY, pillW, pillH, 5, 5, 'F')
-  setText(doc, BRAND.night)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7)
-  doc.text('Check In & Connect', PAD + pillW / 2, pillsY + 14, {
-    align: 'center',
-  })
-
-  setFill(doc, BRAND.green)
-  doc.roundedRect(PAD + pillW + pillGap, pillsY, pillW, pillH, 5, 5, 'F')
-  setText(doc, BRAND.night)
-  doc.text('Updates Only', PAD + pillW + pillGap + pillW / 2, pillsY + 14, {
-    align: 'center',
-  })
-
-  // Amenity pill row (4×9 has more horizontal room than the 4×6
-  // counter card — same render, just at the spot below the action
-  // pills).
-  drawAmenityRow(
-    doc,
-    args.amenities,
-    W / 2,
-    pillsY + pillH + 14,
-    W - PAD * 2,
-  )
-
-  // Footer privacy line
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7)
-  setText(doc, BRAND.mist)
-  const footerLines = doc.splitTextToSize(FOOTER_PRIVACY_LINE, W - PAD * 2)
-  let fy = H - 50
-  for (const ln of footerLines) {
-    doc.text(ln, W / 2, fy, { align: 'center' })
-    fy += 9
-  }
+  doc.text(CARD_FOOTER, W / 2, H - PAD, { align: 'center' })
 
   return doc.output('blob')
 }
@@ -1287,7 +1098,8 @@ function escapeHtml(s: string): string {
 async function copyHtmlToClipboard(
   html: string,
   plain: string,
-): Promise<void> {
+): Promise<boolean> {
+  // Tier 1: modern rich clipboard (Chrome / Safari / new Firefox).
   try {
     if (
       typeof window !== 'undefined' &&
@@ -1299,10 +1111,58 @@ async function copyHtmlToClipboard(
         'text/plain': new Blob([plain], { type: 'text/plain' }),
       })
       await navigator.clipboard.write([item])
-      return
+      return true
     }
   } catch {
-    // Fall through to plain text.
+    // Fall through.
   }
-  await navigator.clipboard.writeText(html)
+  // Tier 2: writeText (plain text only).
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(plain)
+      return true
+    }
+  } catch {
+    // Fall through.
+  }
+  // Tier 3: legacy execCommand via an off-screen textarea. Works on
+  // older browsers + non-HTTPS contexts where navigator.clipboard is
+  // unavailable. Marked deprecated but still ships in every shipping
+  // browser at the time of writing.
+  return execCommandCopyFallback(plain)
+}
+
+async function copyPlainToClipboard(plain: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(plain)
+      return true
+    }
+  } catch {
+    // Fall through.
+  }
+  return execCommandCopyFallback(plain)
+}
+
+function execCommandCopyFallback(text: string): boolean {
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    // Avoid scroll-to + selection-popup on mobile.
+    ta.setAttribute('readonly', '')
+    ta.style.position = 'fixed'
+    ta.style.top = '0'
+    ta.style.left = '0'
+    ta.style.width = '1px'
+    ta.style.height = '1px'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.focus()
+    ta.select()
+    const ok = document.execCommand('copy')
+    ta.remove()
+    return ok
+  } catch {
+    return false
+  }
 }

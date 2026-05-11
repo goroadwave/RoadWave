@@ -302,8 +302,13 @@ export function OwnerQrPanel({
           </a>
           <button
             type="button"
-            onClick={() => window.print()}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 text-cream px-4 py-2.5 text-sm font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors"
+            onClick={() => printQrOnly(dataUrl, campgroundName)}
+            disabled={!dataUrl}
+            className={
+              dataUrl
+                ? 'inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 text-cream px-4 py-2.5 text-sm font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors'
+                : 'inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 text-mist/50 px-4 py-2.5 text-sm font-semibold cursor-not-allowed'
+            }
           >
             Print
           </button>
@@ -366,4 +371,81 @@ function slug(s: string): string {
       .replace(/^-+|-+$/g, '')
       .slice(0, 40) || 'campground'
   )
+}
+
+// Print only the QR — not the whole dashboard. Opens a new tab with a
+// centered, brand-coloured page that auto-fires the print dialog and
+// closes itself after print. This replaces a plain `window.print()`
+// call that used to print the entire owner dashboard.
+function printQrOnly(dataUrl: string | null, campgroundName: string): void {
+  if (!dataUrl) return
+  const w = window.open('', '_blank', 'noopener,noreferrer,width=520,height=720')
+  if (!w) {
+    // Popup blocked — fall back to a same-tab navigation; the user
+    // can hit Cmd/Ctrl+P themselves from there.
+    window.location.href = dataUrl
+    return
+  }
+  // Embed everything as a literal document. Strict CSP-safe — no
+  // external resources, no scripts beyond the inline auto-print.
+  const safeName = campgroundName
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  w.document.open()
+  w.document.write(`<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>RoadWave QR — ${safeName}</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #0a0f1c; }
+  .wrap {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    color: #f5ecd9;
+  }
+  .name {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 16px;
+    text-align: center;
+  }
+  .card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 12px;
+  }
+  img { display: block; width: 360px; height: 360px; max-width: 100%; }
+  @media print {
+    html, body, .wrap { background: #ffffff; color: #0a0f1c; }
+    .name { color: #0a0f1c; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="name">${safeName}</p>
+    <div class="card"><img src="${dataUrl}" alt="RoadWave QR" /></div>
+  </div>
+  <script>
+    window.addEventListener('load', function () {
+      // Small delay so the image finishes painting before print dialog
+      // grabs the page snapshot.
+      setTimeout(function () {
+        window.focus();
+        window.print();
+      }, 100);
+      window.addEventListener('afterprint', function () { window.close(); });
+    });
+  </script>
+</body>
+</html>`)
+  w.document.close()
 }

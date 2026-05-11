@@ -91,7 +91,10 @@ export default async function AuthedOwnerLayout({
         </div>
       </header>
       <OwnerNav />
-      <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-6">
+      {/* Bottom padding reserves space under the floating Riley FAB
+          (fixed bottom-right ~60×60px) so the last action button on
+          /owner/marketing, /owner/qr, etc. isn't covered on phones. */}
+      <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-6 pb-28 sm:pb-12">
         {children}
       </main>
       <OwnerSupportChat />
