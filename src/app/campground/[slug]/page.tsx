@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { WelcomeCtas } from '@/components/campgrounds/welcome-ctas'
+import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
 import { Logo } from '@/components/ui/logo'
 import { splitAmenities } from '@/lib/campgrounds/amenities'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
@@ -45,6 +45,12 @@ type CampgroundRow = {
   is_active: boolean
   google_review_url: string | null
   booking_url: string | null
+  booking_message: string | null
+  booking_promo_code: string | null
+  feature_review_enabled: boolean
+  feature_book_again_enabled: boolean
+  feature_contact_office_enabled: boolean
+  feature_pulse_check_enabled: boolean
 }
 
 type TokenRow = {
@@ -90,7 +96,7 @@ export default async function CampgroundLandingPage({
   const { data: campground } = await admin
     .from('campgrounds')
     .select(
-      'id, slug, name, city, region, logo_url, amenities, is_active, google_review_url, booking_url',
+      'id, slug, name, city, region, logo_url, amenities, is_active, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled',
     )
     .eq('slug', slug)
     .maybeSingle<CampgroundRow>()
@@ -279,11 +285,21 @@ export default async function CampgroundLandingPage({
             </p>
           </section>
 
-          {/* ----- Review + Book Again CTAs (only shown when configured) ----- */}
-          <WelcomeCtas
+          {/* ----- Engagement Hub: Pulse Check + Review + Book Again +
+                    Contact the Office. Each surface is gated by both the
+                    owner's feature toggle and the data it needs (e.g. a
+                    review URL). If every section is suppressed the whole
+                    block renders nothing. */}
+          <WelcomeEngagement
             campgroundId={campground.id}
             reviewUrl={campground.google_review_url}
+            reviewEnabled={campground.feature_review_enabled}
             bookingUrl={campground.booking_url}
+            bookingMessage={campground.booking_message}
+            bookingPromoCode={campground.booking_promo_code}
+            bookingEnabled={campground.feature_book_again_enabled}
+            contactEnabled={campground.feature_contact_office_enabled}
+            pulseEnabled={campground.feature_pulse_check_enabled}
           />
 
           {/* ----- How it works (4 steps) ----- */}

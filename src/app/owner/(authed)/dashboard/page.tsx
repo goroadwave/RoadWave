@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { CopyLinkButton } from '@/components/owner/copy-link-button'
+import { EngagementToggles } from '@/components/owner/engagement-toggles'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { PromoKit } from '@/components/owner/promo-kit'
 import { ThisWeekCard } from '@/components/owner/this-week-card'
@@ -260,6 +261,18 @@ export default async function OwnerDashboardPage() {
 
       <VisibilityBreakdown counts={breakdown} />
 
+      <EngagementToggles
+        campgroundId={campground.id}
+        initial={{
+          feature_review_enabled: campground.feature_review_enabled,
+          feature_book_again_enabled: campground.feature_book_again_enabled,
+          feature_contact_office_enabled:
+            campground.feature_contact_office_enabled,
+          feature_pulse_check_enabled: campground.feature_pulse_check_enabled,
+          email_notifications_enabled: campground.email_notifications_enabled,
+        }}
+      />
+
       <PromoKit
         campgroundName={campground.name}
         checkInUrl={promoCheckInUrl}
@@ -304,6 +317,7 @@ export default async function OwnerDashboardPage() {
         <Tile href="/owner/qr" title="QR code" desc="Print-ready welcome QR." />
         <Tile href="/owner/bulletin" title="Bulletin board" desc="One announcement at a time." />
         <Tile href="/owner/meetups" title="Meetups" desc="Hosted events for guests." />
+        <Tile href="/owner/messages" title="Guest messages" desc="Pulse alerts and Contact the Office submissions." />
         <Tile href="/owner/analytics" title="Analytics" desc="Anonymous check-in stats." />
         <Tile href="/owner/billing" title="Billing" desc="Plan, next billing date, and Stripe portal." />
       </section>

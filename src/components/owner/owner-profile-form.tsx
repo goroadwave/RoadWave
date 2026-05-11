@@ -169,6 +169,32 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
             className={inputCls}
           />
         </Field>
+        <Field
+          label="Booking message (optional)"
+          hint="A short note shown above the Book Again button — e.g. dates, what's new, what's included."
+        >
+          <textarea
+            name="booking_message"
+            defaultValue={campground.booking_message ?? ''}
+            maxLength={500}
+            rows={2}
+            placeholder="Hope to see you again this fall — fire pits are back!"
+            className={inputCls + ' resize-none'}
+          />
+        </Field>
+        <Field
+          label="Promo code (optional)"
+          hint="Shown next to the Booking message. Leave blank if none."
+        >
+          <input
+            name="booking_promo_code"
+            type="text"
+            defaultValue={campground.booking_promo_code ?? ''}
+            maxLength={60}
+            placeholder="RETURN10"
+            className={inputCls}
+          />
+        </Field>
       </div>
 
       <Field label="Timezone">

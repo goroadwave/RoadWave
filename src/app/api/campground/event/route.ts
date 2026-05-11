@@ -22,6 +22,13 @@ const ALLOWED_EVENTS = new Set([
   'book_again_click',
   'contact_message',
   'bulletin_view',
+  // Pulse Check tap counts — added in migration 0039 alongside the
+  // Engagement Hub. The "needs_attention" tap is also captured as a
+  // campground_messages row via /api/campground/message; this event
+  // type just keeps the running pulse count consistent in stats.
+  'pulse_great',
+  'pulse_good',
+  'pulse_needs_attention',
 ])
 
 const UUID_RE =

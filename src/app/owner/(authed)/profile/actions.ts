@@ -53,6 +53,20 @@ const schema = z.object({
   logo_url: z.string().max(500).optional().nullable(),
   google_review_url: optionalUrl,
   booking_url: optionalUrl,
+  booking_message: z
+    .string()
+    .max(500)
+    .transform((s) => s.trim())
+    .transform((s) => (s === '' ? null : s))
+    .nullable()
+    .optional(),
+  booking_promo_code: z
+    .string()
+    .max(60)
+    .transform((s) => s.trim())
+    .transform((s) => (s === '' ? null : s))
+    .nullable()
+    .optional(),
 })
 
 export async function saveOwnerProfileAction(
@@ -70,6 +84,8 @@ export async function saveOwnerProfileAction(
     logo_url: formData.get('logo_url') || null,
     google_review_url: formData.get('google_review_url') ?? '',
     booking_url: formData.get('booking_url') ?? '',
+    booking_message: formData.get('booking_message') ?? '',
+    booking_promo_code: formData.get('booking_promo_code') ?? '',
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()
@@ -90,6 +106,8 @@ export async function saveOwnerProfileAction(
       logo_url: parsed.data.logo_url,
       google_review_url: parsed.data.google_review_url ?? null,
       booking_url: parsed.data.booking_url ?? null,
+      booking_message: parsed.data.booking_message ?? null,
+      booking_promo_code: parsed.data.booking_promo_code ?? null,
     })
     .eq('id', parsed.data.campground_id)
   if (error) return { error: error.message, ok: false }

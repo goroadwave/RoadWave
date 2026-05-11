@@ -10,6 +10,7 @@ const TABS: { href: string; label: string }[] = [
   { href: '/owner/marketing', label: 'Marketing' },
   { href: '/owner/bulletin', label: 'Bulletin' },
   { href: '/owner/meetups', label: 'Meetups' },
+  { href: '/owner/messages', label: 'Messages' },
   { href: '/owner/analytics', label: 'Stats' },
   { href: '/owner/billing', label: 'Billing' },
 ]
