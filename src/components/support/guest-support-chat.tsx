@@ -25,6 +25,7 @@ export function GuestSupportChat() {
       greeting="Hi! I'm Riley. Ask me anything about RoadWave — check-ins, waves, meetups, privacy, anything at all."
       reportButtonLabel="Report to RoadWave Team"
       hideDefaultTrigger
+      includePathname
       externalOpen={open}
       setExternalOpen={setOpen}
       theme={{

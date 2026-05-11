@@ -3,23 +3,30 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useGuestSupport } from '@/components/support/guest-support-context'
+import { useOwnerSupport } from '@/components/support/owner-support-context'
+import { useOwnerTour } from '@/components/support/owner-tour-context'
 import { useTour } from '@/components/support/tour-context'
 
-// Floating Riley mascot. Single entry point for both the in-page
-// tour and the Riley chat panel.
+// Floating Riley mascot. One UI, two personas: Camper Riley on the
+// guest (app) tree, Owner Riley on the /owner/* dashboard. The same
+// mascot button switches which providers it talks to based on the
+// current pathname, so each Riley only ever opens her own tour and
+// her own chat panel.
 //
 // Tapping Riley opens a two-bubble menu pinned above her:
-//   🗺️ Take a Tour  → starts the in-page TourOverlay (when mounted
-//                     inside the (app) layout) or falls back to
-//                     navigating to /tour for non-(app) surfaces.
-//   💬 Chat with Riley → opens the GuestSupportChat panel (only
-//                     surfaced when the GuestSupportProvider is
-//                     mounted, i.e. inside the (app) layout where
-//                     auth is enforced).
+//   🗺️ Take a Tour  → starts the audience-appropriate in-page tour
+//                     (or routes to /tour as a marketing fallback
+//                     when no tour provider is mounted on this
+//                     surface).
+//   💬 Chat with Riley → opens the audience-appropriate chat panel
+//                     (or routes to the audience's dashboard / home
+//                     if the chat panel isn't mounted on this
+//                     surface).
 //
 // Tapping Riley again, clicking outside, or Escape dismisses the
 // bubbles. The component is hidden on the marketing tour page, the
-// campground landing page, auth pages, and the entire owner dashboard.
+// campground landing page, auth pages on both sides, and while a
+// tour or chat panel is already open.
 
 export function FloatingTourButton() {
   const pathname = usePathname()
@@ -28,10 +35,20 @@ export function FloatingTourButton() {
   const [showPopup, setShowPopup] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const tour = useTour()
-  const guestChat = useGuestSupport()
+  const camperTour = useTour()
+  const camperChat = useGuestSupport()
+  const ownerTour = useOwnerTour()
+  const ownerChat = useOwnerSupport()
 
-  // Close the popup whenever the route changes.
+  // Audience detection. Owner persona kicks in for the entire
+  // /owner/* tree; everything else is the camper persona.
+  const isOwnerSurface = pathname?.startsWith('/owner') ?? false
+  const tour = isOwnerSurface ? ownerTour : camperTour
+  const chat = isOwnerSurface ? ownerChat : camperChat
+
+  // Close the popup whenever the route changes — including when the
+  // route changes across the owner/camper boundary, which also flips
+  // the audience above.
   useEffect(() => {
     setShowPopup(false)
   }, [pathname])
@@ -60,9 +77,9 @@ export function FloatingTourButton() {
     }
   }, [showPopup])
 
-  // Hide on /tour (a full-page tour lives there), /campgrounds (its
-  // own host-pitch Riley with a different popup lives on that page),
-  // auth pages, and the entire owner dashboard.
+  // Hide on the full-page /tour, the marketing /campgrounds page
+  // (which has its own host-pitch Riley with a different popup), and
+  // on every auth flow on either side.
   if (
     !pathname ||
     pathname === '/tour' ||
@@ -71,20 +88,18 @@ export function FloatingTourButton() {
     pathname === '/login' ||
     pathname === '/verify' ||
     pathname.startsWith('/auth') ||
-    pathname.startsWith('/owner')
+    pathname.startsWith('/owner/login') ||
+    pathname.startsWith('/owner/signup')
   ) {
     return null
   }
 
-  // While the in-page tour is running, hide Riley so she doesn't
-  // overlap the step card. The TourOverlay handles closing.
+  // Hide while a tour is running — the step card sits where Riley does.
   if (tour.activeStep !== null) return null
 
-  // While the Chat with Riley panel is open, hide the mascot — it
-  // sits in the same bottom-right corner as the chat input and would
-  // overlap it. The chat panel has its own Close (✕) button + Escape
-  // handler, so Riley reappears as soon as the panel is dismissed.
-  if (guestChat.open) return null
+  // Hide while the matching chat panel is open — same bottom-right
+  // real estate, would overlap the chat input.
+  if (chat.open) return null
 
   function handleRileyTap() {
     setShowPopup((prev) => !prev)
@@ -95,21 +110,23 @@ export function FloatingTourButton() {
     if (tour.mounted) {
       tour.start()
     } else {
-      // Marketing surfaces (no TourProvider in the tree) — fall back
-      // to the standalone /tour route.
-      router.push('/tour')
+      // Camper marketing surfaces (no TourProvider mounted) fall back
+      // to the public /tour page. Owner surfaces outside (authed)
+      // (e.g. /owner/setup) fall back to the dashboard, where the
+      // owner tour overlay is available.
+      router.push(isOwnerSurface ? '/owner/dashboard' : '/tour')
     }
   }
 
   function handleChatWithRiley() {
     setShowPopup(false)
-    if (guestChat.mounted) {
-      guestChat.setOpen(true)
+    if (chat.mounted) {
+      chat.setOpen(true)
     } else {
-      // Visitor is on a non-(app) surface (e.g. /, /demo). Send them
-      // to /home — the (app) layout will auth-gate and surface the
-      // chat once they're signed in.
-      router.push('/home')
+      // Chat panel isn't mounted on this surface. Send the visitor to
+      // the right home — the (app) /home for campers, the dashboard
+      // for owners — where the panel is available.
+      router.push(isOwnerSurface ? '/owner/dashboard' : '/home')
     }
   }
 
@@ -121,7 +138,7 @@ export function FloatingTourButton() {
       {showPopup && (
         <div
           role="dialog"
-          aria-label="Riley menu"
+          aria-label={isOwnerSurface ? 'Owner Riley menu' : 'Riley menu'}
           className="riley-popup relative w-60 rounded-2xl border border-flame/50 bg-night/95 backdrop-blur p-3 shadow-2xl shadow-black/60"
         >
           {/* Tail pointing down to Riley */}
@@ -157,7 +174,15 @@ export function FloatingTourButton() {
       <button
         type="button"
         onClick={handleRileyTap}
-        aria-label={showPopup ? 'Close Riley menu' : 'Open Riley menu'}
+        aria-label={
+          showPopup
+            ? isOwnerSurface
+              ? 'Close Owner Riley menu'
+              : 'Close Riley menu'
+            : isOwnerSurface
+              ? 'Open Owner Riley menu'
+              : 'Open Riley menu'
+        }
         aria-expanded={showPopup}
         className="riley-fab grid place-items-center rounded-full bg-card border border-flame/40 shadow-[0_0_22px_rgba(245,158,11,0.35)] hover:shadow-[0_0_36px_rgba(245,158,11,0.6)] hover:scale-105 active:scale-100 transition-all"
         style={{ width: 60, height: 60 }}

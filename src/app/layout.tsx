@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, DM_Sans, Instrument_Serif } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { GuestSupportProvider } from '@/components/support/guest-support-context'
+import { OwnerSupportProvider } from '@/components/support/owner-support-context'
+import { OwnerTourProvider } from '@/components/support/owner-tour-context'
 import { TourProvider } from '@/components/support/tour-context'
 import { FloatingTourButton } from '@/components/ui/floating-tour-button'
 import { SiteFooter } from '@/components/ui/site-footer'
@@ -48,15 +50,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="bg-night text-cream font-sans">
         {/* Riley's tour + chat state lives at the root so the floating
-            Riley button (mounted here) and the actual chat panel +
-            tour overlay (mounted inside the (app) layout) share the
-            same context. The providers themselves are inert until
-            their UI components register on mount. */}
+            Riley button (mounted here) and the actual chat panels +
+            tour overlays (mounted inside the (app) and owner (authed)
+            layouts respectively) share the same context. Both audiences
+            have their own provider pair — the camper-side one and the
+            owner-side one — and the providers themselves are inert
+            until their UI components register on mount. The button
+            picks which set to drive based on the pathname. */}
         <GuestSupportProvider>
           <TourProvider>
-            {children}
-            <SiteFooter />
-            <FloatingTourButton />
+            <OwnerSupportProvider>
+              <OwnerTourProvider>
+                {children}
+                <SiteFooter />
+                <FloatingTourButton />
+              </OwnerTourProvider>
+            </OwnerSupportProvider>
           </TourProvider>
         </GuestSupportProvider>
         <Analytics />

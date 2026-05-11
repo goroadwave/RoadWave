@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { OwnerNav } from '@/components/owner/owner-nav'
 import { OwnerSupportChat } from '@/components/support/owner-support-chat'
+import { OwnerTourOverlay } from '@/components/support/owner-tour-overlay'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export default async function AuthedOwnerLayout({
@@ -94,6 +95,7 @@ export default async function AuthedOwnerLayout({
         {children}
       </main>
       <OwnerSupportChat />
+      <OwnerTourOverlay />
     </div>
   )
 }

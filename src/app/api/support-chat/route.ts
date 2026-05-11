@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import {
-  GUEST_SYSTEM_PROMPT,
+  getGuestSystemPrompt,
   getOwnerSystemPrompt,
   MAX_OUTPUT_TOKENS,
   MAX_USER_MESSAGES_PER_SESSION,
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
 
   const systemPrompt =
     audience === 'guest'
-      ? GUEST_SYSTEM_PROMPT
+      ? getGuestSystemPrompt(pathname ?? '/home')
       : getOwnerSystemPrompt(pathname ?? '/owner/dashboard')
 
   try {
