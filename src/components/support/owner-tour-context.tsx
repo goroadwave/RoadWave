@@ -2,12 +2,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 
-// Owner Riley's 5-step in-page tour. Mirrors the camper TourProvider
-// but with owner-flavoured steps mapped to the dashboard nav
-// (Profile → QR → Marketing → Bulletin → Stats). The Provider is in
-// the root layout; OwnerTourOverlay mounts inside /owner/(authed)/
-// layout and registers via useOwnerTourRegister so Riley's button
-// can tell when to start the in-page tour vs. fall back to a route.
+// Owner Riley's in-page tour. Mirrors the camper TourProvider but
+// with owner-flavoured steps mapped to the dashboard nav. Phase 2
+// (April 2026) extended it to cover the Engagement Hub toggles and
+// the Messages inbox. The Provider is in the root layout;
+// OwnerTourOverlay mounts inside /owner/(authed)/ layout and
+// registers via useOwnerTourRegister so Riley's button can tell when
+// to start the in-page tour vs. fall back to a route.
 
 export type OwnerTourCtx = {
   mounted: boolean
@@ -47,17 +48,22 @@ export const OWNER_TOUR_STEPS = [
   {
     icon: '🏕️',
     title: 'Profile',
-    body: "Set up your campground identity — name, location, logo, and amenities. This is what shows up to guests after they scan.",
+    body: "Set up your campground identity — name, location, logo, and amenities. This is also where you paste your Google Review URL and Book Again URL (plus optional booking message and promo code).",
   },
   {
     icon: '🔳',
     title: 'QR',
-    body: "Grab your unique QR code. Download as PNG or PDF, or regenerate if needed. Every check-in starts here.",
+    body: "Grab your unique QR code. Download as PNG or PDF, or regenerate if needed. Every guest scan starts here.",
   },
   {
-    icon: '📣',
-    title: 'Marketing',
-    body: "Downloadable assets to drive scans: counter cards, posters, email signatures, welcome emails. Everything brand-ready.",
+    icon: '🎚️',
+    title: 'Engagement Hub',
+    body: "On the Home tab, flip toggles for Stay Feedback (Pulse Check), Leave a Google Review, Book Your Next Stay, and Contact the Office. Anything off is hidden from guests entirely.",
+  },
+  {
+    icon: '📨',
+    title: 'Messages',
+    body: "Guest inbox — every Pulse 'needs attention' note and Contact the Office submission lands here. Email me new messages toggle controls Resend alerts.",
   },
   {
     icon: '📌',
@@ -67,7 +73,7 @@ export const OWNER_TOUR_STEPS = [
   {
     icon: '📊',
     title: 'Stats',
-    body: "Check-in counts and guest engagement so you can see how RoadWave is performing at your property.",
+    body: "Check-in counts, weekly summary, and guest engagement so you can see how RoadWave is performing at your property.",
   },
 ] as const
 
