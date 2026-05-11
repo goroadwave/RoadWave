@@ -10,7 +10,10 @@ export type RileyPopupCta = {
   kind: 'start' | 'demo'
 }
 
-const OWNER_PREFIXES = ['/owners', '/campgrounds', '/start'] as const
+// Owner-facing path prefixes. /campgrounds and /start are still here
+// as legacy redirects; matching them keeps the popup CTA consistent
+// during the brief moment a visitor is on the redirect destination.
+const OWNER_PREFIXES = ['/owners', '/campgrounds'] as const
 
 export function rileyPopupCtaForPath(pathname: string | null): RileyPopupCta {
   if (

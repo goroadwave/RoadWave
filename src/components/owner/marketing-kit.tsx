@@ -316,6 +316,27 @@ export function MarketingKit({
         </div>
       )}
 
+      {/* Quick action: preview / open the live guest welcome page in a
+          new tab. Mirrors the "Your RoadWave page" surface on the
+          dashboard but lives here too so it's reachable from the
+          Marketing tab without backtracking. */}
+      <div className="rounded-xl border border-white/5 bg-card px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-flame font-semibold">
+            Live guest welcome page
+          </p>
+          <p className="text-xs text-mist truncate">{campgroundPageUrl}</p>
+        </div>
+        <a
+          href={campgroundPageUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 inline-flex items-center justify-center gap-2 rounded-lg border border-flame/40 bg-flame/[0.06] text-cream px-3 py-2 text-xs font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
+        >
+          Open guest page <span aria-hidden>↗</span>
+        </a>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Asset
           title="Counter Card — 4×6 PDF"
