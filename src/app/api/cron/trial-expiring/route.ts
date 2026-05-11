@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { sendTrialExpiringEmail } from '@/lib/email/trial-expiring'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { getSiteOrigin } from '@/lib/utils'
 
 // Daily Vercel cron at 09:00 UTC (configured in vercel.json). Finds
 // every campground whose trial_ends_at lands roughly four days from
@@ -68,8 +67,16 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const origin = getSiteOrigin(request.headers)
-  const billingUrl = `${origin}/owner/billing`
+  // Build the billing URL from NEXT_PUBLIC_SITE_URL with a hardcoded
+  // production fallback. getSiteOrigin() reads request headers, which
+  // is correct for user-driven traffic but wrong for Vercel cron — the
+  // cron infrastructure forwards an internal host, not the public
+  // domain, so the link would land on the wrong origin. Same pattern
+  // as the owner-weekly-report route and profile/actions.ts.
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.getroadwave.com'
+  ).replace(/\/$/, '')
+  const billingUrl = `${siteUrl}/owner/billing`
 
   let sent = 0
   let skipped = 0
