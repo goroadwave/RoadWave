@@ -85,20 +85,10 @@ export async function POST(request: Request) {
   }
 
   if (audience === 'guest') {
-    const { data: checkin } = await supabase
-      .from('check_ins')
-      .select('id')
-      .eq('profile_id', user.id)
-      .eq('status', 'active')
-      .gt('expires_at', new Date().toISOString())
-      .limit(1)
-      .maybeSingle()
-    if (!checkin) {
-      return NextResponse.json(
-        { error: 'No active check-in.' },
-        { status: 403 },
-      )
-    }
+    // Riley (the guest-facing chat) is available to any signed-in user,
+    // regardless of whether they've checked in to a campground yet.
+    // The previous active-check-in gate has been removed so prospective
+    // and pre-check-in users can ask Riley how RoadWave works.
   } else {
     const { data: link } = await supabase
       .from('campground_admins')

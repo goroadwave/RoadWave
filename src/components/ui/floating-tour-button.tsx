@@ -1,53 +1,39 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { rileyPopupCtaForPath } from '@/lib/ui/riley-popup-cta'
+import { useGuestSupport } from '@/components/support/guest-support-context'
+import { useTour } from '@/components/support/tour-context'
 
-// Per-page Riley narration. Anything not in this map falls through to the
-// default. Pathnames are matched exactly; no wildcards.
-const SPEECH_BY_PATH: Record<string, string> = {
-  '/home':
-    "This is your home base. Check in, set your vibe, and see what's happening at your campground.",
-  '/nearby':
-    "These are the campers checked in here right now. Send a wave to anyone who looks interesting!",
-  '/meetups':
-    "Check out what's happening at the campground tonight. Join a meetup or create your own!",
-  '/settings/privacy':
-    'This is where you control who sees you. Go invisible anytime with one tap.',
-  '/crossed-paths':
-    'These are people you have camped near before. Your camping history, all in one place.',
-}
+// Floating Riley mascot. Single entry point for both the in-page
+// tour and the Riley chat panel.
+//
+// Tapping Riley opens a two-bubble menu pinned above her:
+//   🗺️ Take a Tour  → starts the in-page TourOverlay (when mounted
+//                     inside the (app) layout) or falls back to
+//                     navigating to /tour for non-(app) surfaces.
+//   💬 Chat with Riley → opens the GuestSupportChat panel (only
+//                     surfaced when the GuestSupportProvider is
+//                     mounted, i.e. inside the (app) layout where
+//                     auth is enforced).
+//
+// Tapping Riley again, clicking outside, or Escape dismisses the
+// bubbles. The component is hidden on the marketing tour page, the
+// campground landing page, auth pages, and the entire owner dashboard.
 
-const DEFAULT_SPEECH =
-  "Need help? I am Riley, your RoadWave campground host. Tap Next on the tour to learn more!"
-
-// Floating Riley. Tapping opens a popup with "Take the Tour" / "Got it!"
-// AND fires a per-page narration via /api/speak. Tap-outside, Escape, or
-// tapping Riley again closes the popup and stops the clip.
 export function FloatingTourButton() {
   const pathname = usePathname()
+  const router = useRouter()
   const [imgError, setImgError] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
   const [showPopup, setShowPopup] = useState(false)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  function stopAudio() {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current = null
-    }
-    setIsPlaying(false)
-  }
+  const tour = useTour()
+  const guestChat = useGuestSupport()
 
-  // Stop audio + close popup whenever the route changes.
+  // Close the popup whenever the route changes.
   useEffect(() => {
-    return () => {
-      stopAudio()
-      setShowPopup(false)
-    }
+    setShowPopup(false)
   }, [pathname])
 
   // Click-outside + Escape close the popup.
@@ -59,14 +45,10 @@ export function FloatingTourButton() {
         !containerRef.current.contains(e.target as Node)
       ) {
         setShowPopup(false)
-        stopAudio()
       }
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        setShowPopup(false)
-        stopAudio()
-      }
+      if (e.key === 'Escape') setShowPopup(false)
     }
     document.addEventListener('mousedown', onPointer)
     document.addEventListener('touchstart', onPointer)
@@ -78,11 +60,9 @@ export function FloatingTourButton() {
     }
   }, [showPopup])
 
-  // Hide on /tour (Riley already there) and /campgrounds (its own
-  // host-pitch Riley with a different popup lives on that page). Also
-  // hide on auth pages — Riley shouldn't pop up while someone is signing
-  // in or confirming an email. And hide on the entire owner dashboard:
-  // Riley is a guest mascot, not part of the operator experience.
+  // Hide on /tour (a full-page tour lives there), /campgrounds (its
+  // own host-pitch Riley with a different popup lives on that page),
+  // auth pages, and the entire owner dashboard.
   if (
     !pathname ||
     pathname === '/tour' ||
@@ -96,47 +76,36 @@ export function FloatingTourButton() {
     return null
   }
 
-  const speechText = SPEECH_BY_PATH[pathname] ?? DEFAULT_SPEECH
+  // While the in-page tour is running, hide Riley so she doesn't
+  // overlap the step card. The TourOverlay handles closing.
+  if (tour.activeStep !== null) return null
 
-  async function handleRileyTap() {
-    // Toggle: if open, close + stop.
-    if (showPopup) {
-      setShowPopup(false)
-      stopAudio()
-      return
-    }
+  function handleRileyTap() {
+    setShowPopup((prev) => !prev)
+  }
 
-    // Open + speak.
-    setShowPopup(true)
-    setIsPlaying(true)
-    try {
-      const res = await fetch('/api/speak', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: speechText }),
-      })
-      if (!res.ok) {
-        setIsPlaying(false)
-        return
-      }
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const audio = new Audio(url)
-      audioRef.current = audio
-      const cleanup = () => {
-        URL.revokeObjectURL(url)
-        if (audioRef.current === audio) audioRef.current = null
-        setIsPlaying(false)
-      }
-      audio.addEventListener('ended', cleanup)
-      audio.addEventListener('error', cleanup)
-      await audio.play().catch(cleanup)
-    } catch {
-      setIsPlaying(false)
+  function handleTakeTour() {
+    setShowPopup(false)
+    if (tour.mounted) {
+      tour.start()
+    } else {
+      // Marketing surfaces (no TourProvider in the tree) — fall back
+      // to the standalone /tour route.
+      router.push('/tour')
     }
   }
 
-  const cta = rileyPopupCtaForPath(pathname)
+  function handleChatWithRiley() {
+    setShowPopup(false)
+    if (guestChat.mounted) {
+      guestChat.setOpen(true)
+    } else {
+      // Visitor is on a non-(app) surface (e.g. /, /demo). Send them
+      // to /home — the (app) layout will auth-gate and surface the
+      // chat once they're signed in.
+      router.push('/home')
+    }
+  }
 
   return (
     <div
@@ -146,31 +115,35 @@ export function FloatingTourButton() {
       {showPopup && (
         <div
           role="dialog"
-          aria-label="Riley help menu"
-          className="riley-popup relative w-56 rounded-2xl border border-flame/50 bg-night/95 backdrop-blur p-3 shadow-2xl shadow-black/60"
+          aria-label="Riley menu"
+          className="riley-popup relative w-60 rounded-2xl border border-flame/50 bg-night/95 backdrop-blur p-3 shadow-2xl shadow-black/60"
         >
-          {/* Tail pointing down to the button */}
+          {/* Tail pointing down to Riley */}
           <span
             aria-hidden
             className="absolute -bottom-1.5 right-6 h-3 w-3 rotate-45 bg-night border-r border-b border-flame/50"
           />
           <div className="space-y-2">
-            <Link
-              href="/tour"
-              className="block w-full rounded-lg bg-flame text-night text-center px-3 py-2 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
+            <button
+              type="button"
+              onClick={handleTakeTour}
+              className="block w-full rounded-lg bg-flame text-night text-left px-3 py-2 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
             >
-              Take the Tour <span aria-hidden>👋</span>
-            </Link>
-            <Link
-              href={cta.href}
-              onClick={() => {
-                setShowPopup(false)
-                stopAudio()
-              }}
-              className="block w-full rounded-lg border border-white/15 bg-white/5 text-cream text-center px-3 py-2 text-sm font-medium hover:bg-white/10 hover:border-flame/40 transition-colors"
+              <span aria-hidden className="mr-1.5">
+                🗺️
+              </span>
+              Take a Tour
+            </button>
+            <button
+              type="button"
+              onClick={handleChatWithRiley}
+              className="block w-full rounded-lg border border-white/15 bg-white/5 text-cream text-left px-3 py-2 text-sm font-medium hover:bg-white/10 hover:border-flame/40 transition-colors"
             >
-              {cta.label}
-            </Link>
+              <span aria-hidden className="mr-1.5">
+                💬
+              </span>
+              Chat with Riley
+            </button>
           </div>
         </div>
       )}
@@ -178,13 +151,10 @@ export function FloatingTourButton() {
       <button
         type="button"
         onClick={handleRileyTap}
-        aria-label={
-          showPopup ? 'Close Riley menu' : 'Ask Riley about this page'
-        }
+        aria-label={showPopup ? 'Close Riley menu' : 'Open Riley menu'}
         aria-expanded={showPopup}
         className="riley-fab grid place-items-center rounded-full bg-card border border-flame/40 shadow-[0_0_22px_rgba(245,158,11,0.35)] hover:shadow-[0_0_36px_rgba(245,158,11,0.6)] hover:scale-105 active:scale-100 transition-all"
         style={{ width: 60, height: 60 }}
-        data-playing={isPlaying ? 'true' : 'false'}
       >
         {imgError ? (
           <span className="text-2xl leading-none" aria-hidden>
@@ -200,12 +170,6 @@ export function FloatingTourButton() {
             className="rounded-full object-cover"
             style={{ width: 52, height: 52 }}
             onError={() => setImgError(true)}
-          />
-        )}
-        {isPlaying && (
-          <span
-            className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-leaf border-2 border-night"
-            aria-hidden
           />
         )}
       </button>

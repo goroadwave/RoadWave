@@ -3,22 +3,22 @@
 import { useGuestSupport } from './guest-support-context'
 import { SupportChat } from './support-chat'
 
-// Guest-facing support widget. The trigger now lives in AppNav (the
-// "Help" tab) rather than as a floating button — the bottom-right
-// corner is reserved for the Riley mascot. We pass externalOpen +
-// setExternalOpen sourced from GuestSupportContext so the nav tab can
-// open the panel, and hideDefaultTrigger so SupportChat doesn't render
-// its own floating button.
+// Guest-facing chat widget — Riley's chat panel. The trigger is
+// Riley herself (the floating mascot in the bottom-right corner); a
+// tap on Riley opens a "Chat with Riley" bubble that calls setOpen
+// via GuestSupportContext. SupportChat renders the actual panel; we
+// pass hideDefaultTrigger so it doesn't render its own floating
+// button and conflict with Riley.
 
 export function GuestSupportChat() {
   const { open, setOpen } = useGuestSupport()
   return (
     <SupportChat
       audience="guest"
-      headerLabel="Ask RoadWave 👋"
+      headerLabel="Chat with Riley 👋"
       triggerIcon="💬"
-      triggerAriaLabel="Open RoadWave support chat"
-      greeting="Hi! Ask me anything about RoadWave — privacy modes, waving, check-ins, anything."
+      triggerAriaLabel="Open chat with Riley"
+      greeting="Hi! I'm Riley. Ask me anything about RoadWave — check-ins, waves, meetups, privacy, anything at all."
       reportButtonLabel="Report to RoadWave Team"
       hideDefaultTrigger
       externalOpen={open}
