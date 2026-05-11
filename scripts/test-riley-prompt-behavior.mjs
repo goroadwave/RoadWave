@@ -129,6 +129,7 @@ const password = `Roadwave-Test-${crypto.randomBytes(6).toString('hex')}!`
 let camperId = null
 let ownerId = null
 let ownerAdminLink = false
+let camperCheckInId = null
 
 const legalAck = {
   age_confirmed: true,
@@ -258,6 +259,59 @@ try {
     )
   }
 
+  // 4. Campground info injection: seed an active check-in for the
+  //    camper at RoadWave HQ. The /api/support-chat route should
+  //    resolve it and inject the campground name into Riley's system
+  //    prompt; her response should name the campground when asked.
+  {
+    const { data: ci, error: ciError } = await admin
+      .from('check_ins')
+      .insert({
+        profile_id: camperId,
+        campground_id: CAMPGROUND_ID,
+        status: 'active',
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      })
+      .select('id')
+      .single()
+    if (ciError || !ci) {
+      throw new Error(`seed check_in failed: ${ciError?.message}`)
+    }
+    camperCheckInId = ci.id
+
+    const { data: cg, error: cgError } = await admin
+      .from('campgrounds')
+      .select('name')
+      .eq('id', CAMPGROUND_ID)
+      .single()
+    if (cgError || !cg) {
+      throw new Error(`lookup campground name failed: ${cgError?.message}`)
+    }
+    const campgroundName = cg.name
+
+    const reply = await ask(camperCtx, {
+      audience: 'guest',
+      pathname: '/home',
+      content: 'What campground am I checked in at right now?',
+    })
+    console.log(
+      `\n  Q: "What campground am I checked in at right now?"  (with active check-in at "${campgroundName}")\n  R: ${snippet(reply, 280)}`,
+    )
+    assertNoForbidden(
+      'camper-with-check-in: no "visit getroadwave.com"',
+      reply,
+    )
+    // The injected system prompt should let Riley name the campground
+    // verbatim. Lenient match — strip non-alphanumerics so "RoadWave
+    // HQ" matches "roadwavehq" / "RoadWave-HQ" / etc.
+    const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+    check(
+      'camper-with-check-in: response names the actual campground',
+      slug(reply).includes(slug(campgroundName)),
+      `expected "${campgroundName}" (or a flexible variant) in: ${snippet(reply, 280)}`,
+    )
+  }
+
   // ----------------------------------------------------------------------
   // OWNER RILEY tests
 
@@ -354,6 +408,9 @@ try {
       console.log(`✓ cleaned up owner ${ownerId}`)
     }
     if (camperId) {
+      if (camperCheckInId) {
+        await admin.from('check_ins').delete().eq('id', camperCheckInId)
+      }
       await admin.from('legal_acks').delete().eq('user_id', camperId)
       await admin.auth.admin.deleteUser(camperId)
       console.log(`✓ cleaned up camper ${camperId}`)

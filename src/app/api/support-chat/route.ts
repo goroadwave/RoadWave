@@ -2,12 +2,19 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import {
+  type CamperCampgroundContext,
   getGuestSystemPrompt,
   getOwnerSystemPrompt,
   MAX_OUTPUT_TOKENS,
   MAX_USER_MESSAGES_PER_SESSION,
 } from '@/lib/support/system-prompts'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+
+// Max rows to pull into Riley's context. Bulletins are ≤280 chars and
+// meetups are small, so these caps keep the system prompt comfortably
+// under a few KB even at the limit.
+const MAX_BULLETINS_IN_CONTEXT = 5
+const MAX_MEETUPS_IN_CONTEXT = 5
 
 // POST /api/support-chat
 //
@@ -19,13 +26,17 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 //   {
 //     audience: 'guest' | 'owner',
 //     messages: [{ role: 'user' | 'assistant', content: string }, …],
-//     pathname?: string   // owner only — used for page-aware context
+//     pathname?: string   // page Riley should tailor to — forwarded
+//                         // for both audiences
 //   }
 //
 // Auth + audience gates:
 //   - Both audiences require a Supabase session.
-//   - 'guest' additionally requires an active, non-expired check-in.
 //   - 'owner' additionally requires a campground_admins row.
+//   - 'guest' has no further gate. If the camper has an active
+//     check-in, we attach campground context (name, location, amenities,
+//     current bulletins, upcoming meetups) to Riley's system prompt so
+//     she can answer "what's happening here" with real data.
 //
 // Rate limit:
 //   - Server rejects when user-message count exceeds 20 per session.
@@ -84,11 +95,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
+  // For the guest audience we also assemble per-campground context if
+  // the camper has an active check-in. Riley uses this to answer
+  // "what's happening here" / "what amenities does this place have" /
+  // etc. with the actual data rather than generic guidance.
+  let camperContext: CamperCampgroundContext | undefined
   if (audience === 'guest') {
-    // Riley (the guest-facing chat) is available to any signed-in user,
-    // regardless of whether they've checked in to a campground yet.
-    // The previous active-check-in gate has been removed so prospective
-    // and pre-check-in users can ask Riley how RoadWave works.
+    camperContext = await loadCamperContext(supabase, user.id)
   } else {
     const { data: link } = await supabase
       .from('campground_admins')
@@ -115,7 +128,7 @@ export async function POST(request: Request) {
 
   const systemPrompt =
     audience === 'guest'
-      ? getGuestSystemPrompt(pathname ?? '/home')
+      ? getGuestSystemPrompt(pathname ?? '/home', camperContext)
       : getOwnerSystemPrompt(pathname ?? '/owner/dashboard')
 
   try {
@@ -140,5 +153,83 @@ export async function POST(request: Request) {
       { error: 'AI temporarily unavailable. Please try again.' },
       { status: 502 },
     )
+  }
+}
+
+// ---------------------------------------------------------------------------
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
+
+// Resolve the camper's active check-in → campground row → current
+// bulletins + upcoming meetups, and shape them into the context the
+// guest system-prompt builder expects. Returns undefined when the
+// camper has no active check-in; Riley's prompt handles that branch
+// by telling her she doesn't know the campground.
+//
+// All reads use the caller's RLS-aware client. The camper can read
+// their own check_ins row (self policy) and the joined campground
+// row (campgrounds is publicly readable). Bulletins and meetups have
+// read policies that allow checked-in campers.
+async function loadCamperContext(
+  supabase: SupabaseServerClient,
+  userId: string,
+): Promise<CamperCampgroundContext | undefined> {
+  const nowIso = new Date().toISOString()
+
+  const { data: checkIn } = await supabase
+    .from('check_ins')
+    .select('campground_id')
+    .eq('profile_id', userId)
+    .eq('status', 'active')
+    .gt('expires_at', nowIso)
+    .order('checked_in_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (!checkIn?.campground_id) return undefined
+
+  const campgroundId = checkIn.campground_id
+
+  const [campgroundRes, bulletinsRes, meetupsRes] = await Promise.all([
+    supabase
+      .from('campgrounds')
+      .select('name, city, region, amenities')
+      .eq('id', campgroundId)
+      .maybeSingle(),
+    supabase
+      .from('bulletins')
+      .select('message, category, created_at, expires_at')
+      .eq('campground_id', campgroundId)
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .order('created_at', { ascending: false })
+      .limit(MAX_BULLETINS_IN_CONTEXT),
+    supabase
+      .from('meetups')
+      .select('title, description, location, start_at')
+      .eq('campground_id', campgroundId)
+      .gte('start_at', nowIso)
+      .order('start_at', { ascending: true })
+      .limit(MAX_MEETUPS_IN_CONTEXT),
+  ])
+
+  if (!campgroundRes.data) return undefined
+
+  return {
+    campground: {
+      name: campgroundRes.data.name,
+      city: campgroundRes.data.city ?? null,
+      region: campgroundRes.data.region ?? null,
+      amenities: (campgroundRes.data.amenities ?? []) as string[],
+    },
+    bulletins: (bulletinsRes.data ?? []).map((b) => ({
+      message: b.message,
+      category: b.category as 'event' | 'special' | 'alert' | 'general',
+      createdAt: b.created_at,
+    })),
+    meetups: (meetupsRes.data ?? []).map((m) => ({
+      title: m.title,
+      description: m.description,
+      location: m.location,
+      startAt: m.start_at,
+    })),
   }
 }

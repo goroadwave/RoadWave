@@ -27,9 +27,100 @@ Out of scope (do not bring up):
 - Anything about campground owners, dashboards, generating QR codes, billing, marketing assets, or running a campground. That's the operator side of RoadWave; you don't handle it.
 - Topics unrelated to RoadWave — weather, politics, trivia, etc. Gently redirect: "I'm just here to help you get around RoadWave."`
 
-export function getGuestSystemPrompt(pathname: string): string {
+// Shape of the per-camper context Riley receives. Assembled by the
+// support-chat route from the camper's active check-in row + the
+// related campground/bulletins/meetups. Optional because guests
+// without an active check-in get no campground context at all —
+// Riley falls back to her generic body when ctx is undefined.
+export type CamperCampgroundContext = {
+  campground: {
+    name: string
+    city?: string | null
+    region?: string | null
+    /** Free-form human-readable strings post-0037, e.g. "Pool", "Pet-friendly". */
+    amenities?: string[]
+  }
+  /** Active bulletins, most recent first. Already filtered to
+   *  non-expired by the caller. */
+  bulletins?: Array<{
+    message: string
+    category: 'event' | 'special' | 'alert' | 'general'
+    createdAt: string
+  }>
+  /** Upcoming meetups, soonest first. Already filtered to start_at
+   *  >= now by the caller. */
+  meetups?: Array<{
+    title: string
+    description?: string | null
+    location?: string | null
+    startAt: string
+  }>
+}
+
+export function getGuestSystemPrompt(
+  pathname: string,
+  ctx?: CamperCampgroundContext,
+): string {
   const page = describeGuestPage(pathname)
-  return `${GUEST_SYSTEM_PROMPT}\n\nThe camper is currently on the ${page} page (URL: ${pathname}).`
+  const base = `${GUEST_SYSTEM_PROMPT}\n\nThe camper is currently on the ${page} page (URL: ${pathname}).`
+  if (!ctx) {
+    // No active check-in — Riley doesn't know which campground (if any)
+    // the camper is at. Tell her so she doesn't invent context.
+    return `${base}\n\nThe camper does not have an active check-in right now, so you don't know which campground they're at. If they ask about a specific campground, suggest they head to the Check in tab to scan the QR code at their site.`
+  }
+  return `${base}\n\n${renderCamperCampgroundContext(ctx)}`
+}
+
+function renderCamperCampgroundContext(ctx: CamperCampgroundContext): string {
+  const cg = ctx.campground
+  const lines: string[] = []
+  lines.push('The camper is currently checked in at this campground:')
+  lines.push(`- Name: ${cg.name}`)
+  const loc = [cg.city, cg.region].filter(Boolean).join(', ')
+  if (loc) lines.push(`- Location: ${loc}`)
+  if (cg.amenities && cg.amenities.length) {
+    lines.push(`- Amenities: ${cg.amenities.join(', ')}`)
+  }
+
+  if (ctx.bulletins && ctx.bulletins.length) {
+    lines.push('')
+    lines.push("Today's bulletin posts from the host (most recent first):")
+    for (const b of ctx.bulletins) {
+      lines.push(`- [${b.category}] ${b.message}`)
+    }
+  }
+
+  if (ctx.meetups && ctx.meetups.length) {
+    lines.push('')
+    lines.push('Upcoming meetups at this campground:')
+    for (const m of ctx.meetups) {
+      const when = formatMeetupTime(m.startAt)
+      const where = m.location ? ` at ${m.location}` : ''
+      const desc = m.description ? ` — ${m.description}` : ''
+      lines.push(`- "${m.title}" starts ${when}${where}${desc}`)
+    }
+  }
+
+  lines.push('')
+  lines.push(
+    'When the camper asks "what\'s happening here," "what\'s there to do," "what amenities does this place have," or anything else about THIS campground, answer from the data above. Do not invent details that aren\'t listed.',
+  )
+  return lines.join('\n')
+}
+
+function formatMeetupTime(iso: string): string {
+  // Format as e.g. "Sat May 11 at 6:00 PM". Keep timezone-agnostic
+  // (server local) — Riley is conversational, not a calendar app.
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'short' })
+  const month = d.toLocaleDateString('en-US', { month: 'short' })
+  const day = d.getDate()
+  const time = d.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+  return `${weekday} ${month} ${day} at ${time}`
 }
 
 function describeGuestPage(pathname: string): string {
