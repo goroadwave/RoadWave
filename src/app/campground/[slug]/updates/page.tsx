@@ -82,6 +82,25 @@ export default async function CampgroundUpdatesPage({
 
   if (!campground || !campground.is_active) notFound()
 
+  // Bulletin view event: a guest landed on the read-only updates page,
+  // which is the page surface that displays bulletins to anonymous
+  // visitors. Fire-and-forget — render shouldn't block on the write.
+  void admin
+    .from('campground_events')
+    .insert({
+      campground_id: campground.id,
+      event_type: 'bulletin_view',
+      metadata: { source: 'updates_page' },
+    })
+    .then(({ error }) => {
+      if (error) {
+        console.error(
+          '[campground/updates] bulletin_view log failed:',
+          error.message,
+        )
+      }
+    })
+
   // Active bulletins: not expired (expires_at is null OR in the future).
   // Most recent first. Capped at 30 so a campground with a long history
   // doesn't make this page enormous.

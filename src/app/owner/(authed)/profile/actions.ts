@@ -22,6 +22,21 @@ const amenityString = z
   .min(1)
   .max(MAX_CUSTOM_AMENITY_CHARS)
 
+// Optional URLs the owner configures for the welcome-page Review +
+// Book Again CTAs. Empty strings (the form posts "" when the input is
+// blank) coerce to null so we don't write blanks into the column.
+const optionalUrl = z
+  .string()
+  .max(500)
+  .transform((s) => s.trim())
+  .refine(
+    (s) => s === '' || /^https?:\/\/[^\s]+$/i.test(s),
+    'Must be a full https:// URL',
+  )
+  .transform((s) => (s === '' ? null : s))
+  .nullable()
+  .optional()
+
 const schema = z.object({
   campground_id: z.string().uuid(),
   name: z.string().min(1).max(120),
@@ -36,6 +51,8 @@ const schema = z.object({
     // amenities the owner repeats on accident shouldn't double-up).
     .transform((arr) => Array.from(new Set(arr))),
   logo_url: z.string().max(500).optional().nullable(),
+  google_review_url: optionalUrl,
+  booking_url: optionalUrl,
 })
 
 export async function saveOwnerProfileAction(
@@ -51,6 +68,8 @@ export async function saveOwnerProfileAction(
     timezone: formData.get('timezone') || 'America/New_York',
     amenities: formData.getAll('amenities'),
     logo_url: formData.get('logo_url') || null,
+    google_review_url: formData.get('google_review_url') ?? '',
+    booking_url: formData.get('booking_url') ?? '',
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()
@@ -69,6 +88,8 @@ export async function saveOwnerProfileAction(
       timezone: parsed.data.timezone,
       amenities: parsed.data.amenities,
       logo_url: parsed.data.logo_url,
+      google_review_url: parsed.data.google_review_url ?? null,
+      booking_url: parsed.data.booking_url ?? null,
     })
     .eq('id', parsed.data.campground_id)
   if (error) return { error: error.message, ok: false }

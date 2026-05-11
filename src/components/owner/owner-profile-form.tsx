@@ -131,6 +131,46 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
         currentLogoUrl={campground.logo_url}
       />
 
+      {/* Guest-facing links that surface as CTAs on the welcome page
+          after a guest scans the QR. Clicks are logged to
+          campground_events and roll into the dashboard's "This Week"
+          card + the Monday weekly report email. */}
+      <div className="rounded-2xl border border-flame/20 bg-flame/[0.04] p-4 space-y-3">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-flame font-semibold">
+          Guest CTAs (optional)
+        </p>
+        <p className="text-xs text-mist leading-snug">
+          Show a Leave a Review or Book Again button on your welcome
+          page. We track taps so you can see them in your weekly report.
+        </p>
+        <Field
+          label="Google Review URL"
+          hint="The Google Maps review link for your campground."
+        >
+          <input
+            name="google_review_url"
+            type="url"
+            defaultValue={campground.google_review_url ?? ''}
+            maxLength={500}
+            placeholder="https://g.page/r/..."
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Book Again URL"
+          hint="Direct link to your reservation page, Airbnb listing, etc."
+        >
+          <input
+            name="booking_url"
+            type="url"
+            defaultValue={campground.booking_url ?? ''}
+            maxLength={500}
+            placeholder="https://"
+            className={inputCls}
+          />
+        </Field>
+      </div>
+
       <Field label="Timezone">
         <select
           name="timezone"

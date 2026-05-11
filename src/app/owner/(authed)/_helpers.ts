@@ -28,6 +28,8 @@ export type OwnerCampground = {
   onb_qr_printed: boolean
   onb_qr_posted: boolean
   onb_first_bulletin_sent: boolean
+  google_review_url: string | null
+  booking_url: string | null
 }
 
 export async function loadOwnerCampground() {
@@ -49,7 +51,7 @@ export async function loadOwnerCampground() {
   const { data: cg } = await supabase
     .from('campgrounds')
     .select(
-      'id, name, slug, city, region, address, phone, website, logo_url, amenities, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent',
+      'id, name, slug, city, region, address, phone, website, logo_url, amenities, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url',
     )
     .eq('id', link.campground_id)
     .single()

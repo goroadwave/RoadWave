@@ -1,8 +1,11 @@
 import Link from 'next/link'
 import { CopyLinkButton } from '@/components/owner/copy-link-button'
 import { Eyebrow } from '@/components/ui/eyebrow'
+import { PromoKit } from '@/components/owner/promo-kit'
+import { ThisWeekCard } from '@/components/owner/this-week-card'
 import { TrialBanner } from '@/components/owner/trial-banner'
 import { VisibilityBreakdown } from '@/components/owner/visibility-breakdown'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loadOwnerCampground } from '../_helpers'
 
@@ -38,6 +41,41 @@ export default async function OwnerDashboardPage() {
     'owner_active_checkin_count',
     { _campground_id: campground.id },
   )
+
+  // Trailing 7-day stats (migration 0038). Six counts: scans, check-ins,
+  // review clicks, book-again clicks, contact messages, bulletin views.
+  type WeeklyRow = {
+    qr_scans: number
+    check_ins: number
+    review_clicks: number
+    book_again_clicks: number
+    contact_messages: number
+    bulletin_views: number
+  }
+  const { data: weeklyRow } = await supabase
+    .rpc('owner_weekly_stats', { _campground_id: campground.id })
+    .maybeSingle<WeeklyRow>()
+  const weeklyStats = {
+    qrScans: weeklyRow?.qr_scans ?? 0,
+    checkIns: weeklyRow?.check_ins ?? 0,
+    reviewClicks: weeklyRow?.review_clicks ?? 0,
+    bookAgainClicks: weeklyRow?.book_again_clicks ?? 0,
+    contactMessages: weeklyRow?.contact_messages ?? 0,
+    bulletinViews: weeklyRow?.bulletin_views ?? 0,
+  }
+
+  // QR token for the Promo Kit PDFs. campground_qr_tokens is RLS-locked
+  // to service-role only (migration 0002); ownership has already been
+  // verified by loadOwnerCampground.
+  const admin = createSupabaseAdminClient()
+  const { data: tokenRow } = await admin
+    .from('campground_qr_tokens')
+    .select('token')
+    .eq('campground_id', campground.id)
+    .maybeSingle<{ token: string }>()
+  const promoCheckInUrl = tokenRow
+    ? `${SITE_URL}/campground/${campground.slug}?token=${tokenRow.token}`
+    : null
 
   // Per-mode visibility breakdown (added in migration 0032). Includes
   // campground_updates_only guests who count toward activity stats but stay
@@ -218,7 +256,14 @@ export default async function OwnerDashboardPage() {
         </div>
       </section>
 
+      <ThisWeekCard stats={weeklyStats} />
+
       <VisibilityBreakdown counts={breakdown} />
+
+      <PromoKit
+        campgroundName={campground.name}
+        checkInUrl={promoCheckInUrl}
+      />
 
       {incomplete.length > 0 && (
         <section className="space-y-3">

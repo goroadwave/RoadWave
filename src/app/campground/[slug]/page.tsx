@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
+import { WelcomeCtas } from '@/components/campgrounds/welcome-ctas'
 import { Logo } from '@/components/ui/logo'
 import { splitAmenities } from '@/lib/campgrounds/amenities'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
@@ -42,6 +43,8 @@ type CampgroundRow = {
   logo_url: string | null
   amenities: string[] | null
   is_active: boolean
+  google_review_url: string | null
+  booking_url: string | null
 }
 
 type TokenRow = {
@@ -86,11 +89,35 @@ export default async function CampgroundLandingPage({
 
   const { data: campground } = await admin
     .from('campgrounds')
-    .select('id, slug, name, city, region, logo_url, amenities, is_active')
+    .select(
+      'id, slug, name, city, region, logo_url, amenities, is_active, google_review_url, booking_url',
+    )
     .eq('slug', slug)
     .maybeSingle<CampgroundRow>()
 
   if (!campground || !campground.is_active) notFound()
+
+  // QR scan event: log fire-and-forget whenever the page is reached via
+  // a ?token=... query. That URL only exists on the QR-printed sticker,
+  // so a hit with a valid token is a real scan. We don't await — the
+  // page render shouldn't block on a stats write.
+  if (scannedToken && isUuid(scannedToken)) {
+    void admin
+      .from('campground_events')
+      .insert({
+        campground_id: campground.id,
+        event_type: 'qr_scan',
+        metadata: { source: 'welcome_page' },
+      })
+      .then(({ error }) => {
+        if (error) {
+          console.error(
+            '[campground/welcome] qr_scan log failed:',
+            error.message,
+          )
+        }
+      })
+  }
 
   // Pull the token. Prefer the one from the QR scan (?token= in URL) so
   // it's verifiable, but fall back to the campground's current token if
@@ -251,6 +278,13 @@ export default async function CampgroundLandingPage({
               connect with other campers.
             </p>
           </section>
+
+          {/* ----- Review + Book Again CTAs (only shown when configured) ----- */}
+          <WelcomeCtas
+            campgroundId={campground.id}
+            reviewUrl={campground.google_review_url}
+            bookingUrl={campground.booking_url}
+          />
 
           {/* ----- How it works (4 steps) ----- */}
           <section className="space-y-4">
