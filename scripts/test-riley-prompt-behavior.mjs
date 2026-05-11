@@ -312,6 +312,44 @@ try {
     )
   }
 
+  // 5. Privacy-mode change: a routine camper-facing question that
+  //    should be answered with a specific nav-tab direction (Privacy)
+  //    and should mention one of the four canonical modes — Visible,
+  //    Quiet, Invisible, Updates Only — rather than generic settings
+  //    language. Validates the post-cleanup positive-direction style.
+  {
+    const reply = await ask(camperCtx, {
+      audience: 'guest',
+      pathname: '/home',
+      content: "How do I change my privacy mode to invisible so other campers can't see me?",
+    })
+    console.log(
+      `\n  Q: "How do I change my privacy mode to invisible..."\n  R: ${snippet(reply, 280)}`,
+    )
+    assertNoForbidden('camper: no "visit getroadwave.com" on privacy question', reply)
+    assertAnyMatch(
+      'camper: privacy answer points to the Privacy tab',
+      reply,
+      [/\bPrivacy\b/, /\bprivacy\s+(tab|page|settings)\b/i],
+      'expected a "Privacy tab/page" direction',
+    )
+    assertAnyMatch(
+      'camper: privacy answer mentions Invisible (the requested mode)',
+      reply,
+      [/\bInvisible\b/i],
+      'expected the mode name "Invisible"',
+    )
+    // Sanity check the new "tab-or-action only" rule: no "visit the
+    // settings page" / "go to your account settings" / external-URL
+    // language. The /settings/privacy route IS named Privacy in the
+    // nav so the model should say "Privacy", not "settings".
+    assertNoForbidden(
+      'camper: privacy answer does not punt to generic "settings"',
+      reply,
+      [/\baccount\s+settings\b/i, /\bsettings\s+menu\b/i],
+    )
+  }
+
   // ----------------------------------------------------------------------
   // OWNER RILEY tests
 
