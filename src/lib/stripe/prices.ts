@@ -20,9 +20,22 @@ export const PLAN_INTERVAL_LABEL: Record<Plan, string> = {
 }
 
 export function getStripePriceId(plan: Plan): string | null {
-  return plan === 'monthly'
-    ? (process.env.STRIPE_PRICE_MONTHLY ?? null)
-    : (process.env.STRIPE_PRICE_ANNUAL ?? null)
+  // Read STRIPE_PRICE_ID_* first (the spec-mandated names); fall back
+  // to the legacy STRIPE_PRICE_* names so existing Vercel env vars
+  // keep working without a rename. Both can be set; first non-empty
+  // wins.
+  if (plan === 'monthly') {
+    return (
+      process.env.STRIPE_PRICE_ID_MONTHLY ||
+      process.env.STRIPE_PRICE_MONTHLY ||
+      null
+    )
+  }
+  return (
+    process.env.STRIPE_PRICE_ID_ANNUAL ||
+    process.env.STRIPE_PRICE_ANNUAL ||
+    null
+  )
 }
 
 export function isPlan(value: unknown): value is Plan {

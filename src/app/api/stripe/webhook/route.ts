@@ -31,6 +31,35 @@ export async function POST(request: NextRequest) {
     return new NextResponse('signature verify failed', { status: 400 })
   }
 
+  // Idempotency gate — stripe_events.stripe_event_id is UNIQUE. Insert
+  // first; if PG reports a duplicate-key violation we've already
+  // processed this event and we can return 200 without re-firing the
+  // side effects. Stripe retries the same event on a backoff schedule
+  // when a handler is slow or returns non-2xx, so this guard is the
+  // only thing standing between us and duplicate emails / duplicate
+  // user provisioning attempts.
+  const admin = createSupabaseAdminClient()
+  const { error: idemError } = await admin.from('stripe_events').insert({
+    stripe_event_id: event.id,
+    event_type: event.type,
+  })
+  if (idemError) {
+    // 23505 = unique_violation in Postgres. Anything else is unexpected
+    // and we should surface it.
+    const code = (idemError as { code?: string }).code
+    if (code === '23505') {
+      // Already processed — silently 200.
+      return NextResponse.json({ received: true, duplicate: true })
+    }
+    console.error(
+      '[stripe/webhook] stripe_events insert failed:',
+      idemError.message,
+    )
+    // Continue anyway — losing idempotency is better than losing the
+    // event. Worst case we re-fire a side effect on Stripe's next
+    // retry; most of our side effects are themselves idempotent.
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed':
@@ -50,6 +79,9 @@ export async function POST(request: NextRequest) {
           event.data.object as Stripe.Subscription,
         )
         break
+      case 'invoice.paid':
+        await handleInvoicePaid(event.data.object as Stripe.Invoice)
+        break
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object as Stripe.Invoice)
         break
@@ -59,11 +91,43 @@ export async function POST(request: NextRequest) {
     }
   } catch (err) {
     console.error(`[stripe/webhook] handler ${event.type} failed:`, err)
-    // Return 500 so Stripe retries.
+    // Roll back the idempotency row so Stripe's retry re-runs the
+    // handler. Otherwise we'd swallow a failed handler silently.
+    await admin
+      .from('stripe_events')
+      .delete()
+      .eq('stripe_event_id', event.id)
     return new NextResponse('handler error', { status: 500 })
   }
 
   return NextResponse.json({ received: true })
+}
+
+// invoice.paid keeps the subscription in the active state. Stripe
+// fires this on initial activation (after a successful trial-end
+// charge) and on every renewal. We flip past_due → active when a
+// past-due invoice clears, and refresh current_period_end while
+// we're here.
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  const admin = createSupabaseAdminClient()
+  const sid = extractSubscriptionId(invoice)
+  if (!sid) return
+
+  // Read the latest subscription period end from the invoice line
+  // items if the invoice carries one; otherwise leave it untouched.
+  const lineEnd = invoice.lines?.data?.[0]?.period?.end
+  const periodEnd =
+    typeof lineEnd === 'number'
+      ? new Date(lineEnd * 1000).toISOString()
+      : null
+
+  const update: Record<string, unknown> = { subscription_status: 'active' }
+  if (periodEnd) update.current_period_end = periodEnd
+
+  await admin
+    .from('campgrounds')
+    .update(update)
+    .eq('stripe_subscription_id', sid)
 }
 
 // On checkout completion: provision the auth user + campground +

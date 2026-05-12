@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BillingSummaryCard } from '@/components/owner/billing-summary-card'
 import { CopyLinkButton } from '@/components/owner/copy-link-button'
 import { EngagementToggles } from '@/components/owner/engagement-toggles'
 import { Eyebrow } from '@/components/ui/eyebrow'
@@ -6,6 +7,7 @@ import { PromoKit } from '@/components/owner/promo-kit'
 import { ThisWeekCard } from '@/components/owner/this-week-card'
 import { TrialBanner } from '@/components/owner/trial-banner'
 import { VisibilityBreakdown } from '@/components/owner/visibility-breakdown'
+import { isStripeConfigured } from '@/lib/stripe/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loadOwnerCampground } from '../_helpers'
@@ -258,6 +260,16 @@ export default async function OwnerDashboardPage() {
       </section>
 
       <ThisWeekCard stats={weeklyStats} />
+
+      <BillingSummaryCard
+        status={campground.subscription_status}
+        plan={campground.plan}
+        currentPeriodEnd={campground.current_period_end}
+        trialEndsAt={campground.trial_ends_at}
+        stripeReady={
+          isStripeConfigured() && !!campground.stripe_customer_id
+        }
+      />
 
       <VisibilityBreakdown counts={breakdown} />
 

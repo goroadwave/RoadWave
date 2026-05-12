@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   if (!isStripeConfigured()) {
     return NextResponse.redirect(
-      new URL('/owner/signup?error=stripe_not_configured', request.url),
+      new URL('/owners/start?error=stripe_not_configured', request.url),
     )
   }
 
@@ -26,13 +26,13 @@ export async function GET(request: NextRequest) {
   const plan = sp.get('plan')
   if (!submissionId || !isPlan(plan)) {
     return NextResponse.redirect(
-      new URL('/owner/signup?error=invalid_request', request.url),
+      new URL('/owners/start?error=invalid_request', request.url),
     )
   }
   const priceId = getStripePriceId(plan)
   if (!priceId) {
     return NextResponse.redirect(
-      new URL('/owner/signup?error=price_not_configured', request.url),
+      new URL('/owners/start?error=price_not_configured', request.url),
     )
   }
 
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
   if (!submission) {
     return NextResponse.redirect(
-      new URL('/owner/signup?error=submission_not_found', request.url),
+      new URL('/owners/start?error=submission_not_found', request.url),
     )
   }
 
@@ -71,8 +71,8 @@ export async function GET(request: NextRequest) {
         submission_id: submission.id,
         plan,
       },
-      success_url: `${origin}/start/welcome?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/start?canceled=1`,
+      success_url: `${origin}/owners/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/owners/start?checkout=cancelled`,
       allow_promotion_codes: true,
     })
 
@@ -84,14 +84,14 @@ export async function GET(request: NextRequest) {
 
     if (!session.url) {
       return NextResponse.redirect(
-        new URL('/owner/signup?error=stripe_session_no_url', request.url),
+        new URL('/owners/start?error=stripe_session_no_url', request.url),
       )
     }
     return NextResponse.redirect(session.url, { status: 303 })
   } catch (err) {
     console.error('[stripe/checkout]', err)
     return NextResponse.redirect(
-      new URL('/owner/signup?error=stripe_failed', request.url),
+      new URL('/owners/start?error=stripe_failed', request.url),
     )
   }
 }

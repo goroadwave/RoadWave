@@ -8,11 +8,13 @@ import Stripe from 'stripe'
 // client-side redirect helper only — both are checked at their
 // respective call sites.
 export function isStripeConfigured(): boolean {
-  return Boolean(
-    process.env.STRIPE_SECRET_KEY &&
-      process.env.STRIPE_PRICE_MONTHLY &&
-      process.env.STRIPE_PRICE_ANNUAL,
-  )
+  // Read STRIPE_PRICE_ID_* first (the spec-mandated names); fall back
+  // to the legacy STRIPE_PRICE_* names. Either set means Stripe is
+  // wired up. The annual price ID is optional — monthly is required.
+  const hasMonthly =
+    !!process.env.STRIPE_PRICE_ID_MONTHLY ||
+    !!process.env.STRIPE_PRICE_MONTHLY
+  return Boolean(process.env.STRIPE_SECRET_KEY && hasMonthly)
 }
 
 let _stripe: Stripe | null = null

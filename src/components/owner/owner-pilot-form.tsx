@@ -183,6 +183,101 @@ export function OwnerPilotForm() {
         </div>
       </fieldset>
 
+      {/* Plan picker. Two radios — Monthly is the default. Both options
+          go through Stripe Checkout in subscription mode; the webhook
+          provisions the campground after a successful payment. */}
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-cream">
+          Pick a billing cadence
+        </legend>
+        <p className="text-xs text-mist">
+          14-day free trial on either plan. Cancel any time from the
+          owner billing tab.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2 pt-1">
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 has-[:checked]:border-leaf has-[:checked]:bg-leaf/10 transition-colors">
+            <input
+              type="radio"
+              name="plan"
+              value="monthly"
+              defaultChecked
+              className="mt-1 h-4 w-4 accent-leaf"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-cream">
+                Monthly · Founding Pilot
+              </span>
+              <span className="block text-xs text-mist">
+                Simple monthly pricing. Cancel anytime.
+              </span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 has-[:checked]:border-leaf has-[:checked]:bg-leaf/10 transition-colors">
+            <input
+              type="radio"
+              name="plan"
+              value="annual"
+              className="mt-1 h-4 w-4 accent-leaf"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-cream">
+                Annual · Founding Pilot
+              </span>
+              <span className="block text-xs text-mist">
+                One yearly charge. Same cancel-anytime terms.
+              </span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      {/* Legal acks. All four required — Stripe Checkout won't open
+          until these are checked. Same shape as /owner/signup so the
+          submission row carries the full audit trail. */}
+      <fieldset className="space-y-2 rounded-2xl border border-flame/20 bg-flame/[0.04] p-4">
+        <legend className="px-2 text-xs font-semibold uppercase tracking-[0.18em] text-flame">
+          Before we go to checkout
+        </legend>
+        <AckRow
+          name="accepted_partner_terms"
+          label={
+            <>
+              I agree to the{' '}
+              <a
+                href="/campground-partner-terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                Campground Partner Terms
+              </a>{' '}
+              and{' '}
+              <a
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                Terms of Service
+              </a>
+              .
+            </>
+          }
+        />
+        <AckRow
+          name="ack_optional"
+          label="RoadWave is optional for my guests — I won't require it as a condition of staying."
+        />
+        <AckRow
+          name="ack_no_site_numbers"
+          label="I understand RoadWave never displays exact campsite numbers to other guests."
+        />
+        <AckRow
+          name="ack_not_emergency"
+          label="RoadWave is not an emergency service. For emergencies, guests should call 911."
+        />
+      </fieldset>
+
       {state.error && (
         <p className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
           {state.error}
@@ -194,14 +289,34 @@ export function OwnerPilotForm() {
         disabled={pending}
         className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-leaf text-night px-6 py-3 text-base font-semibold shadow-lg shadow-leaf/20 hover:bg-leaf/85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {pending ? 'Sending…' : 'Create My Campground Pilot'}
+        {pending ? 'Sending you to checkout…' : 'Continue to Secure Checkout →'}
       </button>
 
       <p className="text-center text-[11px] text-mist/80 leading-snug">
-        A real human follows up within one business day. No card needed
-        for the intake.
+        Card on file via Stripe Checkout. 14-day free trial. Cancel
+        anytime.
       </p>
     </form>
+  )
+}
+
+function AckRow({
+  name,
+  label,
+}: {
+  name: string
+  label: React.ReactNode
+}) {
+  return (
+    <label className="flex items-start gap-3 px-2 py-1.5 text-sm text-cream cursor-pointer">
+      <input
+        type="checkbox"
+        name={name}
+        required
+        className="mt-1 h-4 w-4 accent-flame"
+      />
+      <span className="leading-snug text-cream/90">{label}</span>
+    </label>
   )
 }
 

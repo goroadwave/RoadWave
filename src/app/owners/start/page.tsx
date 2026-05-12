@@ -8,15 +8,52 @@ import { OwnerPilotForm } from '@/components/owner/owner-pilot-form'
 export const metadata: Metadata = {
   title: 'Start Your Campground Pilot — RoadWave',
   description:
-    'Set up your RoadWave QR guest hub. A short intake form — a real human follows up within one business day.',
+    'Set up your RoadWave QR guest hub. Short intake, then Stripe checkout with a 14-day free trial. Cancel any time.',
 }
 
-// Action-focused pilot intake page. Intentionally NOT another long
-// marketing page — /owners is the explanation page. This is the
-// "I'm ready, take my info" step that the /owners CTAs and the
-// footer "Start a Campground Pilot" link both lead to.
+// /owners/start is the canonical self-serve entry to RoadWave. The
+// flow is: intake form → owner_signup_submissions row → Stripe
+// Checkout → /owners/success → webhook provisions the campground.
+//
+// Querystring banners:
+//   ?checkout=cancelled — visitor came back from a Stripe Checkout
+//                         abandonment. We surface a friendly note so
+//                         they know nothing was charged.
+//   ?error=<code>       — checkout-creation error path; same shape as
+//                         /owner/billing's error codes.
 
-export default function OwnersStartPage() {
+type SearchParams = Promise<{
+  checkout?: string
+  error?: string
+}>
+
+function friendlyCheckoutError(code: string): string | null {
+  switch (code) {
+    case 'stripe_not_configured':
+      return "Payments aren't switched on yet. Submit the form below and we'll follow up by email."
+    case 'invalid_request':
+      return 'Something was off with that request. Please submit the form again.'
+    case 'price_not_configured':
+      return "We can't open Stripe Checkout right now — our pricing isn't configured. Please try again in a moment."
+    case 'submission_not_found':
+      return "We couldn't find your submission. Please fill out the form again."
+    case 'stripe_session_no_url':
+    case 'stripe_failed':
+      return 'Stripe Checkout failed to open. Please try again or email hello@getroadwave.com.'
+    default:
+      return null
+  }
+}
+
+export default async function OwnersStartPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
+  const sp = await searchParams
+  const cancelled = sp.checkout === 'cancelled'
+  const errorMessage = sp.error ? friendlyCheckoutError(sp.error) : null
+
   return (
     <>
       <header className="px-4 py-5 flex items-center justify-between gap-4">
@@ -54,18 +91,39 @@ export default function OwnersStartPage() {
       </header>
 
       <main className="px-4 pt-8 pb-16 sm:pt-12 sm:pb-24">
-        <div className="mx-auto max-w-xl space-y-8">
+        <div className="mx-auto max-w-xl space-y-6">
           <div className="text-center space-y-3">
             <Eyebrow>Pilot intake</Eyebrow>
             <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream leading-[1.05]">
               Start Your Campground Pilot
             </h1>
             <p className="text-mist text-base sm:text-lg leading-relaxed">
-              Set up your RoadWave QR guest hub so guests can see
-              updates, contact the office, leave reviews, book again,
-              and connect when they want to.
+              Fill in the intake below, then head to secure Stripe
+              Checkout. 14-day free trial. Cancel any time.
             </p>
           </div>
+
+          {cancelled && (
+            <div className="rounded-2xl border border-flame/30 bg-flame/[0.06] p-4 text-sm text-cream">
+              <p className="font-semibold">
+                Checkout cancelled — nothing was charged.
+              </p>
+              <p className="mt-1 text-mist leading-snug">
+                Your intake details are still saved. When you&apos;re
+                ready, hit{' '}
+                <span className="text-cream">
+                  Continue to Secure Checkout
+                </span>{' '}
+                below to pick up where you left off.
+              </p>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+              {errorMessage}
+            </div>
+          )}
 
           <OwnerPilotForm />
 
