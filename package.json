@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "playwright test tests/smoke.test.js",
+    "test:e2e:all": "playwright test",
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.0",
