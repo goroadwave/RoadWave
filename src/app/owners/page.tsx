@@ -115,7 +115,7 @@ export default function OwnersPage() {
                 Start My Campground Pilot
               </Link>
               <Link
-                href="#request-demo"
+                href="/demo"
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-6 py-3 font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
               >
                 See the live demo
@@ -264,19 +264,24 @@ export default function OwnersPage() {
           </div>
         </section>
 
-        {/* Interactive demo wizard */}
+        {/* Interactive demo wizard — customizes the live demo with the
+            owner's campground name, logo, and city, then produces a
+            shareable preview link. The hero "See the live demo" CTA
+            now goes straight to /demo (the Pages-Router live demo);
+            this section is the "build my own branded version" path. */}
         <section
           id="request-demo"
           className="px-4 py-16 border-t border-white/5 bg-flame/[0.06]"
         >
           <div className="mx-auto max-w-2xl">
             <div className="text-center mb-8 space-y-2">
-              <Eyebrow>Try it now — no sign-up</Eyebrow>
+              <Eyebrow>Build my free campground demo</Eyebrow>
               <h2 className="font-display text-3xl font-extrabold tracking-tight text-cream">
-                See RoadWave with your campground name built in.
+                Customize this with my campground name.
               </h2>
               <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
-                Three quick steps. Yours to share.
+                Three quick steps. A shareable preview branded with your
+                campground name, logo, and city.
               </p>
             </div>
             <InteractiveDemo />
