@@ -91,7 +91,7 @@ export default async function RootPage() {
                   href="/signup"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-leaf text-night px-6 py-3 text-base font-semibold shadow-lg shadow-leaf/20 hover:bg-leaf/85 transition-colors"
                 >
-                  Get Started
+                  Check In as a Camper
                 </Link>
                 <Link
                   href="/demo"
@@ -107,6 +107,34 @@ export default async function RootPage() {
                 Sample campground preview — demo data shown
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* Soft owner pathway — subtle callout so campground owners
+            have an entry point without dominating the camper-focused
+            homepage. Borderless on top to sit quietly below the hero. */}
+        <section className="px-4 pb-6 sm:pb-10">
+          <div className="mx-auto max-w-3xl">
+            <aside className="rounded-2xl border border-white/10 bg-card p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1 space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-flame">
+                  Own or manage a campground?
+                </p>
+                <p className="text-sm text-mist leading-snug">
+                  RoadWave helps your guests connect safely through
+                  private, campground-based check-ins — without public
+                  group chats, exact site numbers, or extra work for
+                  your staff.
+                </p>
+              </div>
+              <Link
+                href="/owners"
+                className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-4 py-2.5 text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
+              >
+                See how RoadWave works for campgrounds{' '}
+                <span aria-hidden>→</span>
+              </Link>
+            </aside>
           </div>
         </section>
 
@@ -183,7 +211,7 @@ export default async function RootPage() {
                 href="/signup"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-leaf text-night px-6 py-3 font-semibold shadow-lg shadow-leaf/20 hover:bg-leaf/85 transition-colors"
               >
-                Get Started
+                Check In as a Camper
               </Link>
               <Link
                 href="/demo"
@@ -192,6 +220,14 @@ export default async function RootPage() {
                 Try the Demo <span aria-hidden>👋</span>
               </Link>
             </div>
+            <p className="text-[11px] text-mist/70 pt-1">
+              <Link
+                href="/owners"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                For Campground Owners →
+              </Link>
+            </p>
           </div>
         </section>
       </main>

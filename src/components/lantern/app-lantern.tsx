@@ -283,7 +283,7 @@ export function AppLantern({ pollIntervalMs = POLL_INTERVAL_DEFAULT }: Props) {
         ref={buttonRef}
         type="button"
         onClick={toggleOpen}
-        aria-label="Notifications — tap to see activity"
+        aria-label="Activity Lantern — see waves, check-ins, and updates"
         aria-expanded={open}
         aria-haspopup="menu"
         className={
@@ -298,7 +298,7 @@ export function AppLantern({ pollIntervalMs = POLL_INTERVAL_DEFAULT }: Props) {
           aria-hidden
           className="hidden md:group-hover:block absolute top-full mt-2 right-0 whitespace-nowrap rounded-md border border-flame/40 bg-night px-2 py-1 text-[10px] font-medium text-cream pointer-events-none z-10"
         >
-          Your Lantern — tap to see activity
+          Activity Lantern — see waves, check-ins, and updates
         </span>
       </button>
 

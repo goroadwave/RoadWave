@@ -37,7 +37,7 @@ const LEGAL_LINKS: { label: string; href: string }[] = [
 
 export function SiteFooter() {
   return (
-    <footer className="mt-20 border-t border-white/10 bg-night text-cream">
+    <footer className="mt-12 border-t border-white/10 bg-night text-cream">
       <div className="mx-auto max-w-6xl px-4 pt-10 pb-6 sm:pt-14 sm:pb-8">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-5">
           <div className="col-span-2 sm:col-span-1 space-y-3">

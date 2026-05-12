@@ -18,6 +18,13 @@ html,
 body {
   background: var(--color-night);
   color: var(--color-cream);
+  /* Stop iOS Safari's elastic rubber-band scroll past the footer.
+   * Without this, scrolling past the document end reveals the page
+   * background below the footer, which reads as a "huge empty dark
+   * area below the copyright" — even though the document is exactly
+   * as tall as its content. overscroll-behavior caps the scroll
+   * chain so the page ends visually at the footer. */
+  overscroll-behavior-y: none;
 }
 
 html {

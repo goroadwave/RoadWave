@@ -184,8 +184,11 @@ export function FloatingTourButton() {
               : 'Open Riley menu'
         }
         aria-expanded={showPopup}
-        className="riley-fab grid place-items-center rounded-full bg-card border border-flame/40 shadow-[0_0_22px_rgba(245,158,11,0.35)] hover:shadow-[0_0_36px_rgba(245,158,11,0.6)] hover:scale-105 active:scale-100 transition-all"
-        style={{ width: 60, height: 60 }}
+        // 48×48 on phones (less visual dominance, doesn't crowd CTAs)
+        // and 60×60 from sm: up so desktop keeps the expressive scale
+        // it had. Inline width/height removed so the responsive
+        // utilities can take over.
+        className="riley-fab grid place-items-center rounded-full bg-card border border-flame/40 shadow-[0_0_22px_rgba(245,158,11,0.35)] hover:shadow-[0_0_36px_rgba(245,158,11,0.6)] hover:scale-105 active:scale-100 transition-all h-12 w-12 sm:h-[60px] sm:w-[60px]"
       >
         {imgError ? (
           <span className="text-2xl leading-none" aria-hidden>
@@ -196,10 +199,7 @@ export function FloatingTourButton() {
           <img
             src="/riley.png"
             alt=""
-            width={52}
-            height={52}
-            className="rounded-full object-cover"
-            style={{ width: 52, height: 52 }}
+            className="rounded-full object-cover h-10 w-10 sm:h-[52px] sm:w-[52px]"
             onError={() => setImgError(true)}
           />
         )}

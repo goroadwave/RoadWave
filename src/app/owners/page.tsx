@@ -283,6 +283,27 @@ export default function OwnersPage() {
           </div>
         </section>
 
+        {/* Soft pricing reassurance — kept intentionally vague.
+            We aren't ready to commit to a public $/month figure until
+            more campgrounds have been through the pilot, so this just
+            signals "monthly, no contract, partner-friendly" without
+            anchoring a number. */}
+        <section className="px-4 py-12 border-t border-white/5">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-flame/30 bg-flame/[0.04] p-6 sm:p-8 text-center space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-flame">
+              Founding Campground Pilot
+            </p>
+            <p className="text-cream text-base sm:text-lg leading-relaxed">
+              Simple monthly pricing. Cancel anytime. Early partner
+              pricing available for the first parks that help shape
+              RoadWave.
+            </p>
+            <p className="text-xs text-mist leading-snug">
+              No long-term contract. No hardware. No app-store setup.
+            </p>
+          </div>
+        </section>
+
         {/* Final CTA — point to the self-serve funnel */}
         <section className="px-4 py-16 border-t border-flame/30 bg-flame/[0.06]">
           <div className="mx-auto max-w-xl text-center space-y-5">
@@ -290,8 +311,7 @@ export default function OwnersPage() {
               Ready to activate your campground?
             </h2>
             <p className="text-mist text-base sm:text-lg leading-relaxed">
-              Sign up in two minutes. Cancel anytime. No hardware. No
-              app-store setup.
+              Sign up in two minutes. Cancel anytime.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
               <Link
