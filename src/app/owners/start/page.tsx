@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { CampgroundRileyButton } from '@/components/campgrounds/riley-campground-button'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Logo } from '@/components/ui/logo'
 import { OwnerPilotForm } from '@/components/owner/owner-pilot-form'
@@ -79,6 +80,10 @@ export default function OwnersStartPage() {
           </p>
         </div>
       </main>
+
+      {/* Owner-flavoured Riley for the intake surface. Routes "Take
+          the Tour" to /tour?audience=owner — never to a signup wall. */}
+      <CampgroundRileyButton />
     </>
   )
 }

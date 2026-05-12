@@ -77,13 +77,21 @@ export function FloatingTourButton() {
     }
   }, [showPopup])
 
-  // Hide on the full-page /tour, the marketing /campgrounds page
-  // (which has its own host-pitch Riley with a different popup), and
-  // on every auth flow on either side.
+  // Hide on the full-page /tour, every auth flow on either side, and
+  // on the owner-marketing surfaces (/owners + /owners/start) that
+  // mount the dedicated CampgroundRileyButton. Two Riley buttons on
+  // the same page stack on each other in the bottom-right corner;
+  // worse, this global one's "Take a Tour" fall-back routes to
+  // /owner/dashboard which requires auth and bounces visitors at
+  // /owner/login — looking like an unintentional signup wall on
+  // /owners. CampgroundRileyButton's "Take the Tour" already routes
+  // correctly to /tour?audience=owner so we let it own those pages.
   if (
     !pathname ||
     pathname === '/tour' ||
     pathname === '/campgrounds' ||
+    pathname === '/owners' ||
+    pathname === '/owners/start' ||
     pathname === '/signup' ||
     pathname === '/login' ||
     pathname === '/verify' ||

@@ -64,85 +64,83 @@ const CAMPER_STEPS = [
   },
 ];
 
+// Owner tour script — marketing-flavored, ~60 seconds. Visitors
+// arrive here from the /owners or /owners/start CampgroundRileyButton
+// "Take the Tour" link. The flow stays high-level (what RoadWave does
+// for a campground) instead of going deep into dashboard mechanics —
+// that's covered by the in-dashboard Owner Tour overlay once the
+// owner has signed up.
 const OWNER_STEPS = [
   {
-    id: "branded",
-    speech: "Welcome — let me show you how RoadWave works at your campground. You get a branded guest page tied to your campground, not a generic app. Guests scan a QR code and land here.",
+    id: "intro",
+    speech: "Hi, I'm Riley. I'll show you how RoadWave works for campground owners in about 60 seconds.",
     screen: "home",
-    highlight: "checkin",
-    bubble: { text: "Your branded campground guest page", position: "top" },
+    highlight: "none",
+    bubble: { text: "About 60 seconds. No signup needed to look around.", position: "top" },
     rileyMood: "wave",
   },
   {
     id: "qr",
-    speech: "Print the QR code and place it where guests already look — at check-in, the welcome packet, the front-desk card, the activity board, the laundry room, the clubhouse. No app store. No hardware. The same QR works for every checked-in guest.",
+    speech: "Your campground gets a simple QR code guests can scan at check-in, on a counter card, map, rules sheet, or welcome handout.",
+    screen: "home",
+    highlight: "checkin",
+    bubble: { text: "One QR code, wherever guests already look", position: "top" },
+    rileyMood: "explain",
+  },
+  {
+    id: "branded-page",
+    speech: "When guests scan it, they land on your campground's branded RoadWave page. They can see your updates, contact info, review links, booking links, and helpful guest information.",
     screen: "home",
     highlight: "none",
-    bubble: { text: "Place the QR at check-in or around the campground", position: "top" },
+    bubble: { text: "Your branded guest welcome page", position: "top" },
     rileyMood: "explain",
   },
   {
-    id: "bulletins",
-    speech: "Post bulletins and meetup prompts — coffee hours, food trucks, dog walks, campfire circles, weather notices, quiet-hour reminders. Reach every checked-in guest without starting an open group chat your staff has to moderate.",
-    screen: "meetups",
-    highlight: "none",
-    bubble: { text: "Post bulletins and meetup prompts", position: "top" },
-    rileyMood: "explain",
-  },
-  {
-    id: "guests",
-    speech: "Guests check in by scanning, then pick how visible they want to be — Visible, Quiet, Invisible, or Campground Updates Only. Some browse the list and wave at folks who share their interests. Others just stay private and read your bulletins. The same amenity serves both.",
+    id: "private-check-in",
+    speech: "Guests can also check in privately if they want to be visible to nearby campers. They control their visibility, and RoadWave does not publicly show exact site numbers.",
     screen: "privacy",
     highlight: "none",
-    bubble: { text: "Guests choose their own privacy mode", position: "top" },
+    bubble: { text: "Guests control visibility — never exact sites", position: "top" },
     rileyMood: "explain",
   },
   {
-    id: "stats",
-    speech: "On your owner dashboard you see privacy-safe engagement stats — QR scans, check-ins, bulletin views, meetup interest, mutual waves, popular guest interests. Never private messages, never who waved at whom, never exact site numbers. Aggregate activity only.",
+    id: "real-connection",
+    speech: "RoadWave helps your park encourage real-life connection without turning your campground into a public group chat.",
     screen: "nearby",
     highlight: "none",
-    bubble: { text: "Privacy-safe engagement stats", position: "top" },
+    bubble: { text: "Real-life connection, not a group chat", position: "top" },
     rileyMood: "explain",
   },
   {
-    id: "pulse",
-    speech: "Your guests get a quick \"How's your stay?\" prompt — Great, Good, or Something needs attention. The third option opens a private form that lands in your Messages inbox and (if you want) emails you. You catch problems before they hit a review.",
-    screen: "home",
+    id: "owner-value",
+    speech: "For campground owners, RoadWave can support reviews, repeat bookings, guest updates, private stay feedback, office messages, and optional camper connection.",
+    screen: "meetups",
     highlight: "none",
-    bubble: { text: "Stay Feedback / Pulse Check", position: "top" },
+    bubble: { text: "Reviews · bookings · updates · feedback · office messages", position: "top" },
     rileyMood: "explain",
   },
   {
-    id: "review-booking",
-    speech: "Add a Google Review URL and a Book Again URL on your Profile tab. Then flip the matching toggles on your Home tab and guests see Leave a Google Review and Book Your Next Stay buttons right on the welcome page. Optional promo code shows next to the booking button.",
+    id: "owner-control",
+    speech: "You stay in control through the campground-owner side. You can manage your campground profile, QR code, welcome message, updates, and guest-facing information.",
     screen: "home",
     highlight: "none",
-    bubble: { text: "Review + Book Again buttons", position: "top" },
+    bubble: { text: "You manage everything from the owner dashboard", position: "top" },
     rileyMood: "explain",
   },
   {
-    id: "contact-office",
-    speech: "Contact the Office is a categorized form — Wi-Fi, Laundry, Propane, Late checkout, Maintenance, Quiet hours, Local recs, Activities, General question — that lands in your Messages inbox. The disclaimer reminds guests to call 911 for emergencies and call the office directly for urgent issues.",
+    id: "privacy-low-maint",
+    speech: "RoadWave is designed to be optional, privacy-first, and low-maintenance for your staff.",
     screen: "home",
     highlight: "none",
-    bubble: { text: "Structured Contact the Office", position: "top" },
+    bubble: { text: "Optional · privacy-first · low-maintenance", position: "top" },
     rileyMood: "explain",
   },
   {
-    id: "toggles",
-    speech: "Every Engagement Hub feature has an on/off toggle in the Home tab's Engagement Hub section. Flip a toggle off and the feature disappears from the guest welcome page entirely. There's also a master switch for email notifications — turn it off and you'll only see messages in the inbox.",
+    id: "cta",
+    speech: "Want to try it at your park? Tap Start My Campground Pilot.",
     screen: "home",
     highlight: "none",
-    bubble: { text: "Owner toggles control what guests see", position: "top" },
-    rileyMood: "explain",
-  },
-  {
-    id: "messages-inbox",
-    speech: "Tap Messages at the top of your dashboard to see every Pulse alert and Contact the Office submission, newest first. Each row shows the category, the guest's note, and any optional contact info they left. Ready to set yours up?",
-    screen: "home",
-    highlight: "none",
-    bubble: { text: "Messages inbox", position: "top" },
+    bubble: { text: "Ready when you are.", position: "top" },
     rileyMood: "wave",
   },
 ];
@@ -542,7 +540,11 @@ export default function RileyWalkthrough() {
           ? <button onClick={next} style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)", border: "none", borderRadius: "10px", padding: "7px 18px", color: "#0a0f1c", fontSize: "12px", fontWeight: "700", cursor: "pointer", fontFamily: "Georgia" }}>Next →</button>
           : <div style={{ display: "flex", gap: "6px" }}>
               <a href="/demo" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "10px", padding: "7px 12px", color: "white", fontSize: "11px", fontWeight: "700", textDecoration: "none", fontFamily: "Georgia" }}>Try the Demo</a>
-              <a href="/checkin" style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)", border: "none", borderRadius: "10px", padding: "7px 12px", color: "white", fontSize: "11px", fontWeight: "700", textDecoration: "none", fontFamily: "Georgia" }}>Start Your Check-In</a>
+              {/* Final-step CTA is audience-aware so owners don't land
+                  on the camper-only /checkin route at the end of the
+                  owner tour. Owners go to /owners/start (intake form),
+                  campers go to /checkin. */}
+              <a href={isOwner ? "/owners/start" : "/checkin"} style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)", border: "none", borderRadius: "10px", padding: "7px 12px", color: "white", fontSize: "11px", fontWeight: "700", textDecoration: "none", fontFamily: "Georgia" }}>{isOwner ? "Start My Campground Pilot" : "Start Your Check-In"}</a>
             </div>
         }
       </div>
