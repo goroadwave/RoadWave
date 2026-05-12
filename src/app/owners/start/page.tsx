@@ -54,6 +54,28 @@ export default async function OwnersStartPage({
   const cancelled = sp.checkout === 'cancelled'
   const errorMessage = sp.error ? friendlyCheckoutError(sp.error) : null
 
+  // Which Stripe plans the deploy actually has a price ID for. Drives
+  // the form's plan picker — we hide options whose env var isn't set
+  // so the visitor can't pick a plan that would 302-fail downstream.
+  // Reads both the spec env names (STRIPE_PRICE_ID_*) and the legacy
+  // aliases (STRIPE_PRICE_*) so either set works.
+  const availablePlans: Array<'monthly' | 'annual'> = []
+  if (
+    process.env.STRIPE_PRICE_ID_MONTHLY ||
+    process.env.STRIPE_PRICE_MONTHLY
+  ) {
+    availablePlans.push('monthly')
+  }
+  if (
+    process.env.STRIPE_PRICE_ID_ANNUAL ||
+    process.env.STRIPE_PRICE_ANNUAL
+  ) {
+    availablePlans.push('annual')
+  }
+  // Sanity fallback so the form always has something to submit; the
+  // server action will still gate on whether Stripe is fully configured.
+  if (availablePlans.length === 0) availablePlans.push('monthly')
+
   return (
     <>
       <header className="px-4 py-5 flex items-center justify-between gap-4">
@@ -125,7 +147,7 @@ export default async function OwnersStartPage({
             </div>
           )}
 
-          <OwnerPilotForm />
+          <OwnerPilotForm availablePlans={availablePlans} />
 
           <p className="text-center text-[11px] text-mist/70 leading-snug">
             Looking for the explanation page first?{' '}

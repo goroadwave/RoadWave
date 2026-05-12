@@ -28,7 +28,14 @@ const INTEREST_OPTIONS: { value: string; label: string }[] = [
 
 const initialState: OwnerPilotIntakeState = { error: null, ok: false }
 
-export function OwnerPilotForm() {
+type Props = {
+  /** Which Stripe plans the deploy has price IDs for. Defaults to
+   *  monthly-only — the annual radio is hidden until the env var is
+   *  wired up so the form can't 302-fail on price_not_configured. */
+  availablePlans?: ReadonlyArray<'monthly' | 'annual'>
+}
+
+export function OwnerPilotForm({ availablePlans = ['monthly'] }: Props) {
   const [state, formAction, pending] = useActionState(
     submitOwnerPilotIntakeAction,
     initialState,
@@ -183,53 +190,67 @@ export function OwnerPilotForm() {
         </div>
       </fieldset>
 
-      {/* Plan picker. Two radios — Monthly is the default. Both options
-          go through Stripe Checkout in subscription mode; the webhook
-          provisions the campground after a successful payment. */}
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-cream">
-          Pick a billing cadence
-        </legend>
-        <p className="text-xs text-mist">
-          14-day free trial on either plan. Cancel any time from the
-          owner billing tab.
-        </p>
-        <div className="grid gap-2 sm:grid-cols-2 pt-1">
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 has-[:checked]:border-leaf has-[:checked]:bg-leaf/10 transition-colors">
-            <input
-              type="radio"
-              name="plan"
-              value="monthly"
-              defaultChecked
-              className="mt-1 h-4 w-4 accent-leaf"
-            />
-            <span>
-              <span className="block text-sm font-semibold text-cream">
-                Monthly · Founding Pilot
-              </span>
-              <span className="block text-xs text-mist">
-                Simple monthly pricing. Cancel anytime.
-              </span>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 has-[:checked]:border-leaf has-[:checked]:bg-leaf/10 transition-colors">
-            <input
-              type="radio"
-              name="plan"
-              value="annual"
-              className="mt-1 h-4 w-4 accent-leaf"
-            />
-            <span>
-              <span className="block text-sm font-semibold text-cream">
-                Annual · Founding Pilot
-              </span>
-              <span className="block text-xs text-mist">
-                One yearly charge. Same cancel-anytime terms.
-              </span>
-            </span>
-          </label>
-        </div>
-      </fieldset>
+      {/* Plan picker. The set of radios is gated by what STRIPE_PRICE_ID_*
+          env vars are configured on the server (passed down via
+          `availablePlans`). When only one plan is configured we skip
+          the visible picker entirely and submit that plan via a
+          hidden input — no half-broken "pick annual and 302-fail to
+          price_not_configured" path. */}
+      {availablePlans.length > 1 ? (
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium text-cream">
+            Pick a billing cadence
+          </legend>
+          <p className="text-xs text-mist">
+            14-day free trial on either plan. Cancel any time from the
+            owner billing tab.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2 pt-1">
+            {availablePlans.includes('monthly') && (
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 has-[:checked]:border-leaf has-[:checked]:bg-leaf/10 transition-colors">
+                <input
+                  type="radio"
+                  name="plan"
+                  value="monthly"
+                  defaultChecked
+                  className="mt-1 h-4 w-4 accent-leaf"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-cream">
+                    Monthly · Founding Pilot
+                  </span>
+                  <span className="block text-xs text-mist">
+                    Simple monthly pricing. Cancel anytime.
+                  </span>
+                </span>
+              </label>
+            )}
+            {availablePlans.includes('annual') && (
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 has-[:checked]:border-leaf has-[:checked]:bg-leaf/10 transition-colors">
+                <input
+                  type="radio"
+                  name="plan"
+                  value="annual"
+                  defaultChecked={!availablePlans.includes('monthly')}
+                  className="mt-1 h-4 w-4 accent-leaf"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-cream">
+                    Annual · Founding Pilot
+                  </span>
+                  <span className="block text-xs text-mist">
+                    One yearly charge. Same cancel-anytime terms.
+                  </span>
+                </span>
+              </label>
+            )}
+          </div>
+        </fieldset>
+      ) : (
+        // Single plan available — submit it via a hidden input so the
+        // server action's schema validates without a visible picker.
+        <input type="hidden" name="plan" value={availablePlans[0] ?? 'monthly'} />
+      )}
 
       {/* Legal acks. All four required — Stripe Checkout won't open
           until these are checked. Same shape as /owner/signup so the
