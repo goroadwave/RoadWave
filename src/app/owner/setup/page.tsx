@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { OwnerSetupForm } from '@/components/owner/owner-setup-form'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 // /owner/setup is the post-OAuth onboarding page. An owner who signed in
@@ -25,13 +26,63 @@ export default async function OwnerSetupPage() {
     .maybeSingle()
   if (!ackRow) redirect('/consent?next=/owner/setup')
 
-  // If they already have a campground, skip setup.
-  const { data: existingLink } = await supabase
+  // If they already manage at least one campground, skip setup.
+  //
+  // IMPORTANT: use .limit(1) on an array result rather than .maybeSingle().
+  // An owner can have multiple campground_admins rows (one per campground
+  // they manage), and .maybeSingle() silently returns null when more than
+  // one row matches — which previously sent established owners back to
+  // this form, and each form submission added another admin row.
+  const { data: existingLinks } = await supabase
     .from('campground_admins')
     .select('campground_id')
     .eq('user_id', user.id)
-    .maybeSingle()
-  if (existingLink) redirect('/owner/dashboard')
+    .limit(1)
+  if (existingLinks && existingLinks.length > 0) {
+    console.info(
+      '[owner-setup] user already has a campground link — redirecting to dashboard',
+      { user_id_prefix: user.id.slice(0, 8) },
+    )
+    redirect('/owner/dashboard')
+  }
+
+  // Recovery path: no admin link, but a campground exists owned by this
+  // user's email (e.g. Stripe webhook created the campground but the
+  // admin-link insert failed). Auto-link them to the most recent one
+  // and send them to the dashboard instead of forcing them through the
+  // setup form, which would create a duplicate campground.
+  const ownerEmail = user.email ?? ''
+  if (ownerEmail) {
+    const admin = createSupabaseAdminClient()
+    const { data: orphanCgs } = await admin
+      .from('campgrounds')
+      .select('id, slug, name')
+      .eq('owner_email', ownerEmail)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const orphanCg = orphanCgs?.[0]
+    if (orphanCg) {
+      const { error: linkErr } = await admin
+        .from('campground_admins')
+        .insert({
+          campground_id: orphanCg.id,
+          user_id: user.id,
+          role: 'owner',
+        })
+      if (!linkErr) {
+        console.info('[owner-setup] recovered orphaned campground link', {
+          user_id_prefix: user.id.slice(0, 8),
+          campground_id_prefix: orphanCg.id.slice(0, 8),
+          slug: orphanCg.slug,
+        })
+        redirect('/owner/dashboard')
+      }
+      console.warn(
+        '[owner-setup] orphan recovery insert failed — falling through to setup form',
+        { message: linkErr.message },
+      )
+    }
+  }
 
   const { data: profile } = await supabase
     .from('profiles')

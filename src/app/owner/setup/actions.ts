@@ -43,6 +43,34 @@ function slugify(name: string): string {
   )
 }
 
+// Pick a slug that isn't already taken in campgrounds.slug. The previous
+// scheme appended userId.slice(0,6) — that collides on the second insert
+// for the same owner with the same campground name. We now suffix with
+// the user id slice on the first attempt (back-compat for existing rows)
+// and fall back to numeric + timestamp suffixes if it's still taken.
+async function uniqueSlugFor(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  name: string,
+  userId: string,
+): Promise<string> {
+  const base = slugify(name)
+  const userTail = userId.replace(/-/g, '').slice(0, 6)
+  const candidates: string[] = [`${base}-${userTail}`]
+  for (let i = 2; i <= 20; i++) candidates.push(`${base}-${userTail}-${i}`)
+  candidates.push(`${base}-${userTail}-${Date.now().toString(36).slice(-6)}`)
+
+  for (const candidate of candidates) {
+    const { data } = await admin
+      .from('campgrounds')
+      .select('id')
+      .eq('slug', candidate)
+      .maybeSingle()
+    if (!data) return candidate
+  }
+  // Extremely unlikely fallback.
+  return `${base}-${Date.now().toString(36)}`
+}
+
 // Mirrors the username scheme from /owner/signup actions: 24 chars max,
 // alphanumeric + underscore, derived from the user id so it's stable.
 function makeUsername(userId: string): string {
@@ -103,13 +131,55 @@ export async function ownerSetupAction(
   const admin = createSupabaseAdminClient()
   const h = await headers()
 
-  // If they already provisioned (e.g. double-submit, refresh), short-circuit.
-  const { data: existingLink } = await admin
+  // If they already manage any campground (double-submit, refresh, or a
+  // returning owner who somehow re-entered the setup form), short-circuit.
+  // .limit(1) on an array — .maybeSingle() silently returns null when
+  // the user has more than one admin row, which previously caused setup
+  // to keep adding rows and looping.
+  const { data: existingLinks } = await admin
     .from('campground_admins')
     .select('campground_id')
     .eq('user_id', userId)
-    .maybeSingle()
-  if (existingLink) redirect('/owner/dashboard')
+    .limit(1)
+  if (existingLinks && existingLinks.length > 0) {
+    console.info('[owner-setup] short-circuit — user already has admin link', {
+      user_id_prefix: userId.slice(0, 8),
+    })
+    redirect('/owner/dashboard')
+  }
+
+  // Recovery: if a campground already exists for this owner_email (e.g.
+  // Stripe webhook created the campground but the admin-link insert
+  // failed), link to that instead of creating a duplicate row.
+  if (ownerEmail) {
+    const { data: orphanCgs } = await admin
+      .from('campgrounds')
+      .select('id, slug')
+      .eq('owner_email', ownerEmail)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const orphanCg = orphanCgs?.[0]
+    if (orphanCg) {
+      const { error: linkErr } = await admin
+        .from('campground_admins')
+        .insert({
+          campground_id: orphanCg.id,
+          user_id: userId,
+          role: 'owner',
+        })
+      if (!linkErr) {
+        console.info('[owner-setup] recovered orphaned campground link', {
+          user_id_prefix: userId.slice(0, 8),
+          campground_id_prefix: orphanCg.id.slice(0, 8),
+          slug: orphanCg.slug,
+        })
+        redirect('/owner/dashboard')
+      }
+      console.warn('[owner-setup] orphan recovery insert failed', {
+        message: linkErr.message,
+      })
+    }
+  }
 
   // 0) Record acceptance of Partner Terms (and the general Terms +
   // Privacy versions implicit in account creation).
@@ -138,8 +208,10 @@ export async function ownerSetupAction(
     return { error: `Profile update failed: ${profileErr.message}` }
   }
 
-  // 2) Create campground.
-  const slug = `${slugify(campground_name)}-${userId.slice(0, 6)}`
+  // 2) Create campground. Slug is collision-checked against existing
+  // rows before insert — the previous scheme of `{name}-{userId[:6]}`
+  // collided when the same owner reused a campground name across tests.
+  const slug = await uniqueSlugFor(admin, campground_name, userId)
   const { data: campground, error: cgError } = await admin
     .from('campgrounds')
     .insert({
@@ -155,13 +227,22 @@ export async function ownerSetupAction(
     .select('id')
     .single()
   if (cgError || !campground) {
-    console.error(
-      '[owner-setup] campground insert failed:',
-      cgError?.message ?? '(no row returned)',
-    )
-    return { error: cgError?.message ?? "Couldn't create campground." }
+    console.error('[owner-setup] campground insert failed', {
+      user_id_prefix: userId.slice(0, 8),
+      slug,
+      message: cgError?.message ?? '(no row returned)',
+    })
+    return {
+      error:
+        "Sorry — we couldn't create your campground. Try a slightly different name, or email hello@getroadwave.com.",
+    }
   }
   const campgroundId = campground.id
+  console.info('[owner-setup] campground created', {
+    user_id_prefix: userId.slice(0, 8),
+    campground_id_prefix: campgroundId.slice(0, 8),
+    slug,
+  })
 
   // 3) Link admin (host first; upgrade to owner once 0011 is applied).
   const { error: adminError } = await admin.from('campground_admins').insert({
@@ -170,10 +251,15 @@ export async function ownerSetupAction(
     role: 'host',
   })
   if (adminError) {
-    console.error('[owner-setup] campground_admins insert failed:', adminError.message)
+    console.error('[owner-setup] campground_admins insert failed', {
+      user_id_prefix: userId.slice(0, 8),
+      campground_id_prefix: campgroundId.slice(0, 8),
+      message: adminError.message,
+    })
     await admin.from('campgrounds').delete().eq('id', campgroundId)
     return {
-      error: `Couldn't link your account to the campground: ${adminError.message}`,
+      error:
+        "Sorry — we couldn't link your account to that campground. Please try again, or email hello@getroadwave.com.",
     }
   }
 

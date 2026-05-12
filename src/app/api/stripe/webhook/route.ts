@@ -185,16 +185,19 @@ async function handleCheckoutCompleted(
   if (created?.user) {
     userId = created.user.id
   } else if (createError && createError.message.includes('already')) {
-    // Look up by email.
-    const { data: existing } = await admin.auth.admin.listUsers()
-    userId =
-      existing?.users.find((u) => u.email === submission.email)?.id ?? null
+    // Walk every page of listUsers until we find the email or run out.
+    // The previous version only checked page 1 (default 50), which
+    // silently dropped users past that boundary and left them
+    // orphaned with no campground_admins row.
+    userId = await findAuthUserIdByEmail(admin, submission.email)
   } else if (createError) {
     console.error('[stripe/webhook] createUser failed:', createError.message)
     return
   }
   if (!userId) {
-    console.error('[stripe/webhook] could not resolve userId for', submission.email)
+    console.error('[stripe/webhook] could not resolve userId for submission', {
+      submission_id_prefix: submission.id.slice(0, 8),
+    })
     return
   }
 
@@ -451,6 +454,28 @@ function mapStripePlanFromSubscription(
   const interval = item.price?.recurring?.interval
   if (interval === 'month') return 'monthly'
   if (interval === 'year') return 'annual'
+  return null
+}
+
+// Walk every page of admin.auth.admin.listUsers until we find a user
+// with the given email, or run out of pages. Replaces the previous
+// single-page lookup which silently lost users beyond page 1.
+async function findAuthUserIdByEmail(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  email: string,
+): Promise<string | null> {
+  const perPage = 200
+  // Hard ceiling so a misbehaving call can't loop forever.
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
+    if (error) {
+      console.error('[stripe/webhook] listUsers failed', { page, message: error.message })
+      return null
+    }
+    const hit = data?.users.find((u) => u.email === email)
+    if (hit) return hit.id
+    if (!data?.users || data.users.length < perPage) return null
+  }
   return null
 }
 

@@ -46,11 +46,16 @@ export async function loadOwnerCampground() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/owner/login')
 
-  const { data: link } = await supabase
+  // An owner can manage multiple campgrounds. Take the most-recent link
+  // and ignore the rest for dashboard purposes. Using .limit(1) +
+  // ordering avoids the .maybeSingle() trap (silent null on >1 row).
+  const { data: links } = await supabase
     .from('campground_admins')
-    .select('campground_id')
+    .select('campground_id, created_at')
     .eq('user_id', user.id)
-    .maybeSingle()
+    .order('created_at', { ascending: false })
+    .limit(1)
+  const link = links?.[0]
   if (!link) {
     return { user, campground: null as OwnerCampground | null }
   }

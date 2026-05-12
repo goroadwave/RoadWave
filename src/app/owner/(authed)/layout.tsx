@@ -40,12 +40,18 @@ export default async function AuthedOwnerLayout({
 
   // OAuth signups arrive here without a campground link. Route them through
   // the onboarding flow before they can hit the dashboard / nav surfaces.
-  const { data: link } = await supabase
+  //
+  // IMPORTANT: do NOT use .maybeSingle() here. A user can legitimately have
+  // multiple campground_admins rows (one per campground they manage), and
+  // .maybeSingle() silently returns null when more than one row matches.
+  // That null was bouncing established owners back to /owner/setup, where
+  // each form submission added yet another admin row — an unbounded loop.
+  const { data: links } = await supabase
     .from('campground_admins')
     .select('campground_id')
     .eq('user_id', user.id)
-    .maybeSingle()
-  if (!link) redirect('/owner/setup')
+    .limit(1)
+  if (!links || links.length === 0) redirect('/owner/setup')
 
   return (
     <div className="min-h-screen flex flex-col">
