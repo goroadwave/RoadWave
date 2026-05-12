@@ -4,12 +4,23 @@ import { AuthDivider, GoogleAuthButton } from '@/components/auth/google-auth-but
 import { OwnerLoginForm } from '@/components/owner/owner-login-form'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-export default async function OwnerLoginPage() {
+export default async function OwnerLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (user) redirect('/owner')
+
+  // When Supabase or our /auth/sign-in confirmation step rejects an
+  // expired magic link, the user lands here with ?error=otp_expired
+  // (or a verbatim Supabase error message). Show a banner above the
+  // sign-in card so they know what happened and what to do next.
+  const sp = await searchParams
+  const errorBanner = friendlyOwnerLoginError(sp.error)
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10">
@@ -49,12 +60,29 @@ export default async function OwnerLoginPage() {
             Welcome back
           </h1>
         </div>
+        {errorBanner && (
+          <div className="mb-5 rounded-xl border border-flame/30 bg-flame/[0.06] p-3 text-sm text-cream leading-snug">
+            {errorBanner}
+          </div>
+        )}
         <div className="space-y-4">
           <GoogleAuthButton next="/owner" />
           <AuthDivider />
           <OwnerLoginForm />
         </div>
+        <p className="mt-4 text-center text-[11px] text-mist/80 leading-snug">
+          Just signed up via Stripe? Use the email you paid with — we&apos;ll
+          mint a fresh magic link to your inbox.
+        </p>
       </main>
     </div>
   )
+}
+
+function friendlyOwnerLoginError(code: string | undefined): string | null {
+  if (!code) return null
+  if (code === 'otp_expired' || /expired|invalid/i.test(code)) {
+    return 'That sign-in link has expired — magic links are good for an hour. Enter your email below and we’ll send a fresh one.'
+  }
+  return code
 }

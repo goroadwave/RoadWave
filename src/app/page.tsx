@@ -45,7 +45,28 @@ const PRIVACY_PROMISE: string[] = [
   'Connection is always optional',
 ]
 
-export default async function RootPage() {
+export default async function RootPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    error?: string
+    error_code?: string
+    error_description?: string
+  }>
+}) {
+  // Supabase redirects to its configured Site URL after a failed
+  // magic-link verification with ?error=access_denied&error_code=
+  // otp_expired&error_description=Email+link+is+invalid+or+has+
+  // expired. When that lands on the homepage, the camper-flavored
+  // marketing copy is the wrong place to surface it — bounce them
+  // to the friendly /auth/sign-in?error=expired card instead. (This
+  // is a stopgap until Supabase Site URL is reconfigured to point at
+  // /auth/sign-in directly; see the deploy notes in the commit.)
+  const sp = await searchParams
+  if (sp.error_code === 'otp_expired' || sp.error === 'access_denied') {
+    redirect('/auth/sign-in?error=expired')
+  }
+
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },

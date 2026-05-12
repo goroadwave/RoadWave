@@ -236,6 +236,15 @@ async function handleCheckoutCompleted(
   }
 
   // 4. Issue a magic link for the dashboard.
+  //
+  // The email's CTA does NOT point at the raw Supabase action_link.
+  // Gmail / Outlook / corporate gateways pre-fetch every URL in an
+  // incoming email for malware scanning; that pre-fetch consumes
+  // any single-use OTP embedded in the link, and the human lands on
+  // "otp_expired" the moment they actually click. We instead route
+  // them to our own /auth/sign-in page which renders a form. The
+  // hashed_token is consumed only when the human submits the form
+  // — scanners don't submit forms.
   const origin = getSiteOrigin(request.headers)
   let magicLink = `${origin}/owner/login`
   const { data: linkData } = await admin.auth.admin.generateLink({
@@ -243,7 +252,16 @@ async function handleCheckoutCompleted(
     email: submission.email,
     options: { redirectTo: `${origin}/owner/dashboard` },
   })
-  if (linkData?.properties?.action_link) {
+  if (linkData?.properties?.hashed_token) {
+    const params = new URLSearchParams({
+      th: linkData.properties.hashed_token,
+      email: submission.email,
+      next: '/owner/dashboard',
+    })
+    magicLink = `${origin}/auth/sign-in?${params.toString()}`
+  } else if (linkData?.properties?.action_link) {
+    // Old SDKs that don't expose hashed_token — fall through to the
+    // legacy URL. Scanner risk applies, but better than no link.
     magicLink = linkData.properties.action_link
   }
 

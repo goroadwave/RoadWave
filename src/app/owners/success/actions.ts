@@ -79,8 +79,12 @@ export async function resendOwnerMagicLinkAction(
   }
 
   // Generate the magic link against the auth user that the webhook
-  // created. The redirectTo lands them directly on /owner/dashboard
-  // once the link is clicked.
+  // created. We DON'T email the raw Supabase action_link — Gmail
+  // and other gateways pre-fetch links in emails for malware
+  // scanning, which consumes the OTP. We email a link to our own
+  // /auth/sign-in confirmation page; the OTP is only consumed when
+  // the human submits the form on that page. See the page comment
+  // at src/app/auth/sign-in/page.tsx for the full rationale.
   const headerList = await headers()
   const origin = getSiteOrigin(headerList)
   const { data: linkData, error: linkError } =
@@ -89,7 +93,7 @@ export async function resendOwnerMagicLinkAction(
       email: submission.email,
       options: { redirectTo: `${origin}/owner/dashboard` },
     })
-  if (linkError || !linkData?.properties?.action_link) {
+  if (linkError || !linkData?.properties?.hashed_token) {
     console.error(
       '[owners/success/resend] generateLink failed:',
       linkError?.message,
@@ -101,9 +105,16 @@ export async function resendOwnerMagicLinkAction(
     }
   }
 
+  const params = new URLSearchParams({
+    th: linkData.properties.hashed_token,
+    email: submission.email,
+    next: '/owner/dashboard',
+  })
+  const magicLinkUrl = `${origin}/auth/sign-in?${params.toString()}`
+
   const result = await sendMagicLinkEmail({
     toEmail: submission.email,
-    magicLinkUrl: linkData.properties.action_link,
+    magicLinkUrl,
     campgroundName: submission.campground_name,
   })
 
