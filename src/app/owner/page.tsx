@@ -19,12 +19,15 @@ export default async function OwnerRoot() {
   if (profile?.role === 'guest') redirect('/checkin')
 
   // OAuth signups land here without a campground link — send them to setup.
-  const { data: link } = await supabase
+  // Use .limit(1) on an array (not .maybeSingle()) so an owner with 2+
+  // campgrounds doesn't silently get null and bounce to /owner/setup,
+  // which previously created the setup ↔ dashboard redirect loop.
+  const { data: links } = await supabase
     .from('campground_admins')
     .select('campground_id')
     .eq('user_id', user.id)
-    .maybeSingle()
-  if (!link) redirect('/owner/setup')
+    .limit(1)
+  if (!links || links.length === 0) redirect('/owner/setup')
 
   redirect('/owner/dashboard')
 }

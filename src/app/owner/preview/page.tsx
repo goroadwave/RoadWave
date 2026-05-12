@@ -21,12 +21,17 @@ export default async function OwnerPreviewPage() {
     .single()
   if (profile?.role === 'guest') redirect('/checkin')
 
-  // Find the campground this owner is linked to.
-  const { data: link } = await supabase
+  // Find the campground this owner is linked to. Use .limit(1) on an
+  // array (not .maybeSingle()) so an owner managing 2+ campgrounds
+  // doesn't silently get null and see the "no campground" screen.
+  // Picks the most-recent admin link, mirroring loadOwnerCampground.
+  const { data: links } = await supabase
     .from('campground_admins')
-    .select('campground_id')
+    .select('campground_id, created_at')
     .eq('user_id', user.id)
-    .maybeSingle()
+    .order('created_at', { ascending: false })
+    .limit(1)
+  const link = links?.[0]
   if (!link) {
     return (
       <NoCampground />

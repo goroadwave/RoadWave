@@ -43,10 +43,22 @@ export async function checkOutAction(
   }
 
   const supabase = await createSupabaseServerClient()
+
+  // Defense-in-depth: RLS policy `check_ins_update_own` already restricts
+  // updates to rows where profile_id = auth.uid(), but pin the filter
+  // here too so the auth assumption is visible in code and the action
+  // can't silently mutate someone else's check-in if a future migration
+  // ever relaxes that RLS policy.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Your session expired — please sign in again.' }
+
   const { error } = await supabase
     .from('check_ins')
     .update({ status: 'departed' })
     .eq('id', id)
+    .eq('profile_id', user.id)
   if (error) return { error: error.message }
 
   revalidatePath('/checkin')
