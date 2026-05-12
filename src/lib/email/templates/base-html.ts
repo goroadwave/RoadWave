@@ -16,6 +16,11 @@ import { escapeHtml } from '@/lib/email/resend'
 const PALETTE = {
   night: '#0a0f1c',
   card: '#111a2e',
+  // Slightly lighter than `card` so a section sitting inside the card
+  // still reads as a distinct rounded "subcard" — without going so
+  // light that white-on-dark text starts to lose contrast.
+  section: '#16213d',
+  sectionBorder: 'rgba(255,255,255,0.08)',
   cardBorder: 'rgba(255,255,255,0.06)',
   cream: '#f5ecd9',
   flame: '#f59e0b',
@@ -23,6 +28,36 @@ const PALETTE = {
   body: '#cbd3e0',
   mist: '#94a3b8',
   mistDim: '#64748b',
+}
+
+/**
+ * Render a rounded subcard (a "blue card section") to drop inside a
+ * branded email body. Useful for the owner onboarding kit where each
+ * step lives in its own visually-separated block. Pure string output —
+ * compose multiple of these and pass the joined result as `bodyHtml`.
+ *
+ * Email-client notes:
+ *   - Uses <table> with `bgcolor=` + `style="background:…"` so Outlook
+ *     and stripped-CSS clients still paint the section background.
+ *   - Border-radius degrades to right-angles on Outlook desktop — the
+ *     section is still readable, just not rounded there.
+ */
+export function renderEmailSection(args: {
+  title?: string
+  bodyHtml: string
+}): string {
+  const title = args.title
+    ? `<p style="margin:0 0 10px; color:${PALETTE.flame}; font-size:11px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase;">${escapeHtml(args.title)}</p>`
+    : ''
+  return `
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;">
+              <tr>
+                <td bgcolor="${PALETTE.section}" style="background:${PALETTE.section}; border:1px solid ${PALETTE.sectionBorder}; border-radius:14px; padding:20px 22px;">
+                  ${title}
+                  <div style="color:${PALETTE.body}; font-size:15px; line-height:1.55;">${args.bodyHtml}</div>
+                </td>
+              </tr>
+            </table>`
 }
 
 export type BrandedEmailParts = {

@@ -38,7 +38,8 @@ export async function sendWelcomeEmail(args: Args): Promise<SendResult> {
     <ul style="margin:0 0 18px; padding-left:20px; color:#f5ecd9; font-size:15px; line-height:1.6;">
       <li>No exact site numbers</li>
       <li>No public group chat</li>
-      <li>Visible, Quiet, Invisible, or Campground Updates Only — your call</li>
+      <li>Visible, Quiet, Invisible, or Campground Updates Only &mdash; your call</li>
+      <li>Always free for campers</li>
     </ul>
     <p style="margin:0; color:#94a3b8; font-size:13px;">
       Next time you pull into a RoadWave-ready campground, scan the QR.
@@ -64,6 +65,7 @@ You're in. RoadWave is a private campground guest amenity — scan a QR code at 
 — No exact site numbers
 — No public group chat
 — Visible, Quiet, Invisible, or Campground Updates Only — your call
+— Always free for campers
 
 Next time you pull into a RoadWave-ready campground, scan the QR. Until then, take a look around: ${homeUrl}
 
