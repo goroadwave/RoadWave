@@ -8,7 +8,7 @@ import { OwnerPilotForm } from '@/components/owner/owner-pilot-form'
 export const metadata: Metadata = {
   title: 'Start Your Campground Pilot — RoadWave',
   description:
-    'Set up your RoadWave QR guest hub. Short intake, then Stripe checkout with a 14-day free trial. Cancel any time.',
+    'Set up your RoadWave QR guest hub. Short intake, then Stripe checkout. Pilot is free for 30 days. After that, Founding Campground plans start at $39/month. Cancel anytime.',
 }
 
 // /owners/start is the canonical self-serve entry to RoadWave. The
@@ -121,7 +121,8 @@ export default async function OwnersStartPage({
             </h1>
             <p className="text-mist text-base sm:text-lg leading-relaxed">
               Fill in the intake below, then head to secure Stripe
-              Checkout. 14-day free trial. Cancel any time.
+              Checkout. Pilot is free for 30 days. After that, Founding
+              Campground plans start at $39/month. Cancel anytime.
             </p>
           </div>
 

@@ -202,7 +202,7 @@ export function OwnerPilotForm({ availablePlans = ['monthly'] }: Props) {
             Pick a billing cadence
           </legend>
           <p className="text-xs text-mist">
-            14-day free trial on either plan. Cancel any time from the
+            30-day free trial on either plan. Cancel anytime from the
             owner billing tab.
           </p>
           <div className="grid gap-2 sm:grid-cols-2 pt-1">
@@ -314,8 +314,9 @@ export function OwnerPilotForm({ availablePlans = ['monthly'] }: Props) {
       </button>
 
       <p className="text-center text-[11px] text-mist/80 leading-snug">
-        Card on file via Stripe Checkout. 14-day free trial. Cancel
-        anytime.
+        Card on file via Stripe Checkout. Pilot is free for 30 days.
+        After that, Founding Campground plans start at $39/month.
+        Cancel anytime.
       </p>
     </form>
   )

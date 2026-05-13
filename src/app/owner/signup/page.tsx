@@ -34,7 +34,7 @@ export default async function OwnerSignupPage({
       <main className="w-full max-w-xl rounded-2xl border border-white/5 bg-card p-6 sm:p-8 shadow-2xl shadow-black/40">
         <div className="space-y-2 mb-6 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-flame">
-            Founding Campground Pilot · 14-day trial
+            Founding Campground Pilot · 30-day trial
           </p>
           <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-cream">
             Start My Campground Pilot

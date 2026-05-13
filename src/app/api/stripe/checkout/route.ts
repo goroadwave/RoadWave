@@ -60,8 +60,12 @@ export async function GET(request: NextRequest) {
       // link the resulting subscription back to our row.
       client_reference_id: submission.id,
       subscription_data: {
-        // 14-day trial mirrored at the DB layer (campgrounds.trial_ends_at).
-        trial_period_days: 14,
+        // 30-day trial mirrored at the DB layer (campgrounds.trial_ends_at).
+        // Changed from 14 → 30 in May 2026 to align with the public
+        // "Pilot is free for 30 days" pricing line. Existing customers
+        // mid-trial keep their original window per Stripe behavior;
+        // only new checkouts get the longer trial.
+        trial_period_days: 30,
         metadata: {
           submission_id: submission.id,
           campground_name: submission.campground_name,

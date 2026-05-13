@@ -7,7 +7,7 @@ import {
 
 // Owner onboarding kit — sent post-Stripe-checkout once the campground
 // has been provisioned. Trial-activation framing (NOT "payment
-// received" — Stripe captures $0 today and starts a 14-day trial),
+// received" — Stripe captures $0 today and starts a 30-day trial),
 // printable QR for the front desk, and a clear next-steps list.
 //
 // The QR PNG is generated server-side and attached inline as
@@ -133,7 +133,7 @@ export async function sendOwnerOnboardingKitEmail(
       Hi ${safeGreeting} — welcome to the founding pilot.
     </p>
     <p style="margin:0 0 18px; color:#cbd3e0;">
-      Your 14-day trial is active. <strong style="color:#f5ecd9;">$0 due today.</strong>
+      Your 30-day trial is active. <strong style="color:#f5ecd9;">$0 due today.</strong>
       Below is everything you need to activate ${safeCampground} for guests.
     </p>
     ${campgroundSection}
@@ -159,7 +159,7 @@ export async function sendOwnerOnboardingKitEmail(
 
 Hi ${greetingName} — welcome to the founding pilot.
 
-Your 14-day trial is active. $0 due today.
+Your 30-day trial is active. $0 due today.
 ${args.campgroundName} is live on RoadWave.
 
 Open your dashboard:

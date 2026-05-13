@@ -9,7 +9,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 export const metadata: Metadata = {
   title: 'Trial activated — RoadWave',
   description:
-    'Your 14-day free trial is active. Check your inbox for the dashboard magic link.',
+    'Your 30-day free trial is active. Check your inbox for the dashboard magic link.',
   robots: { index: false, follow: false },
 }
 
@@ -101,9 +101,9 @@ export default async function OwnersSuccessPage({
                 : "You're on RoadWave."}
             </h1>
             <p className="text-mist text-base sm:text-lg leading-relaxed">
-              Your 14-day free trial is active. $0 due today — Stripe
-              will charge your card when the trial ends, and you can
-              cancel any time from the owner billing tab.
+              Your 30-day free trial is active. $0 due today — Stripe
+              will charge $39/month when the trial ends, and you can
+              cancel anytime from the owner billing tab.
             </p>
           </div>
 

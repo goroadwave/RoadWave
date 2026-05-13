@@ -113,12 +113,13 @@ Switch to your phone (refresh the camper view).
 
 ### Step 7 (30s) — Pricing + setup
 
-> "$20/month per campground. 14-day free trial — $0 due today. Sign
-> up via Stripe, get an email with your QR PDF attached, print, post,
-> done. Total setup time: two minutes."
+> "Pilot is free for 30 days. After that, Founding Campground plans
+> start at $39/month. Cancel anytime. $0 due today. Sign up via
+> Stripe, get an email with your QR PDF attached, print, post, done.
+> Total setup time: two minutes."
 
-> "Cancel anytime from the billing tab. No contract. We don't sell
-> your guest data. You can export your dashboard data anytime."
+> "No contract. We don't sell your guest data. You can export your
+> dashboard data anytime."
 
 ### Step 8 (30s) — Ask for the close
 
@@ -134,9 +135,10 @@ If yes → `/owners/start`. If they want time to think, send them the
 
 ### "How do you make money?"
 
-> "Subscriptions only. $20/month per campground. We don't take a cut
-> of bookings, we don't sell guest data, we don't run ads. We make
-> money when campgrounds choose to keep paying us."
+> "Subscriptions only. Founding Campground plans start at $39/month
+> per campground after a free 30-day pilot. We don't take a cut of
+> bookings, we don't sell guest data, we don't run ads. We make money
+> when campgrounds choose to keep paying us."
 
 ### "What about Wi-Fi? My guests have bad cell service."
 
@@ -178,8 +180,8 @@ If yes → `/owners/start`. If they want time to think, send them the
 
 ### "What happens when my trial ends?"
 
-> "On day 14, Stripe charges $20 and you keep going. If you cancel
-> before day 14, no charge. If you cancel later, the QR keeps working
+> "On day 30, Stripe charges $39 and you keep going. If you cancel
+> before day 30, no charge. If you cancel later, the QR keeps working
 > until the end of the period you paid for, then it deactivates."
 
 ### "Do you have iOS / Android push notifications?"

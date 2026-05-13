@@ -219,7 +219,8 @@ async function handleCheckoutCompleted(
       plan,
       subscription_status: 'trial',
       trial_started_at: new Date().toISOString(),
-      trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      // 30-day trial — mirrors trial_period_days in stripe/checkout/route.ts.
+      trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     })
     .select('id, slug')
     .single()
