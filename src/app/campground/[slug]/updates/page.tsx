@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
 import { Logo } from '@/components/ui/logo'
+import { splitAmenities } from '@/lib/campgrounds/amenities'
 import { isQuickCheckInSlug } from '@/lib/checkin/quick-checkin-slugs'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
@@ -27,6 +29,20 @@ type CampgroundRow = {
   region: string | null
   logo_url: string | null
   is_active: boolean
+  // Amenities + helpful-links + engagement-hub fields. All optional
+  // from the camper's POV; each surface is gated on having both an
+  // owner-set feature flag (where applicable) and the data it needs.
+  amenities: string[] | null
+  website: string | null
+  phone: string | null
+  google_review_url: string | null
+  booking_url: string | null
+  booking_message: string | null
+  booking_promo_code: string | null
+  feature_review_enabled: boolean
+  feature_book_again_enabled: boolean
+  feature_contact_office_enabled: boolean
+  feature_pulse_check_enabled: boolean
 }
 
 type BulletinRow = {
@@ -85,7 +101,9 @@ export default async function CampgroundUpdatesPage({
 
   const { data: campground } = await admin
     .from('campgrounds')
-    .select('id, slug, name, city, region, logo_url, is_active')
+    .select(
+      'id, slug, name, city, region, logo_url, is_active, amenities, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled',
+    )
     .eq('slug', slug)
     .maybeSingle<CampgroundRow>()
 
@@ -205,6 +223,35 @@ export default async function CampgroundUpdatesPage({
               </h1>
               {where && <p className="text-sm text-mist">{where}</p>}
             </div>
+
+            {/* Amenities chips — same split between standard (filled
+                amber) and custom (dashed outline) that the welcome
+                page uses. Hidden when the campground has no amenities
+                configured. */}
+            {(() => {
+              const { standard, custom } = splitAmenities(campground.amenities)
+              if (standard.length + custom.length === 0) return null
+              return (
+                <ul className="flex flex-wrap justify-center gap-2 pt-1">
+                  {standard.map((a) => (
+                    <li
+                      key={`s-${a}`}
+                      className="rounded-full border border-flame/30 bg-flame/[0.06] px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-flame font-semibold"
+                    >
+                      {a}
+                    </li>
+                  ))}
+                  {custom.map((a) => (
+                    <li
+                      key={`c-${a}`}
+                      className="rounded-full border border-dashed border-flame/50 bg-transparent px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-flame font-semibold"
+                    >
+                      {a}
+                    </li>
+                  ))}
+                </ul>
+              )
+            })()}
           </section>
 
           {/* Updates Only privacy badge — prominent, sage-green to
@@ -298,6 +345,62 @@ export default async function CampgroundUpdatesPage({
               </p>
             )}
           </section>
+
+          {/* Helpful Campground Links — Visit Website + Call Office.
+              Both are gated on the campground actually having the
+              data; either one renders if configured. Sits ABOVE
+              WelcomeEngagement so the camper sees the "static"
+              outbound links before the form-bearing widgets. */}
+          {(campground.website || campground.phone) && (
+            <section className="space-y-3">
+              <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+                Helpful campground links
+              </h2>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {campground.website && (
+                  <a
+                    href={campground.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-4 py-3 text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
+                  >
+                    <span aria-hidden>🌐</span>
+                    Visit campground website
+                  </a>
+                )}
+                {campground.phone && (
+                  <a
+                    href={`tel:${campground.phone.replace(/[^0-9+]/g, '')}`}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-4 py-3 text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
+                  >
+                    <span aria-hidden>📞</span>
+                    Call the office
+                  </a>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Engagement Hub — same component the welcome page uses.
+              Surfaces Pulse Check ("How's your stay?"), Leave a
+              Review, Book Your Next Stay, and the categorized Contact
+              the Office form. Each surface is independently gated on
+              its owner-set feature flag AND its data dependency; if
+              every flag is off the component renders nothing.
+              Anon-safe: tap-event POSTs go via /api/campground/event
+              and form submissions via /api/campground/message, both
+              of which use the service-role admin client server-side. */}
+          <WelcomeEngagement
+            campgroundId={campground.id}
+            reviewUrl={campground.google_review_url}
+            reviewEnabled={campground.feature_review_enabled}
+            bookingUrl={campground.booking_url}
+            bookingMessage={campground.booking_message}
+            bookingPromoCode={campground.booking_promo_code}
+            bookingEnabled={campground.feature_book_again_enabled}
+            contactEnabled={campground.feature_contact_office_enabled}
+            pulseEnabled={campground.feature_pulse_check_enabled}
+          />
 
           {/* Closing nudge — opt back into the full app */}
           <section className="text-center space-y-3 pt-2">
