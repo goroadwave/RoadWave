@@ -3,12 +3,55 @@ import { redirect } from 'next/navigation'
 import { LoginForm } from '@/components/auth/login-form'
 import { AuthDivider, GoogleAuthButton } from '@/components/auth/google-auth-button'
 import { PageHeading } from '@/components/ui/page-heading'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+
+// Same campground-aware shape as /signup: if the caller arrived with
+// ?next=/checkin?token=<uuid>, resolve the campground from the token
+// and surface a campground-specific header instead of the generic
+// "Welcome back / Sign in" copy.
+const CHECKIN_NEXT_RE = /^\/checkin\?token=([0-9a-f-]{36})$/i
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+async function resolveCheckInTarget(
+  next: string | undefined,
+): Promise<{ name: string; city: string | null; region: string | null } | null> {
+  if (!next) return null
+  const decoded = next.startsWith('%2F') ? decodeURIComponent(next) : next
+  const match = decoded.match(CHECKIN_NEXT_RE)
+  if (!match) return null
+  const token = match[1]
+  if (!UUID_RE.test(token)) return null
+  try {
+    const admin = createSupabaseAdminClient()
+    const { data: tokenRow } = await admin
+      .from('campground_qr_tokens')
+      .select('campground_id')
+      .eq('token', token)
+      .maybeSingle<{ campground_id: string }>()
+    if (!tokenRow?.campground_id) return null
+    const { data: cg } = await admin
+      .from('campgrounds')
+      .select('name, city, region, is_active')
+      .eq('id', tokenRow.campground_id)
+      .maybeSingle<{
+        name: string
+        city: string | null
+        region: string | null
+        is_active: boolean
+      }>()
+    if (!cg || !cg.is_active) return null
+    return { name: cg.name, city: cg.city, region: cg.region }
+  } catch {
+    return null
+  }
+}
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string | string[] }>
+  searchParams: Promise<{ error?: string | string[]; next?: string }>
 }) {
   const supabase = await createSupabaseServerClient()
   const {
@@ -19,15 +62,34 @@ export default async function LoginPage({
   const params = await searchParams
   const rawError = Array.isArray(params.error) ? params.error[0] : params.error
   const errorMessage = rawError ? friendlyError(rawError) : null
+  const target = await resolveCheckInTarget(params.next)
 
   return (
     <div className="space-y-6">
-      <PageHeading
-        eyebrow="Welcome back"
-        title="Sign in"
-        subtitle="Pick up where you parked."
-        compact
-      />
+      {target ? (
+        <>
+          <PageHeading
+            eyebrow={`Check in to ${target.name}`}
+            title="Sign in to finish checking in"
+            subtitle={
+              [target.city, target.region].filter(Boolean).join(', ') ||
+              target.name
+            }
+            compact
+          />
+          <p className="rounded-xl border border-leaf/30 bg-leaf/[0.06] px-4 py-3 text-sm text-cream/90 leading-relaxed">
+            Sign in below and you&apos;ll go straight to the check-in screen
+            for <strong className="text-cream">{target.name}</strong>.
+          </p>
+        </>
+      ) : (
+        <PageHeading
+          eyebrow="Welcome back"
+          title="Sign in"
+          subtitle="Pick up where you parked."
+          compact
+        />
+      )}
 
       {errorMessage && (
         <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200 space-y-1">
