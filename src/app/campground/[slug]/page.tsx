@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
 import { Logo } from '@/components/ui/logo'
-import { splitAmenities } from '@/lib/campgrounds/amenities'
 import { isQuickCheckInSlug } from '@/lib/checkin/quick-checkin-slugs'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -42,7 +41,6 @@ type CampgroundRow = {
   city: string | null
   region: string | null
   logo_url: string | null
-  amenities: string[] | null
   is_active: boolean
   google_review_url: string | null
   booking_url: string | null
@@ -97,7 +95,7 @@ export default async function CampgroundLandingPage({
   const { data: campground } = await admin
     .from('campgrounds')
     .select(
-      'id, slug, name, city, region, logo_url, amenities, is_active, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled',
+      'id, slug, name, city, region, logo_url, is_active, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled',
     )
     .eq('slug', slug)
     .maybeSingle<CampgroundRow>()
@@ -154,14 +152,6 @@ export default async function CampgroundLandingPage({
   const where = [campground.city, campground.region]
     .filter(Boolean)
     .join(', ')
-  // Saved campgrounds.amenities mixes brand-curated labels (saved when
-  // the owner ticks a checkbox) with owner-typed custom strings from
-  // the "Add Your Own" section. Render them in the same row but with
-  // distinct tag styles per spec — solid amber for standard, dashed
-  // outlined for custom.
-  const { standard: standardAmenities, custom: customAmenities } =
-    splitAmenities(campground.amenities)
-  const hasAmenities = standardAmenities.length + customAmenities.length > 0
 
   // CTA targets. For campgrounds in the QUICK_CHECKIN_SLUGS allow-list
   // (demo + test campgrounds), the primary CTA routes to /quickcheckin
@@ -236,27 +226,6 @@ export default async function CampgroundLandingPage({
                 <p className="text-sm sm:text-base text-mist">{where}</p>
               )}
             </div>
-
-            {hasAmenities && (
-              <ul className="flex flex-wrap justify-center gap-2 pt-1">
-                {standardAmenities.map((a) => (
-                  <li
-                    key={`s-${a}`}
-                    className="rounded-full border border-flame/30 bg-flame/[0.06] px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-flame font-semibold"
-                  >
-                    {a}
-                  </li>
-                ))}
-                {customAmenities.map((a) => (
-                  <li
-                    key={`c-${a}`}
-                    className="rounded-full border border-dashed border-flame/50 bg-transparent px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-flame font-semibold"
-                  >
-                    {a}
-                  </li>
-                ))}
-              </ul>
-            )}
 
             <p className="text-cream/90 text-sm sm:text-base leading-relaxed max-w-lg mx-auto pt-2">
               This campground uses RoadWave to help guests see updates, find

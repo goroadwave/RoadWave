@@ -5,7 +5,10 @@ import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { sendOwnerWelcomeEmail } from '@/lib/email/owner-welcome'
-import { MAX_CUSTOM_AMENITY_CHARS } from '@/lib/campgrounds/amenities'
+import {
+  MAX_AMENITY_NOTE_CHARS,
+  MAX_CUSTOM_AMENITY_CHARS,
+} from '@/lib/campgrounds/amenities'
 
 export type ProfileSaveState = { error: string | null; ok: boolean }
 
@@ -21,6 +24,51 @@ const amenityString = z
   .trim()
   .min(1)
   .max(MAX_CUSTOM_AMENITY_CHARS)
+
+// Per-amenity notes. Parsed from a hidden JSON payload posted by the
+// owner profile form. Each value capped + trimmed; orphan keys (keys
+// whose amenity is no longer in the saved array) are dropped after
+// validation in saveOwnerProfileAction. Cap on total keys = the same
+// 80-entry cap on the amenities array, so a malicious payload can't
+// balloon the column.
+const amenityNoteValue = z
+  .string()
+  .max(MAX_AMENITY_NOTE_CHARS)
+  .transform((s) => s.trim())
+const amenityNotesPayload = z
+  .string()
+  .max(20_000)
+  .transform((raw, ctx) => {
+    if (!raw || raw.trim() === '') return {} as Record<string, string>
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Invalid amenity notes payload',
+      })
+      return z.NEVER
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Amenity notes must be an object',
+      })
+      return z.NEVER
+    }
+    const out: Record<string, string> = {}
+    let count = 0
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (count >= 80) break
+      if (typeof v !== 'string') continue
+      const noteCheck = amenityNoteValue.safeParse(v)
+      if (!noteCheck.success || noteCheck.data === '') continue
+      out[k] = noteCheck.data
+      count++
+    }
+    return out
+  })
 
 // Optional URLs the owner configures for the welcome-page Review +
 // Book Again CTAs. Empty strings (the form posts "" when the input is
@@ -50,6 +98,7 @@ const schema = z.object({
     // De-dupe (case-sensitive — labels are case-stable; custom
     // amenities the owner repeats on accident shouldn't double-up).
     .transform((arr) => Array.from(new Set(arr))),
+  amenity_notes_json: amenityNotesPayload,
   logo_url: z.string().max(500).optional().nullable(),
   google_review_url: optionalUrl,
   booking_url: optionalUrl,
@@ -81,6 +130,7 @@ export async function saveOwnerProfileAction(
     website: formData.get('website') || null,
     timezone: formData.get('timezone') || 'America/New_York',
     amenities: formData.getAll('amenities'),
+    amenity_notes_json: formData.get('amenity_notes_json') ?? '{}',
     logo_url: formData.get('logo_url') || null,
     google_review_url: formData.get('google_review_url') ?? '',
     booking_url: formData.get('booking_url') ?? '',
@@ -93,6 +143,16 @@ export async function saveOwnerProfileAction(
     return { error: String(first), ok: false }
   }
 
+  // Prune orphan notes: keys whose amenity is no longer in the saved
+  // array shouldn't make it to the column. The client already does this,
+  // but re-check server-side so a hand-crafted payload can't write notes
+  // for amenities the owner hasn't selected.
+  const amenitySet = new Set(parsed.data.amenities)
+  const prunedNotes: Record<string, string> = {}
+  for (const [k, v] of Object.entries(parsed.data.amenity_notes_json)) {
+    if (amenitySet.has(k)) prunedNotes[k] = v
+  }
+
   const supabase = await createSupabaseServerClient()
   const { error } = await supabase
     .from('campgrounds')
@@ -103,6 +163,7 @@ export async function saveOwnerProfileAction(
       website: parsed.data.website,
       timezone: parsed.data.timezone,
       amenities: parsed.data.amenities,
+      amenity_notes: prunedNotes,
       logo_url: parsed.data.logo_url,
       google_review_url: parsed.data.google_review_url ?? null,
       booking_url: parsed.data.booking_url ?? null,

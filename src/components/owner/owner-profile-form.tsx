@@ -9,10 +9,13 @@ import type { OwnerCampground } from '@/app/owner/(authed)/_helpers'
 import { OwnerLogoUpload } from '@/components/owner/owner-logo-upload'
 import {
   AMENITY_GROUPS,
+  MAX_AMENITY_NOTE_CHARS,
   MAX_CUSTOM_AMENITIES,
   MAX_CUSTOM_AMENITY_CHARS,
   splitAmenities,
 } from '@/lib/campgrounds/amenities'
+
+const NOTE_MAX_CHARS = MAX_AMENITY_NOTE_CHARS
 
 const TIMEZONES = [
   'America/New_York',
@@ -39,13 +42,62 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
     () => splitAmenities(campground.amenities),
     [campground.amenities],
   )
+  // Standard amenity selection is controlled (vs the previous
+  // uncontrolled `defaultChecked`) so the Notes panel below knows which
+  // amenities are currently active and only renders note inputs for those.
+  // Unchecking an amenity also drops its note from the serialized payload
+  // — see `serializedNotes` below.
+  const [selectedStandard, setSelectedStandard] = useState<Set<string>>(
+    () => new Set(initial.standard),
+  )
   const [customAmenities, setCustomAmenities] = useState<string[]>(
     initial.custom,
   )
   const [customDraft, setCustomDraft] = useState('')
   const draftInputRef = useRef<HTMLInputElement>(null)
 
+  // Per-amenity notes the owner wants shown under each amenity card on
+  // the Updates Only page. Keyed by amenity label. Empty / whitespace-only
+  // notes get pruned at save time so the column stays tidy.
+  const [notes, setNotes] = useState<Record<string, string>>(
+    () => ({ ...(campground.amenity_notes ?? {}) }),
+  )
+
   const atCustomLimit = customAmenities.length >= MAX_CUSTOM_AMENITIES
+
+  function toggleStandard(label: string) {
+    setSelectedStandard((prev) => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
+    })
+  }
+
+  // Active amenities = selected standards (in canonical group order, so
+  // the Notes panel matches the order of the checkbox grid) followed by
+  // custom amenities in the order the owner added them.
+  const activeAmenities = useMemo(() => {
+    const ordered: string[] = []
+    for (const group of AMENITY_GROUPS) {
+      for (const label of group.amenities) {
+        if (selectedStandard.has(label)) ordered.push(label)
+      }
+    }
+    return [...ordered, ...customAmenities]
+  }, [selectedStandard, customAmenities])
+
+  // The hidden form field. Only includes notes for currently-active
+  // amenities, and only those with non-empty content. The server action
+  // re-prunes against the saved amenities array as a belt-and-braces.
+  const serializedNotes = useMemo(() => {
+    const out: Record<string, string> = {}
+    for (const label of activeAmenities) {
+      const note = notes[label]?.trim()
+      if (note) out[label] = note
+    }
+    return JSON.stringify(out)
+  }, [activeAmenities, notes])
 
   function addCustom() {
     const trimmed = customDraft.trim().slice(0, MAX_CUSTOM_AMENITY_CHARS)
@@ -212,11 +264,21 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
       </Field>
 
       <div className="space-y-4">
-        <p className="text-sm font-medium text-cream">Amenities</p>
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-cream">Guest Page Amenities</p>
+          <p className="text-xs text-mist leading-snug">
+            Shown to campers on the &ldquo;Just See Campground Updates&rdquo;
+            page. Toggle the amenities your campground offers, add custom
+            ones below, and add an optional note for each (e.g. hours,
+            location, password) so guests know what to expect.
+          </p>
+        </div>
 
         {/* Standard amenities — grouped, one checkbox per amenity. The
             saved value IS the label (e.g. "Heated Pool"); the new
-            renderers and the migrated DB rows align on labels not slugs. */}
+            renderers and the migrated DB rows align on labels not slugs.
+            Selection is controlled so the Notes panel can reflect the
+            current set. */}
         {AMENITY_GROUPS.map((group) => (
           <div key={group.title} className="space-y-2">
             <p className="text-[11px] uppercase tracking-[0.16em] text-flame font-semibold">
@@ -224,7 +286,7 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
             </p>
             <div className="flex flex-wrap gap-1.5">
               {group.amenities.map((label) => {
-                const checked = initial.standard.includes(label)
+                const checked = selectedStandard.has(label)
                 return (
                   <label
                     key={label}
@@ -234,7 +296,8 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
                       type="checkbox"
                       name="amenities"
                       value={label}
-                      defaultChecked={checked}
+                      checked={checked}
+                      onChange={() => toggleStandard(label)}
                       className="sr-only"
                     />
                     {label}
@@ -323,6 +386,75 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
             </p>
           )}
         </div>
+
+        {/* Notes for active amenities — one input per active amenity.
+            Optional: blanks are pruned at save. Shown as a collapsible
+            <details> so the form stays compact for owners who don't want
+            to add notes. Auto-opens when at least one amenity already
+            has a note so an owner editing their profile can see what
+            they have. */}
+        {activeAmenities.length > 0 && (
+          <details
+            className="rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 group"
+            open={Object.values(notes).some((v) => v?.trim().length > 0)}
+          >
+            <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-flame font-semibold">
+                  Notes for your amenities (optional)
+                </p>
+                <p className="text-xs text-mist leading-snug">
+                  Add a short note per amenity — hours, location, Wi-Fi
+                  password, etc. Leave blank if no note is needed.
+                </p>
+              </div>
+              <span
+                aria-hidden
+                className="text-mist text-xs group-open:hidden"
+              >
+                Show
+              </span>
+              <span
+                aria-hidden
+                className="text-mist text-xs hidden group-open:inline"
+              >
+                Hide
+              </span>
+            </summary>
+            <div className="pt-3 space-y-2">
+              {activeAmenities.map((label) => (
+                <div key={`note-${label}`} className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-cream/90">
+                    {label}
+                  </label>
+                  <input
+                    type="text"
+                    value={notes[label] ?? ''}
+                    onChange={(e) =>
+                      setNotes((prev) => ({
+                        ...prev,
+                        [label]: e.target.value,
+                      }))
+                    }
+                    maxLength={NOTE_MAX_CHARS}
+                    placeholder="e.g. Open 8 AM–10 PM, Password at office"
+                    className={inputCls}
+                  />
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
+        {/* Hidden form payload: serialized notes for active amenities
+            with non-empty values. The server action zod-parses this,
+            re-prunes against the persisted amenities array, and saves
+            into campgrounds.amenity_notes (migration 0045). */}
+        <input
+          type="hidden"
+          name="amenity_notes_json"
+          value={serializedNotes}
+        />
       </div>
 
       {state.error && (

@@ -12,6 +12,9 @@ export type OwnerCampground = {
   website: string | null
   logo_url: string | null
   amenities: string[]
+  /** Optional owner-written notes per amenity, keyed by amenity label.
+   *  Added in migration 0045. Pre-migration deployments default to {}. */
+  amenity_notes: Record<string, string>
   timezone: string
   is_verified: boolean
   is_active: boolean
@@ -63,7 +66,7 @@ export async function loadOwnerCampground() {
   const { data: cg } = await supabase
     .from('campgrounds')
     .select(
-      'id, name, slug, city, region, address, phone, website, logo_url, amenities, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, email_notifications_enabled',
+      'id, name, slug, city, region, address, phone, website, logo_url, amenities, amenity_notes, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, email_notifications_enabled',
     )
     .eq('id', link.campground_id)
     .single()

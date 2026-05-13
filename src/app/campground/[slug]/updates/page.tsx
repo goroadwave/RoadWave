@@ -34,6 +34,10 @@ type CampgroundRow = {
   // from the camper's POV; each surface is gated on having both an
   // owner-set feature flag (where applicable) and the data it needs.
   amenities: string[] | null
+  /** Optional owner-written note per amenity, keyed by amenity label.
+   *  Added in migration 0045; missing on pre-migration deployments
+   *  (the renderer treats null/undefined as an empty map). */
+  amenity_notes: Record<string, string> | null
   website: string | null
   phone: string | null
   google_review_url: string | null
@@ -103,7 +107,7 @@ export default async function CampgroundUpdatesPage({
   const { data: campground } = await admin
     .from('campgrounds')
     .select(
-      'id, slug, name, city, region, logo_url, is_active, amenities, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled',
+      'id, slug, name, city, region, logo_url, is_active, amenities, amenity_notes, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled',
     )
     .eq('slug', slug)
     .maybeSingle<CampgroundRow>()
@@ -237,35 +241,6 @@ export default async function CampgroundUpdatesPage({
               </h1>
               {where && <p className="text-sm text-mist">{where}</p>}
             </div>
-
-            {/* Amenities chips — same split between standard (filled
-                amber) and custom (dashed outline) that the welcome
-                page uses. Hidden when the campground has no amenities
-                configured. */}
-            {(() => {
-              const { standard, custom } = splitAmenities(campground.amenities)
-              if (standard.length + custom.length === 0) return null
-              return (
-                <ul className="flex flex-wrap justify-center gap-2 pt-1">
-                  {standard.map((a) => (
-                    <li
-                      key={`s-${a}`}
-                      className="rounded-full border border-flame/30 bg-flame/[0.06] px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-flame font-semibold"
-                    >
-                      {a}
-                    </li>
-                  ))}
-                  {custom.map((a) => (
-                    <li
-                      key={`c-${a}`}
-                      className="rounded-full border border-dashed border-flame/50 bg-transparent px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-flame font-semibold"
-                    >
-                      {a}
-                    </li>
-                  ))}
-                </ul>
-              )
-            })()}
           </section>
 
           {/* Updates Only privacy badge — prominent, sage-green to
@@ -359,6 +334,64 @@ export default async function CampgroundUpdatesPage({
               </p>
             )}
           </section>
+
+          {/* Campground Amenities — dedicated, labeled section between
+              meetups and helpful-links. Renders the campground's
+              amenities (standard + custom in display order) as a 2-col
+              mobile / 3-col desktop card grid. Each card shows the
+              amenity name plus the optional owner-written note from
+              campgrounds.amenity_notes (migration 0045). Custom
+              amenities the owner typed get a dashed-flame border so
+              they're visually distinct from the brand-curated presets.
+              Hidden entirely when the campground has no amenities
+              configured. */}
+          {(() => {
+            const { standard, custom } = splitAmenities(campground.amenities)
+            const all = [
+              ...standard.map((label) => ({ label, isCustom: false })),
+              ...custom.map((label) => ({ label, isCustom: true })),
+            ]
+            if (all.length === 0) return null
+            const notes = campground.amenity_notes ?? {}
+            return (
+              <section className="space-y-3">
+                <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+                  Campground amenities
+                </h2>
+                <p className="text-sm text-mist leading-relaxed">
+                  Here&apos;s what this campground offers during your
+                  stay.
+                </p>
+                <ul className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 pt-1">
+                  {all.map((a) => {
+                    const note =
+                      typeof notes[a.label] === 'string'
+                        ? notes[a.label].trim()
+                        : ''
+                    return (
+                      <li
+                        key={`${a.isCustom ? 'c' : 's'}-${a.label}`}
+                        className={
+                          a.isCustom
+                            ? 'rounded-xl border border-dashed border-flame/40 bg-card/40 p-3 sm:p-4 space-y-1'
+                            : 'rounded-xl border border-white/5 bg-card p-3 sm:p-4 space-y-1'
+                        }
+                      >
+                        <p className="text-sm font-semibold text-cream leading-tight">
+                          {a.label}
+                        </p>
+                        {note && (
+                          <p className="text-xs text-mist leading-snug">
+                            {note}
+                          </p>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            )
+          })()}
 
           {/* Helpful Campground Links — Visit Website + Call Office.
               Both are gated on the campground actually having the

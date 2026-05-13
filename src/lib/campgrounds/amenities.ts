@@ -1,14 +1,20 @@
 // Single source of truth for the campground amenities the owner profile
 // form lets you tick. Used by:
 //   - src/components/owner/owner-profile-form.tsx (the checkbox grid +
-//     the "Other Amenities — Add Your Own" section)
-//   - src/app/campground/[slug]/page.tsx (guest welcome page render)
-//   - src/components/owner/marketing-kit.tsx (counter card PDF render)
+//     the "Other Amenities — Add Your Own" section + the notes panel)
+//   - src/app/campground/[slug]/updates/page.tsx (Updates Only camper
+//     render — card grid with optional per-amenity notes)
+//
+// The welcome page (/campground/[slug]) does NOT render amenities —
+// they only surface after a camper taps "Just See Campground Updates"
+// so the hero stays focused on the two CTAs.
 //
 // Stored values in campgrounds.amenities are the LABELS below — not
 // internal slugs. Custom amenities owners type into the "Add Your Own"
 // section save into the same text[] alongside the standard ones; the
 // renderer distinguishes them via membership in STANDARD_AMENITY_LABELS.
+// Owner-written notes live in campgrounds.amenity_notes (jsonb,
+// migration 0045) keyed by amenity label.
 
 export type AmenityGroup = {
   /** Group title shown above the checkboxes. */
@@ -113,6 +119,10 @@ export function isStandardAmenity(value: string): boolean {
 export const MAX_CUSTOM_AMENITIES = 20
 /** Max characters per custom amenity, to keep tags presentable. */
 export const MAX_CUSTOM_AMENITY_CHARS = 50
+/** Max characters per amenity note (e.g. "Open 8 AM–10 PM"). Kept short
+ *  so the camper card stays a one-liner. Stored in
+ *  campgrounds.amenity_notes (migration 0045). */
+export const MAX_AMENITY_NOTE_CHARS = 200
 
 /** Split a saved campgrounds.amenities array into [standard, custom]
  *  preserving order. Trims + drops empties on the way through. */
