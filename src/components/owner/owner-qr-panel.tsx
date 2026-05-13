@@ -1,7 +1,8 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
 import {
+  generateQrTokenAction,
   rotateQrTokenAction,
   type RotateState,
 } from '@/app/owner/(authed)/qr/actions'
@@ -182,6 +183,10 @@ export function OwnerQrPanel({
   const [renderError, setRenderError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle')
+  // Hoisted from the post-early-return slot so all hooks run on every
+  // render (rules-of-hooks). The no-token branch lives in a separate
+  // subcomponent so its state doesn't conflict either.
+  const [pdfBusyFormat, setPdfBusyFormat] = useState<SignFormat | null>(null)
   const [state, formAction, pending] = useActionState(
     rotateQrTokenAction,
     initialState,
@@ -238,23 +243,16 @@ export function OwnerQrPanel({
     setWaveDataUrl(renderEmojiToPng('👋', 192))
   }, [])
 
+  // Pre-token state — owner can self-serve provisioning. Returning a
+  // separate subcomponent here keeps the hooks order in OwnerQrPanel
+  // unconditional (the call to setPdfBusyFormat / useState below
+  // would otherwise live behind a conditional return, which trips
+  // React's rules-of-hooks on token transitions).
   if (!token || !checkInUrl) {
-    return (
-      <div className="rounded-2xl border border-dashed border-white/10 bg-card p-6 text-center text-sm text-mist">
-        No QR token has been issued for your campground yet.{' '}
-        <a
-          href="mailto:hello@getroadwave.com"
-          className="text-flame underline-offset-2 hover:underline"
-        >
-          Email us
-        </a>{' '}
-        and we&apos;ll provision one.
-      </div>
-    )
+    return <NoQrTokenCard campgroundId={campgroundId} />
   }
 
   const baseFilename = `${slug(campgroundName)}-roadwave-qr`
-  const [pdfBusyFormat, setPdfBusyFormat] = useState<SignFormat | null>(null)
 
   async function downloadPdf(format: SignFormat) {
     if (!dataUrl || !checkInUrl) return
@@ -432,6 +430,63 @@ export function OwnerQrPanel({
         )}
       </div>
 
+    </div>
+  )
+}
+
+// Pre-token state — campground exists but has no campground_qr_tokens
+// row yet. Owner can self-serve provisioning. After successful insert
+// the server action revalidates /owner/qr, the page re-renders with a
+// real token, and the parent OwnerQrPanel takes over the normal
+// rendered branch.
+function NoQrTokenCard({ campgroundId }: { campgroundId: string }) {
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  function onGenerate() {
+    setError(null)
+    startTransition(async () => {
+      const res = await generateQrTokenAction(campgroundId)
+      if (!res.ok) setError(res.error ?? 'Could not generate a QR token.')
+      // On success the server action calls revalidatePath('/owner/qr'),
+      // so the page rerenders with the new token and this component
+      // unmounts — nothing else to do here.
+    })
+  }
+
+  return (
+    <div className="rounded-2xl border border-flame/30 bg-card p-6 text-center space-y-3">
+      <p className="font-display text-lg font-extrabold text-cream">
+        Your QR code isn&apos;t set up yet
+      </p>
+      <p className="text-sm text-mist leading-relaxed max-w-md mx-auto">
+        Generate a one-tap check-in QR for your front desk, welcome packet,
+        or activity board. It only takes a second and you can rotate it
+        anytime.
+      </p>
+      <div className="pt-1">
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={pending}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-flame text-night px-5 py-2.5 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {pending ? 'Generating…' : 'Generate QR Code'}
+        </button>
+      </div>
+      {error && (
+        <p className="text-xs text-red-300 leading-snug">{error}</p>
+      )}
+      <p className="text-[11px] text-mist/70 leading-snug pt-1">
+        Still stuck? Email{' '}
+        <a
+          href="mailto:hello@getroadwave.com"
+          className="text-flame underline-offset-2 hover:underline"
+        >
+          hello@getroadwave.com
+        </a>
+        .
+      </p>
     </div>
   )
 }
