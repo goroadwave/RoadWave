@@ -349,6 +349,18 @@ function ContactOffice({ campgroundId }: { campgroundId: string }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+  const [startedLogged, setStartedLogged] = useState(false)
+
+  // Fires once per ContactOffice mount the first time the camper
+  // interacts with any field. Distinct from the contact_message
+  // event that fires on submit — together they let the owner see
+  // form-open vs form-submit conversion. Best-effort; failures are
+  // swallowed by logEvent's beacon path.
+  function markStarted() {
+    if (startedLogged) return
+    setStartedLogged(true)
+    logEvent(campgroundId, 'office_contact_started')
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -413,6 +425,7 @@ function ContactOffice({ campgroundId }: { campgroundId: string }) {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
+            onFocus={markStarted}
             className={selectCls}
             required
           >
@@ -427,6 +440,7 @@ function ContactOffice({ campgroundId }: { campgroundId: string }) {
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          onFocus={markStarted}
           rows={4}
           maxLength={2000}
           placeholder="Your message…"

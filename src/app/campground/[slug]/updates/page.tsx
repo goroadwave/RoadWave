@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { TrackedLinkButton } from '@/components/campgrounds/tracked-link-button'
 import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
 import { Logo } from '@/components/ui/logo'
 import { splitAmenities } from '@/lib/campgrounds/amenities'
@@ -133,20 +134,33 @@ export default async function CampgroundUpdatesPage({
       ? `/signup?next=${encodeURIComponent(`/checkin?token=${resolvedToken}`)}`
       : '/signup'
 
-  // Bulletin view event: a guest landed on the read-only updates page,
-  // which is the page surface that displays bulletins to anonymous
-  // visitors. Fire-and-forget — render shouldn't block on the write.
+  // Updates Only visit log. Fires two events on page load:
+  //   - bulletin_view   (legacy, kept for backwards-compat with the
+  //                      bulletin-engagement-count metric)
+  //   - updates_only_view (added in migration 0044 so the owner
+  //                      dashboard can surface "Updates Only visits"
+  //                      as a distinct first-class metric)
+  // Fire-and-forget — render shouldn't block on the writes. If the
+  // updates_only_view insert fails its CHECK constraint (migration
+  // 0044 not yet applied), the page still renders correctly.
   void admin
     .from('campground_events')
-    .insert({
-      campground_id: campground.id,
-      event_type: 'bulletin_view',
-      metadata: { source: 'updates_page' },
-    })
+    .insert([
+      {
+        campground_id: campground.id,
+        event_type: 'bulletin_view',
+        metadata: { source: 'updates_page' },
+      },
+      {
+        campground_id: campground.id,
+        event_type: 'updates_only_view',
+        metadata: { source: 'updates_page' },
+      },
+    ])
     .then(({ error }) => {
       if (error) {
         console.error(
-          '[campground/updates] bulletin_view log failed:',
+          '[campground/updates] event log failed:',
           error.message,
         )
       }
@@ -358,15 +372,15 @@ export default async function CampgroundUpdatesPage({
               </h2>
               <div className="grid gap-2 sm:grid-cols-2">
                 {campground.website && (
-                  <a
+                  <TrackedLinkButton
                     href={campground.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    campgroundId={campground.id}
+                    eventType="campground_website_click"
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-4 py-3 text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
                   >
                     <span aria-hidden>🌐</span>
                     Visit campground website
-                  </a>
+                  </TrackedLinkButton>
                 )}
                 {campground.phone && (
                   <a

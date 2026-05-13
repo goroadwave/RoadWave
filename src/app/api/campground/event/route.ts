@@ -36,6 +36,12 @@ const ALLOWED_EVENTS = new Set([
   // surface is consistent if a future caller needs them.
   'check_in_started',
   'check_in_completed',
+  // Updates Only flow surfaces — added in migration 0044. Fired by
+  // the /campground/<slug>/updates page server-side and by the
+  // Visit Website / Contact Office buttons on that page client-side.
+  'updates_only_view',
+  'campground_website_click',
+  'office_contact_started',
 ])
 
 const UUID_RE =
