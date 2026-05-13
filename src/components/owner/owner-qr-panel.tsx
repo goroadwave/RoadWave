@@ -28,10 +28,10 @@ const FRONT_DESK_PRIVACY =
 const FRONT_DESK_COMPLIANCE =
   'RoadWave is 18+. Meet in public campground areas. For emergencies call 911 and notify campground staff.'
 
-type SignFormat = 'letter' | '5x7'
+type SignFormat = 'letter' | '5x7' | '4x6'
 
 // Builds a print-ready, dark-navy-themed signage PDF at the requested size.
-// Layout scales from the page width: same hierarchy at 5×7 and 8.5×11.
+// Layout scales from the page width: same hierarchy at 4×6, 5×7, and 8.5×11.
 async function buildBrandedQrPdf(args: {
   qrDataUrl: string
   /** Pre-rasterised 👋 PNG; pass null to fall back to text-only wordmark. */
@@ -41,14 +41,28 @@ async function buildBrandedQrPdf(args: {
 }): Promise<Blob> {
   const { default: JsPDF } = await import('jspdf')
 
-  // jsPDF accepts 'letter' as a name, but '5x7' has to be passed as
-  // explicit dimensions in the unit ('in'). Standard print sizes:
-  //   letter = 8.5 × 11 in → 612 × 792 pt
-  //   5×7    = 5   × 7  in → 360 × 504 pt
+  // jsPDF accepts 'letter' as a name. Other sizes are passed as
+  // explicit dimensions in points (the default `pt` unit). Standard
+  // sizes used here:
+  //   letter = 8.5 × 11 in  →  612 × 792 pt   (front-desk poster)
+  //   5×7    = 5   × 7  in  →  360 × 504 pt   (smaller standing card)
+  //   4×6    = 4   × 6  in  →  288 × 432 pt   (postcard / index-card;
+  //                                            fits most label
+  //                                            printers + photo
+  //                                            printers; ideal for the
+  //                                            front desk counter)
+  const dimensions: Record<Exclude<SignFormat, 'letter'>, [number, number]> = {
+    '5x7': [360, 504],
+    '4x6': [288, 432],
+  }
   const doc =
     args.format === 'letter'
       ? new JsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' })
-      : new JsPDF({ unit: 'pt', format: [360, 504], orientation: 'portrait' })
+      : new JsPDF({
+          unit: 'pt',
+          format: dimensions[args.format],
+          orientation: 'portrait',
+        })
 
   const W = doc.internal.pageSize.getWidth()
   const H = doc.internal.pageSize.getHeight()
@@ -267,7 +281,8 @@ export function OwnerQrPanel({
       const objectUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = objectUrl
-      const sizeTag = format === 'letter' ? '8.5x11' : '5x7'
+      const sizeTag =
+        format === 'letter' ? '8.5x11' : format === '5x7' ? '5x7' : '4x6'
       a.download = `${baseFilename}-${sizeTag}.pdf`
       document.body.appendChild(a)
       a.click()
@@ -360,27 +375,36 @@ export function OwnerQrPanel({
           <p className="text-center text-[11px] uppercase tracking-[0.2em] text-mist">
             Print-ready signage PDF
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => downloadPdf('letter')}
               disabled={!dataUrl || pdfBusyFormat !== null}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-flame/40 bg-flame/10 text-flame px-4 py-2.5 text-sm font-semibold hover:bg-flame/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-flame/40 bg-flame/10 text-flame px-3 py-2.5 text-sm font-semibold hover:bg-flame/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {pdfBusyFormat === 'letter' ? 'Building…' : 'Download 8.5 × 11'}
+              {pdfBusyFormat === 'letter' ? 'Building…' : '8.5 × 11'}
             </button>
             <button
               type="button"
               onClick={() => downloadPdf('5x7')}
               disabled={!dataUrl || pdfBusyFormat !== null}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-flame/40 bg-flame/10 text-flame px-4 py-2.5 text-sm font-semibold hover:bg-flame/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-flame/40 bg-flame/10 text-flame px-3 py-2.5 text-sm font-semibold hover:bg-flame/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {pdfBusyFormat === '5x7' ? 'Building…' : 'Download 5 × 7'}
+              {pdfBusyFormat === '5x7' ? 'Building…' : '5 × 7'}
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadPdf('4x6')}
+              disabled={!dataUrl || pdfBusyFormat !== null}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-flame/40 bg-flame/10 text-flame px-3 py-2.5 text-sm font-semibold hover:bg-flame/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {pdfBusyFormat === '4x6' ? 'Building…' : '4 × 6'}
             </button>
           </div>
           <p className="text-center text-[11px] text-mist/70">
-            Both sizes include the RoadWave brand, your QR, and the
-            front-desk safety copy.
+            All three sizes include the RoadWave brand, your QR, and the
+            front-desk safety copy. 4 × 6 fits most label / photo
+            printers and reads well on a check-in counter.
           </p>
         </div>
 

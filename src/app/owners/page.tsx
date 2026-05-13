@@ -121,6 +121,16 @@ export default function OwnersPage() {
                 See the live demo
               </Link>
             </div>
+            <p className="text-[11px] text-mist/80 leading-snug pt-2 text-center">
+              Or read{' '}
+              <Link
+                href="/owners/how-it-works"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                the step-by-step walkthrough of the camper experience
+              </Link>{' '}
+              first.
+            </p>
           </div>
         </section>
 
