@@ -97,7 +97,15 @@ export function FloatingTourButton() {
     pathname === '/verify' ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/owner/login') ||
-    pathname.startsWith('/owner/signup')
+    pathname.startsWith('/owner/signup') ||
+    // Hide on the QR check-in surfaces. Campers landing here are
+    // in the middle of a flow (welcome → updates → quickcheckin
+    // form) and Riley's FAB overlaps the primary CTA in the lower
+    // half of the screen on mobile, which is exactly where the
+    // "Check In to This Campground" / "Complete Check-In" buttons
+    // sit. Owners can still get Riley help from any /owner/* page.
+    pathname.startsWith('/campground/') ||
+    pathname.startsWith('/quickcheckin')
   ) {
     return null
   }

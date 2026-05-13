@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
 import { Logo } from '@/components/ui/logo'
 import { splitAmenities } from '@/lib/campgrounds/amenities'
+import { isQuickCheckInSlug } from '@/lib/checkin/quick-checkin-slugs'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { isUuid } from '@/lib/validators/checkin'
@@ -162,17 +163,26 @@ export default async function CampgroundLandingPage({
     splitAmenities(campground.amenities)
   const hasAmenities = standardAmenities.length + customAmenities.length > 0
 
-  // CTA targets. Primary routes the camper through signup with the
-  // post-auth landing already pointing at /checkin so the post-Stripe-
-  // verify chain doesn't drop the token. Secondary opens the read-only
-  // updates view (no account required).
+  // CTA targets. For campgrounds in the QUICK_CHECKIN_SLUGS allow-list
+  // (demo + test campgrounds), the primary CTA routes to /quickcheckin
+  // — a public no-signup form that provisions a throwaway camper and
+  // completes the check-in in one click. For every other campground we
+  // keep the original behaviour: /signup → email confirm → /checkin.
+  //
+  // The secondary CTA always opens the read-only updates view, which
+  // doesn't require an account.
+  const useQuickCheckIn = isQuickCheckInSlug(campground.slug) && !!validatedToken
   const checkInUrl = validatedToken
     ? `/checkin?token=${validatedToken}`
     : '/checkin'
-  const joinUrl = validatedToken
-    ? `/signup?next=${encodeURIComponent(checkInUrl)}`
-    : '/signup'
-  const updatesUrl = `/campground/${campground.slug}/updates`
+  const joinUrl = useQuickCheckIn
+    ? `/quickcheckin?slug=${encodeURIComponent(campground.slug)}&token=${validatedToken}`
+    : validatedToken
+      ? `/signup?next=${encodeURIComponent(checkInUrl)}`
+      : '/signup'
+  const updatesUrl = `/campground/${campground.slug}/updates${
+    validatedToken ? `?token=${validatedToken}` : ''
+  }`
 
   return (
     <main className="min-h-screen bg-night text-cream">

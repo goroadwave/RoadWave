@@ -1,7 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
+import { isQuickCheckInSlug } from '@/lib/checkin/quick-checkin-slugs'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // Read-only campground updates view. The "Just See Campground Updates"
 // button on /campground/<slug> lands here. No account required, no
@@ -68,10 +72,15 @@ export async function generateMetadata({
 
 export default async function CampgroundUpdatesPage({
   params,
+  searchParams,
 }: {
   params: Promise<Params>
+  searchParams?: Promise<{ token?: string }>
 }) {
   const { slug } = await params
+  const sp = (await searchParams) ?? {}
+  const passedToken =
+    typeof sp.token === 'string' && UUID_RE.test(sp.token) ? sp.token : null
   const admin = createSupabaseAdminClient()
 
   const { data: campground } = await admin
@@ -81,6 +90,30 @@ export default async function CampgroundUpdatesPage({
     .maybeSingle<CampgroundRow>()
 
   if (!campground || !campground.is_active) notFound()
+
+  // Token resolution mirrors /campground/[slug]/page.tsx: prefer the
+  // ?token= query param if one was passed through from the welcome
+  // page or the QR scan; otherwise fall back to the campground's
+  // canonical token from campground_qr_tokens. Used to build the
+  // forward-Check-In CTA at the bottom of the page so it lands on the
+  // right place, not back on the welcome page.
+  let resolvedToken: string | null = passedToken
+  if (!resolvedToken) {
+    const { data: tokenRow } = await admin
+      .from('campground_qr_tokens')
+      .select('token')
+      .eq('campground_id', campground.id)
+      .maybeSingle<{ token: string }>()
+    resolvedToken = tokenRow?.token ?? null
+  }
+
+  const useQuickCheckIn =
+    isQuickCheckInSlug(campground.slug) && !!resolvedToken
+  const checkInHref = useQuickCheckIn
+    ? `/quickcheckin?slug=${encodeURIComponent(campground.slug)}&token=${resolvedToken}`
+    : resolvedToken
+      ? `/signup?next=${encodeURIComponent(`/checkin?token=${resolvedToken}`)}`
+      : '/signup'
 
   // Bulletin view event: a guest landed on the read-only updates page,
   // which is the page surface that displays bulletins to anonymous
@@ -135,7 +168,7 @@ export default async function CampgroundUpdatesPage({
           <Logo className="text-2xl" />
         </Link>
         <Link
-          href={`/campground/${campground.slug}`}
+          href={`/campground/${campground.slug}${resolvedToken ? `?token=${resolvedToken}` : ''}`}
           className="text-xs font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
         >
           ← Back
@@ -256,7 +289,7 @@ export default async function CampgroundUpdatesPage({
               reminders? Check in to {campground.name}.
             </p>
             <Link
-              href={`/campground/${campground.slug}`}
+              href={checkInHref}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
             >
               Check In to This Campground <span aria-hidden>👋</span>
