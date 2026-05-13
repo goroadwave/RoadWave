@@ -294,8 +294,8 @@ export default async function CampgroundLandingPage({
               Just See Campground Updates
             </Link>
             <p className="text-center text-[11px] text-mist/80 leading-snug">
-              No account needed for updates. Check in only if you want to
-              connect with other campers.
+              No check-in needed. See announcements, meetups, and office
+              updates only.
             </p>
           </section>
 

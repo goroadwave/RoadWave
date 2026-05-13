@@ -205,9 +205,23 @@ export default async function CampgroundUpdatesPage({
               </h1>
               {where && <p className="text-sm text-mist">{where}</p>}
             </div>
-            <p className="text-[11px] text-mist/80 leading-snug max-w-sm mx-auto">
-              Read-only view. No account required. Check in to wave at other
-              campers, post messages, or RSVP.
+          </section>
+
+          {/* Updates Only privacy badge — prominent, sage-green to
+              match the privacy-promise pattern used on /quickcheckin.
+              Confirms visitor's anon state and explains the boundary
+              between "just look at updates" and "check in to connect". */}
+          <section
+            role="status"
+            className="rounded-2xl border border-leaf/30 bg-leaf/[0.06] px-4 py-3 text-center space-y-1"
+          >
+            <p className="text-sm font-semibold text-cream">
+              Updates Only — you are not visible to other campers.
+            </p>
+            <p className="text-xs text-mist leading-snug">
+              No check-in. No account. Check in any time if you want to
+              wave, RSVP to meetups, or connect with shared-interest
+              campers.
             </p>
           </section>
 
