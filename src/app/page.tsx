@@ -6,6 +6,14 @@ import { Logo } from '@/components/ui/logo'
 import { getPostAuthDestination } from '@/lib/auth/post-auth-destination'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
+// Force per-request rendering. The homepage reads the user's auth
+// state and redirects signed-in owners to /owner/dashboard via
+// getPostAuthDestination; without force-dynamic, an edge cache could
+// serve a stale 30x redirect to a user whose session has changed
+// (notably: right after sign-out). Used in tandem with the sign-out
+// route's response.cookies.set pattern.
+export const dynamic = 'force-dynamic'
+
 // Public homepage. Phase 3 simplification (April 2026):
 //   - Camper-focused. The homepage no longer pitches owners at all —
 //     owner content lives at /owners and the footer's Campground

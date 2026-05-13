@@ -266,6 +266,43 @@ test.describe('Owner landing + CTAs', () => {
     await expect(page.locator('input[type="email"]').first()).toBeVisible()
   })
 
+  test('/owner/login "Set up your campground" link points to /owners/start', async ({
+    page,
+  }) => {
+    // The owner-login form's signup link used to point to the legacy
+    // /owner/signup. After the 2026-05-13 audit it now funnels through
+    // the canonical /owners/start path (Stripe-gated intake) so a
+    // prospect tapping it lands on the path that matches every other
+    // marketing CTA.
+    await page.goto('/owner/login')
+    const setupLink = page
+      .getByRole('link', { name: /Set up your campground/i })
+      .first()
+    await expect(setupLink).toBeVisible()
+    await expect(setupLink).toHaveAttribute('href', '/owners/start')
+  })
+
+  test('POST /auth/sign-out without a session returns 303 to /', async ({
+    request,
+  }) => {
+    // Defensive: the sign-out endpoint should work even when the
+    // caller has no session — return 303 to the safe-default
+    // destination "/" instead of erroring. Catches accidental
+    // changes to the route handler that would 500 on an
+    // unauthenticated POST.
+    const resp = await request.post('/auth/sign-out', {
+      maxRedirects: 0,
+      failOnStatusCode: false,
+    })
+    expect(resp.status()).toBe(303)
+    const location = resp.headers()['location']
+    expect(location).toBeTruthy()
+    // Destination should be same-origin and start with "/" or be a
+    // full URL pointing at this site (Next emits a fully-qualified
+    // Location header).
+    expect(location).toMatch(/^(\/|https?:\/\/)/)
+  })
+
   test('/owner/preview without auth redirects to /owner/login', async ({
     page,
   }) => {
