@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/admin/guard'
 import { EmptyState } from '@/components/admin/empty-state'
 import { CampgroundRow } from '@/components/admin/campground-row'
+import { ResetDemoButton } from '@/components/admin/reset-demo-button'
 
 type Campground = {
   id: string
@@ -57,6 +58,8 @@ export default async function CampgroundsPage() {
     }
   })
 
+  const demoCampground = rows.find((r) => r.slug === 'roadwave-demo-campground')
+
   return (
     <div className="space-y-5">
       <header className="space-y-1">
@@ -71,6 +74,27 @@ export default async function CampgroundsPage() {
           amber are within 7 days of trial expiry.
         </p>
       </header>
+
+      {demoCampground && (
+        <section className="rounded-2xl border border-flame/30 bg-flame/[0.05] p-4 space-y-2">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-flame">
+                Demo campground
+              </p>
+              <h2 className="font-display text-lg font-extrabold text-cream">
+                {demoCampground.name}
+              </h2>
+              <p className="text-xs text-mist leading-snug">
+                Slug: <code className="text-cream">{demoCampground.slug}</code>{' '}
+                · clears bulletins, meetups, check-ins, events, and demo camper
+                auth users. Keeps the campground row, owner link, and QR token.
+              </p>
+            </div>
+          </div>
+          <ResetDemoButton />
+        </section>
+      )}
 
       {rows.length === 0 ? (
         <EmptyState

@@ -29,6 +29,13 @@ const ALLOWED_EVENTS = new Set([
   'pulse_great',
   'pulse_good',
   'pulse_needs_attention',
+  // Check-in lifecycle — added in migration 0041 so /admin/activity
+  // can stream completed check-ins alongside QR scans + engagement
+  // events. Written from the server-side checkInAction, not from the
+  // public POST endpoint — keep them allow-listed here anyway so the
+  // surface is consistent if a future caller needs them.
+  'check_in_started',
+  'check_in_completed',
 ])
 
 const UUID_RE =

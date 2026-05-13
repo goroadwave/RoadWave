@@ -2,10 +2,32 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { isUuid } from '@/lib/validators/checkin'
 
 export type CheckInState = { error: string | null }
+
+// Best-effort campground_events insert. Never throws — event logging
+// is observability only, not part of the check-in success contract.
+async function logCheckinEvent(
+  campgroundId: string | null,
+  eventType: 'check_in_started' | 'check_in_completed',
+) {
+  if (!campgroundId) return
+  try {
+    const admin = createSupabaseAdminClient()
+    await admin.from('campground_events').insert({
+      campground_id: campgroundId,
+      event_type: eventType,
+    })
+  } catch (err) {
+    console.warn(
+      `[checkin/actions] ${eventType} event log failed:`,
+      err instanceof Error ? err.message : String(err),
+    )
+  }
+}
 
 export async function checkInAction(
   _prev: CheckInState,
@@ -17,6 +39,27 @@ export async function checkInAction(
   }
 
   const supabase = await createSupabaseServerClient()
+
+  // Resolve campground_id once up front so we can log both started
+  // and completed events with the right id. campground_qr_tokens is
+  // RLS-locked to service-role only (migration 0002) so we need the
+  // admin client. If this read fails, we still proceed with the
+  // check-in — event logging is purely observability.
+  let campgroundId: string | null = null
+  try {
+    const admin = createSupabaseAdminClient()
+    const { data: tokenRow } = await admin
+      .from('campground_qr_tokens')
+      .select('campground_id')
+      .eq('token', token)
+      .maybeSingle<{ campground_id: string }>()
+    campgroundId = tokenRow?.campground_id ?? null
+  } catch {
+    campgroundId = null
+  }
+
+  await logCheckinEvent(campgroundId, 'check_in_started')
+
   const { error } = await supabase.rpc('checkin_by_token', { _token: token })
   if (error) {
     if ((error as { code?: string }).code === 'P0002') {
@@ -27,6 +70,8 @@ export async function checkInAction(
     }
     return { error: error.message }
   }
+
+  await logCheckinEvent(campgroundId, 'check_in_completed')
 
   revalidatePath('/home')
   revalidatePath('/nearby')
