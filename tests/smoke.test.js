@@ -238,6 +238,17 @@ test.describe('Owner landing + CTAs', () => {
     await expect(page.locator('input[name="email"]')).toBeVisible()
   })
 
+  test('/owners/signup redirects to /owners/start (no 404)', async ({
+    page,
+  }) => {
+    // A prospect typing the plural /owners/signup form (mirroring
+    // /owners/start, /owners/how-it-works, /owners/success) used to
+    // hit a 404. Now it permanent-redirects to the canonical intake.
+    await page.goto('/owners/signup')
+    await expect(page).toHaveURL(/\/owners\/start$/)
+    await expect(page.locator('input[name="campground_name"]')).toBeVisible()
+  })
+
   test('/owners/success without session_id renders a friendly state', async ({
     page,
   }) => {

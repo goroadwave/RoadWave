@@ -56,7 +56,7 @@ export function OwnerLoginForm() {
       <p className="text-center text-sm text-mist">
         New here?{' '}
         <Link
-          href="/owner/signup"
+          href="/owners/start"
           className="font-semibold text-flame underline-offset-2 hover:underline"
         >
           Set up your campground
