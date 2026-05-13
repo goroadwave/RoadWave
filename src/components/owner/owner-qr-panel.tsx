@@ -17,9 +17,15 @@ const CREAM: [number, number, number] = [245, 236, 217] // #f5ecd9
 const FLAME: [number, number, number] = [245, 158, 11] // #f59e0b
 const MIST: [number, number, number] = [148, 163, 184] // #94a3b8
 
-// Verbatim safety paragraph required on every printed sign.
-const SAFETY_TEXT =
-  'See campground updates and meet other campers — only if you want to. RoadWave is an optional 18+ guest connection tool. Exact campsite numbers are not shown. Meet in public campground areas. For emergencies call 911 and notify campground staff.'
+// Front-desk card copy. Leads with the welcoming pitch, follows
+// with the privacy reassurance, and keeps a compact compliance
+// footer (18+ + emergency line) below the user-facing copy.
+const FRONT_DESK_PITCH =
+  'See campground updates, meetup prompts, and friendly nearby campers — only if you want to.'
+const FRONT_DESK_PRIVACY =
+  'No exact site number. No always-on GPS. You control your visibility.'
+const FRONT_DESK_COMPLIANCE =
+  'RoadWave is 18+. Meet in public campground areas. For emergencies call 911 and notify campground staff.'
 
 type SignFormat = 'letter' | '5x7'
 
@@ -102,35 +108,48 @@ async function buildBrandedQrPdf(args: {
     qrCardSize - qrInset * 2,
   )
 
-  // 4) Caption directly under the QR card.
+  // 4) Headline caption directly under the QR card.
   doc.setFontSize(captionSize)
   doc.setTextColor(FLAME[0], FLAME[1], FLAME[2])
   const yCaption = qrCardY + qrCardSize + captionSize * 1.4
-  doc.text('Scan for campground updates and connect privately', W / 2, yCaption, { align: 'center' })
+  doc.text('Staying here? Scan to check in with RoadWave.', W / 2, yCaption, { align: 'center' })
 
-  // 5) Safety paragraph in a tinted card — wrapped to width.
-  doc.setFontSize(safetySize)
-  doc.setTextColor(MIST[0], MIST[1], MIST[2])
-  const safetyMaxWidth = W - pad * 2 - 24
-  const safetyLines = doc.splitTextToSize(SAFETY_TEXT, safetyMaxWidth)
-  const safetyLineHeight = safetySize * 1.35
-  const safetyHeight = safetyLines.length * safetyLineHeight + 18
+  // 5) Pitch + privacy reassurance in a tinted card.
+  const pitchSize = safetySize * 1.15
+  doc.setFontSize(pitchSize)
+  const pitchMaxWidth = W - pad * 2 - 24
+  const pitchLines = doc.splitTextToSize(FRONT_DESK_PITCH, pitchMaxWidth)
+  const privacyLines = doc.splitTextToSize(FRONT_DESK_PRIVACY, pitchMaxWidth)
+  const lineHeight = pitchSize * 1.35
+  // pitch + gap + privacy + outer padding
+  const pitchBoxHeight =
+    (pitchLines.length + privacyLines.length) * lineHeight + lineHeight + 18
 
-  const ySafetyBox = yCaption + captionSize * 1.1
-  const safetyBoxW = W - pad * 2
-  const safetyBoxX = pad
+  const yPitchBox = yCaption + captionSize * 1.1
   doc.setFillColor(CARD[0], CARD[1], CARD[2])
-  doc.roundedRect(safetyBoxX, ySafetyBox, safetyBoxW, safetyHeight, 10, 10, 'F')
-  doc.setFontSize(safetySize)
-  doc.setTextColor(MIST[0], MIST[1], MIST[2])
-  doc.text(safetyLines, W / 2, ySafetyBox + safetyLineHeight, {
+  doc.roundedRect(pad, yPitchBox, W - pad * 2, pitchBoxHeight, 10, 10, 'F')
+  doc.setTextColor(CREAM[0], CREAM[1], CREAM[2])
+  doc.text(pitchLines, W / 2, yPitchBox + lineHeight, {
     align: 'center',
-    maxWidth: safetyMaxWidth,
+    maxWidth: pitchMaxWidth,
   })
+  doc.setTextColor(MIST[0], MIST[1], MIST[2])
+  doc.text(
+    privacyLines,
+    W / 2,
+    yPitchBox + lineHeight + pitchLines.length * lineHeight + lineHeight * 0.6,
+    { align: 'center', maxWidth: pitchMaxWidth },
+  )
 
-  // 6) Footer — getroadwave.com.
+  // 6) Compact compliance footer (18+ / emergencies) + brand line.
   doc.setFontSize(footerSize)
   doc.setTextColor(MIST[0], MIST[1], MIST[2])
+  const yCompliance = H - pad * 1.4
+  const complianceLines = doc.splitTextToSize(
+    FRONT_DESK_COMPLIANCE,
+    W - pad * 2,
+  )
+  doc.text(complianceLines, W / 2, yCompliance, { align: 'center' })
   doc.text('getroadwave.com', W / 2, H - pad * 0.6, { align: 'center' })
 
   return doc.output('blob')
@@ -162,11 +181,24 @@ export function OwnerQrPanel({
   const [waveDataUrl, setWaveDataUrl] = useState<string | null>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle')
   const [state, formAction, pending] = useActionState(
     rotateQrTokenAction,
     initialState,
   )
   const downloadRef = useRef<HTMLAnchorElement | null>(null)
+
+  async function handleCopyLink() {
+    if (!checkInUrl) return
+    try {
+      await navigator.clipboard.writeText(checkInUrl)
+      setCopyState('copied')
+      window.setTimeout(() => setCopyState('idle'), 2000)
+    } catch {
+      setCopyState('error')
+      window.setTimeout(() => setCopyState('idle'), 2500)
+    }
+  }
 
   // Render the QR locally as a PNG data URL so the user can preview AND
   // download the same image. Re-renders when token rotates.
@@ -254,7 +286,9 @@ export function OwnerQrPanel({
   return (
     <div className="space-y-5">
       <div className="rounded-2xl border border-white/5 bg-card p-5 sm:p-6 space-y-4">
-        <div className="mx-auto w-full max-w-xs aspect-square rounded-xl overflow-hidden bg-white grid place-items-center">
+        {/* Inline scannable QR — large enough to scan straight off the
+            screen from a phone, on a white card for camera contrast. */}
+        <div className="mx-auto w-full max-w-sm aspect-square rounded-xl overflow-hidden bg-white grid place-items-center p-3">
           {dataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- data URL, no need for next/image
             <img
@@ -279,16 +313,61 @@ export function OwnerQrPanel({
           )}
         </div>
 
-        <div className="space-y-2">
+        {/* Primary action row: Copy Link (sage), Download QR Code, Print
+            Front Desk Card. Stack on phones, three-up on desktop. */}
+        <div className="grid gap-2 sm:grid-cols-3">
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            disabled={!checkInUrl}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-leaf/40 bg-leaf/10 text-leaf px-4 py-2.5 text-sm font-semibold hover:bg-leaf/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {copyState === 'copied'
+              ? '✓ Link copied'
+              : copyState === 'error'
+                ? 'Copy failed'
+                : 'Copy Link'}
+          </button>
+          <a
+            ref={downloadRef}
+            href={dataUrl ?? '#'}
+            download={`${baseFilename}.png`}
+            aria-disabled={!dataUrl}
+            className={
+              dataUrl
+                ? 'inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 text-cream px-4 py-2.5 text-sm font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors'
+                : 'inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 text-mist/50 px-4 py-2.5 text-sm font-semibold cursor-not-allowed'
+            }
+          >
+            Download QR Code
+          </a>
+          <button
+            type="button"
+            onClick={() =>
+              printFrontDeskCard(dataUrl, campgroundName, checkInUrl)
+            }
+            disabled={!dataUrl}
+            className={
+              dataUrl
+                ? 'inline-flex items-center justify-center gap-2 rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors'
+                : 'inline-flex items-center justify-center gap-2 rounded-lg bg-flame/50 text-night/50 px-4 py-2.5 text-sm font-semibold cursor-not-allowed'
+            }
+          >
+            Print Front Desk Card
+          </button>
+        </div>
+
+        {/* Secondary: pre-built PDF versions of the front-desk card. */}
+        <div className="space-y-2 pt-2 border-t border-white/5">
           <p className="text-center text-[11px] uppercase tracking-[0.2em] text-mist">
-            Print-ready signage
+            Print-ready signage PDF
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => downloadPdf('letter')}
               disabled={!dataUrl || pdfBusyFormat !== null}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-flame/40 bg-flame/10 text-flame px-4 py-2.5 text-sm font-semibold hover:bg-flame/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {pdfBusyFormat === 'letter' ? 'Building…' : 'Download 8.5 × 11'}
             </button>
@@ -302,38 +381,11 @@ export function OwnerQrPanel({
             </button>
           </div>
           <p className="text-center text-[11px] text-mist/70">
-            Both sizes include the RoadWave brand, your QR, and the required
-            safety language.
+            Both sizes include the RoadWave brand, your QR, and the
+            front-desk safety copy.
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2 justify-center pt-1">
-          <a
-            ref={downloadRef}
-            href={dataUrl ?? '#'}
-            download={`${baseFilename}.png`}
-            aria-disabled={!dataUrl}
-            className={
-              dataUrl
-                ? 'inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 text-cream px-4 py-2.5 text-sm font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors'
-                : 'inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 text-mist/50 px-4 py-2.5 text-sm font-semibold cursor-not-allowed'
-            }
-          >
-            Download PNG (QR only)
-          </a>
-          <button
-            type="button"
-            onClick={() => printQrOnly(dataUrl, campgroundName)}
-            disabled={!dataUrl}
-            className={
-              dataUrl
-                ? 'inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 text-cream px-4 py-2.5 text-sm font-semibold hover:bg-white/10 hover:border-flame/40 transition-colors'
-                : 'inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 text-mist/50 px-4 py-2.5 text-sm font-semibold cursor-not-allowed'
-            }
-          >
-            Print
-          </button>
-        </div>
         {renderError && (
           <p className="text-center text-xs text-red-300">{renderError}</p>
         )}
@@ -394,31 +446,35 @@ function slug(s: string): string {
   )
 }
 
-// Print only the QR — not the whole dashboard. Opens a new tab with a
+// Print a complete front-desk card — RoadWave wordmark, campground
+// name, large QR on a white card, the three-line welcome/privacy
+// copy, and a small compliance footer. Opens a new tab with a
 // centered, brand-coloured page that auto-fires the print dialog and
-// closes itself after print. This replaces a plain `window.print()`
-// call that used to print the entire owner dashboard.
-function printQrOnly(dataUrl: string | null, campgroundName: string): void {
+// closes itself after print. Replaces the older "print QR only" path.
+function printFrontDeskCard(
+  dataUrl: string | null,
+  campgroundName: string,
+  checkInUrl: string | null,
+): void {
   if (!dataUrl) return
-  const w = window.open('', '_blank', 'noopener,noreferrer,width=520,height=720')
+  const w = window.open('', '_blank', 'noopener,noreferrer,width=620,height=900')
   if (!w) {
-    // Popup blocked — fall back to a same-tab navigation; the user
-    // can hit Cmd/Ctrl+P themselves from there.
     window.location.href = dataUrl
     return
   }
-  // Embed everything as a literal document. Strict CSP-safe — no
-  // external resources, no scripts beyond the inline auto-print.
-  const safeName = campgroundName
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+  const safe = (s: string) =>
+    s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+  const safeName = safe(campgroundName)
+  const safeUrl = checkInUrl ? safe(checkInUrl) : ''
   w.document.open()
   w.document.write(`<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>RoadWave QR — ${safeName}</title>
+<title>RoadWave front-desk card — ${safeName}</title>
 <style>
   html, body { margin: 0; padding: 0; background: #0a0f1c; }
   .wrap {
@@ -427,42 +483,98 @@ function printQrOnly(dataUrl: string | null, campgroundName: string): void {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: 32px 24px;
     box-sizing: border-box;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     color: #f5ecd9;
-  }
-  .name {
-    font-size: 18px;
-    font-weight: 700;
-    margin: 0 0 16px;
     text-align: center;
+  }
+  .brand {
+    font-family: Georgia, serif;
+    font-weight: 800;
+    font-size: 38px;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    white-space: nowrap;
+    margin: 0 0 8px;
+  }
+  .brand .road  { color: #f5ecd9; }
+  .brand .wave  { color: #f59e0b; }
+  .brand .emoji { font-size: 36px; }
+  .name {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 24px;
+    color: #f5ecd9;
   }
   .card {
     background: #ffffff;
-    border-radius: 14px;
-    padding: 12px;
+    border-radius: 18px;
+    padding: 16px;
+    margin: 0 0 22px;
   }
-  img { display: block; width: 360px; height: 360px; max-width: 100%; }
+  .card img { display: block; width: 360px; height: 360px; max-width: 100%; }
+  .pitch  {
+    font-size: 18px;
+    font-weight: 700;
+    color: #f59e0b;
+    margin: 0 0 14px;
+    max-width: 460px;
+  }
+  .desc   {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #f5ecd9;
+    margin: 0 0 10px;
+    max-width: 460px;
+  }
+  .privacy {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #94a3b8;
+    margin: 0 0 26px;
+    max-width: 460px;
+  }
+  .compliance {
+    font-size: 11px;
+    line-height: 1.5;
+    color: #94a3b8;
+    margin: 0 0 4px;
+    max-width: 460px;
+  }
+  .url {
+    font-size: 10px;
+    color: #64748b;
+    word-break: break-all;
+    max-width: 460px;
+  }
   @media print {
-    html, body, .wrap { background: #ffffff; color: #0a0f1c; }
-    .name { color: #0a0f1c; }
+    html, body, .wrap { background: #ffffff !important; color: #0a0f1c !important; }
+    .brand .road, .name, .desc { color: #0a0f1c !important; }
+    .privacy, .compliance, .url { color: #475569 !important; }
+    .card { box-shadow: none; }
   }
 </style>
 </head>
 <body>
   <div class="wrap">
+    <p class="brand">
+      <span class="road">Road</span><span class="wave">Wave<span class="emoji" aria-hidden="true">👋</span></span>
+    </p>
     <p class="name">${safeName}</p>
-    <div class="card"><img src="${dataUrl}" alt="RoadWave QR" /></div>
+    <div class="card"><img src="${dataUrl}" alt="RoadWave check-in QR" /></div>
+    <p class="pitch">Staying here? Scan to check in with RoadWave.</p>
+    <p class="desc">See campground updates, meetup prompts, and friendly nearby campers &mdash; only if you want to.</p>
+    <p class="privacy">No exact site number. No always-on GPS. You control your visibility.</p>
+    <p class="compliance">RoadWave is 18+. Meet in public campground areas. For emergencies call 911 and notify campground staff.</p>
+    <p class="url">${safeUrl || 'getroadwave.com'}</p>
   </div>
   <script>
     window.addEventListener('load', function () {
-      // Small delay so the image finishes painting before print dialog
-      // grabs the page snapshot.
       setTimeout(function () {
         window.focus();
         window.print();
-      }, 100);
+      }, 150);
       window.addEventListener('afterprint', function () { window.close(); });
     });
   </script>
