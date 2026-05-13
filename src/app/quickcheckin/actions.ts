@@ -172,12 +172,21 @@ export async function quickCheckInAction(
 
   // ── 4. Update profile row created by handle_new_user trigger ───────
   //
-  // travel_style is set to a benign default ("Weekender") so the /home
-  // WelcomeModal doesn't fire — that modal walks the camper through
-  // selecting a travel style and interests, which isn't the flow we
-  // want post-quickcheckin (the camper just picked their interests
-  // on the quickcheckin form). They can edit travel_style from
-  // /profile/setup later if they want.
+  // travel_style is set to a benign default value so /home's
+  // needsOnboarding gate (which fires the WelcomeModal) passes. The
+  // value MUST be a member of the public.travel_style enum from
+  // migration 0004 — those are lowercase + underscore, not the
+  // human-readable titlecase strings the UI renders. Wrong casing
+  // ('Weekender' vs 'weekender') aborts the entire update with
+  // Postgres error 22P02 atomically — meaning display_name doesn't
+  // persist either, and the camper bounces from /home to
+  // /profile/setup with no checked-in chip. That's what broke
+  // smoke test #45 in CI.
+  //
+  // Treat profile_update failure as FATAL going forward. A camper
+  // who got an auth user + check_in but no display_name is in
+  // half-provisioned state and the /home guard rejects them. Better
+  // to surface a clean error than land them on /profile/setup.
   const { error: profileError } = await admin
     .from('profiles')
     .update({
@@ -185,12 +194,18 @@ export async function quickCheckInAction(
       display_name: 'Demo Camper',
       role: 'guest',
       privacy_mode: visibility,
-      travel_style: 'Weekender',
+      travel_style: 'weekender',
     })
     .eq('id', userId)
   if (profileError) {
-    console.warn('[quickcheckin] profile update failed:', profileError.message)
-    // Non-fatal — defaults still apply.
+    console.error(
+      '[quickcheckin] profile update failed (FATAL):',
+      profileError.message,
+    )
+    return {
+      error:
+        "We couldn't finish setting up your demo profile. Try again, or sign up the normal way.",
+    }
   }
 
   // ── 5. profile_interests for selected chips ────────────────────────
