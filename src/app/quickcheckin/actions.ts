@@ -276,8 +276,20 @@ export async function quickCheckInAction(
   // standard "confirm check-in" UI for a check-in they've already
   // completed — the symptom is "I tapped Complete Check-In and saw
   // only the footer / wrong screen."
+  //
+  // IMPORTANT: the proxy sets this cookie with path:'/', so the
+  // deletion MUST also specify path:'/'. Calling
+  // cookies().delete(name) from a server action defaults to the
+  // current request's path scope (/quickcheckin) which emits a
+  // Set-Cookie with path=/quickcheckin — the browser treats that
+  // as a different cookie and the original /-scoped cookie
+  // survives, re-triggering the (app) layout bounce. Using
+  // jar.set(name, '', { path:'/', maxAge:0 }) is the explicit form
+  // that reliably matches and overwrites the proxy's cookie across
+  // every browser, including headless Chrome (where the bug
+  // manifested as a CI smoke-test failure on 2026-05-13).
   const jar = await cookies()
-  jar.delete(PENDING_CHECKIN_COOKIE)
+  jar.set(PENDING_CHECKIN_COOKIE, '', { path: '/', maxAge: 0 })
 
   revalidatePath('/owner/dashboard')
   revalidatePath('/admin/activity')
