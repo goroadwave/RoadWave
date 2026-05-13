@@ -131,7 +131,10 @@ export default async function QuickCheckInPage({
         </Link>
       </header>
 
-      <article className="px-4 pb-32 sm:pb-12">
+      {/* Mobile: 8rem + iOS safe-area-inset-bottom so the full-width
+          "Complete Check-In" CTA stays clear of iOS Safari's URL bar
+          and the home indicator. Desktop unchanged. */}
+      <article className="px-4 pb-[calc(env(safe-area-inset-bottom)+8rem)] sm:pb-12">
         <div className="mx-auto max-w-md space-y-6">
           <section className="text-center space-y-3 pt-2">
             {cg.logo_url ? (

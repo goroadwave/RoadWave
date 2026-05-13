@@ -202,7 +202,11 @@ export default async function CampgroundLandingPage({
         </Link>
       </header>
 
-      <article className="px-4 pb-16 sm:pb-24">
+      {/* Mobile bottom padding accounts for iOS Safari's URL bar and
+          the home-indicator safe area so the "Check In to This
+          Campground" CTAs aren't covered. Desktop falls back to the
+          original sm:pb-24. */}
+      <article className="px-4 pb-[calc(env(safe-area-inset-bottom)+8rem)] sm:pb-24">
         <div className="mx-auto max-w-xl space-y-12">
           {/* ----- Header ----- */}
           <section className="text-center space-y-5 pt-4 sm:pt-8">

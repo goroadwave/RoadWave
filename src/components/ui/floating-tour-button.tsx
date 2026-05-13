@@ -97,18 +97,21 @@ export function FloatingTourButton() {
     pathname === '/verify' ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/owner/login') ||
-    pathname.startsWith('/owner/signup') ||
-    // Hide on the QR check-in surfaces. Campers landing here are
-    // in the middle of a flow (welcome → updates → quickcheckin
-    // form) and Riley's FAB overlaps the primary CTA in the lower
-    // half of the screen on mobile, which is exactly where the
-    // "Check In to This Campground" / "Complete Check-In" buttons
-    // sit. Owners can still get Riley help from any /owner/* page.
-    pathname.startsWith('/campground/') ||
-    pathname.startsWith('/quickcheckin')
+    pathname.startsWith('/owner/signup')
   ) {
     return null
   }
+
+  // QR check-in flow surfaces — Riley's FAB sits in the same lower-
+  // right region as the primary CTA ("Check In to This Campground" /
+  // "Complete Check-In") and overlaps it on phone widths. Hide on
+  // mobile only; desktop has enough room for both. `hidden sm:flex`
+  // on the wrapper below handles this; we don't return null because
+  // we want her available for owners doing a smoke-test from a
+  // desktop browser.
+  const hideOnMobile =
+    pathname.startsWith('/campground/') ||
+    pathname.startsWith('/quickcheckin')
 
   // Hide while a tour is running — the step card sits where Riley does.
   if (tour.activeStep !== null) return null
@@ -149,7 +152,11 @@ export function FloatingTourButton() {
   return (
     <div
       ref={containerRef}
-      className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3"
+      className={
+        hideOnMobile
+          ? 'fixed bottom-5 right-5 z-50 hidden sm:flex flex-col items-end gap-3'
+          : 'fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3'
+      }
     >
       {showPopup && (
         <div

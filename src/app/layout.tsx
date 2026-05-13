@@ -40,6 +40,11 @@ export const viewport: Viewport = {
   themeColor: '#0a0f1c',
   width: 'device-width',
   initialScale: 1,
+  // Lets pages opt into `env(safe-area-inset-*)` so the bottom CTAs
+  // on the QR / check-in flow don't sit under iPhone Safari's URL
+  // bar or the iOS home indicator. The background already fills the
+  // viewport so extending under the safe area has no visual cost.
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
