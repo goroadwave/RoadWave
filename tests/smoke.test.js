@@ -408,7 +408,96 @@ test.describe('Stripe endpoints (no real charges)', () => {
 })
 
 // ---------------------------------------------------------------------------
-// 7. Mobile viewport — quick visual sanity on the homepage
+// 7. Unauthenticated first-time camper check-in (the QR end-to-end
+//    flow that broke in incognito on 2026-05-13: cookie bounce from
+//    /home → /checkin showed an empty screen instead of the "Checked
+//    in at X" home view). One real auth.users row + check_in are
+//    created per run on the seeded demo campground — those are the
+//    quickcheckin-<random>@example.com users that the demo-reset
+//    script sweeps.
+// ---------------------------------------------------------------------------
+
+test.describe('Unauthenticated first-time camper QR check-in', () => {
+  // Fresh context per test so we're guaranteed no auth state, no
+  // pending_checkin_token cookie, and no localStorage leftovers from
+  // other tests in the suite.
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test('QR → quickcheckin form → /home shows "Checked in at" chip', async ({
+    page,
+  }) => {
+    // 1. Open the seeded demo campground's QR URL. Token is the
+    //    canonical demo token seeded by scripts/seed-demo-campground.mjs.
+    //    The middleware will set pending_checkin_token from the URL.
+    await page.goto(
+      '/campground/roadwave-demo-campground?token=cc21f1d1-5ffa-4dcd-ba72-d475c847ac41',
+    )
+
+    // 2. The welcome page should show the primary CTA.
+    const checkInLink = page
+      .getByRole('link', { name: /Check In to This Campground/i })
+      .first()
+    await expect(checkInLink).toBeVisible()
+
+    // 3. Demo slug routes to /quickcheckin (the no-signup form),
+    //    not /signup. Assert the destination first so the test
+    //    fails early if the routing regresses.
+    const href = await checkInLink.getAttribute('href')
+    expect(href).toContain('/quickcheckin')
+    expect(href).toContain('slug=roadwave-demo-campground')
+    expect(href).toContain('token=cc21f1d1-5ffa-4dcd-ba72-d475c847ac41')
+
+    // 4. Navigate.
+    await checkInLink.click()
+    await page.waitForURL(/\/quickcheckin/)
+
+    // 5. Form sanity — campground name + visibility radio + interest
+    //    chips + terms checkbox + submit button.
+    await expect(
+      page.getByRole('heading', { name: /RoadWave Demo Campground/i }),
+    ).toBeVisible()
+    // Visibility radio cards (hidden inputs; labels are clickable)
+    await page.getByText(/^Visible$/i).first().click()
+    // Pick three interest chips
+    for (const label of [/^Coffee$/i, /^Dog walk$/i, /^Campfire$/i]) {
+      await page.getByRole('button', { name: label }).click()
+    }
+    // Required compliance checkbox
+    await page.locator('input[name="accept_terms"]').check()
+
+    // 6. Submit. The action provisions a throwaway auth user, signs
+    //    them in via cookie session, writes the check_in, clears the
+    //    pending_checkin_token cookie, and redirects to /home.
+    await page
+      .getByRole('button', { name: /Complete Check-In to/i })
+      .click()
+
+    // 7. Land on /home — NOT /checkin (the cookie-bounce regression
+    //    we just fixed). Generous timeout because the action creates
+    //    an auth user + several DB rows.
+    await page.waitForURL(/\/home$/, { timeout: 30_000 })
+    await expect(page).toHaveURL(/\/home$/)
+
+    // 8. The "Checked in at RoadWave Demo Campground" chip should be
+    //    visible — this is the affirmative proof that the camper sees
+    //    a real success state, not just the footer.
+    await expect(
+      page
+        .getByText(/Checked in at RoadWave Demo Campground/i)
+        .first(),
+    ).toBeVisible({ timeout: 15_000 })
+
+    // 9. Defensive: the "Where the action is" tile grid should also
+    //    render. Catches the case where /home redirected mid-load to
+    //    a near-empty page that happens to contain the chip text.
+    await expect(
+      page.getByText(/Where the action is/i).first(),
+    ).toBeVisible()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 8. Mobile viewport — quick visual sanity on the homepage
 // ---------------------------------------------------------------------------
 
 test.describe('Mobile viewport sanity', () => {

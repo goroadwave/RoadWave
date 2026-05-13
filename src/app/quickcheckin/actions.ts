@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
@@ -10,6 +11,15 @@ import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from '@/lib/constants/interests'
+
+// Set by the proxy when a camper opens /campground/<slug>?token=<uuid>.
+// The (app) layout reads this after auth and redirects to /checkin?token=
+// if it's still set. After a successful /quickcheckin we own the
+// check-in already, so this bridge cookie must be cleared before the
+// redirect to /home — otherwise the (app) layout bounces the camper
+// into /checkin which then renders the standard "confirm check-in"
+// flow they don't need.
+const PENDING_CHECKIN_COOKIE = 'pending_checkin_token'
 
 export type QuickCheckInState = { error: string | null }
 
@@ -161,6 +171,13 @@ export async function quickCheckInAction(
   const userId = created.user.id
 
   // ── 4. Update profile row created by handle_new_user trigger ───────
+  //
+  // travel_style is set to a benign default ("Weekender") so the /home
+  // WelcomeModal doesn't fire — that modal walks the camper through
+  // selecting a travel style and interests, which isn't the flow we
+  // want post-quickcheckin (the camper just picked their interests
+  // on the quickcheckin form). They can edit travel_style from
+  // /profile/setup later if they want.
   const { error: profileError } = await admin
     .from('profiles')
     .update({
@@ -168,6 +185,7 @@ export async function quickCheckInAction(
       display_name: 'Demo Camper',
       role: 'guest',
       privacy_mode: visibility,
+      travel_style: 'Weekender',
     })
     .eq('id', userId)
   if (profileError) {
@@ -251,6 +269,15 @@ export async function quickCheckInAction(
       )
     }
   }
+
+  // Clear the QR bridge cookie before redirect. Without this, the
+  // (app) layout's pending_checkin_token gate fires on /home and
+  // bounces the camper into /checkin?token=…, which renders the
+  // standard "confirm check-in" UI for a check-in they've already
+  // completed — the symptom is "I tapped Complete Check-In and saw
+  // only the footer / wrong screen."
+  const jar = await cookies()
+  jar.delete(PENDING_CHECKIN_COOKIE)
 
   revalidatePath('/owner/dashboard')
   revalidatePath('/admin/activity')
