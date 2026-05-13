@@ -99,8 +99,10 @@ export default async function OwnerSetupPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10 relative">
+      {/* Owner-side sign-out lands on /owner/login, matching the
+          owner (authed) layout. */}
       <form
-        action="/auth/sign-out?next=/"
+        action="/auth/sign-out?next=/owner/login"
         method="post"
         className="absolute top-4 right-4"
       >

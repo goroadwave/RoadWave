@@ -86,7 +86,11 @@ export default async function AuthedOwnerLayout({
               </span>
             </span>
           </Link>
-          <form action="/auth/sign-out?next=/" method="post">
+          {/* Owner sign-out lands on /owner/login (not the camper-
+              focused homepage at /). An owner who signed out from
+              the owner side expects to see the owner login, not
+              "Camper QR scanner" hero copy. */}
+          <form action="/auth/sign-out?next=/owner/login" method="post">
             <button
               type="submit"
               className="text-sm text-mist hover:text-cream underline-offset-2 hover:underline"

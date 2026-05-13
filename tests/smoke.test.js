@@ -303,6 +303,23 @@ test.describe('Owner landing + CTAs', () => {
     expect(location).toMatch(/^(\/|https?:\/\/)/)
   })
 
+  test('POST /auth/sign-out?next=/owner/login lands on /owner/login', async ({
+    request,
+  }) => {
+    // The owner (authed) layout + /owner/setup sign-out forms POST
+    // here with ?next=/owner/login so an owner who clicks Sign out
+    // doesn't get dumped on the camper-focused homepage. Catches
+    // accidental reversions of the next param OR overly-strict
+    // safeNext validation that would force fallback to "/".
+    const resp = await request.post('/auth/sign-out?next=/owner/login', {
+      maxRedirects: 0,
+      failOnStatusCode: false,
+    })
+    expect(resp.status()).toBe(303)
+    const location = resp.headers()['location']
+    expect(location).toMatch(/\/owner\/login$/)
+  })
+
   test('/owner/preview without auth redirects to /owner/login', async ({
     page,
   }) => {
