@@ -63,12 +63,12 @@ const STAFF_PROMISE: string[] = [
 export default function OwnersPage() {
   return (
     <>
-      <header className="px-4 py-5 flex items-center justify-between gap-4">
+      <header className="px-4 py-5 flex items-center justify-between gap-3">
         <Link href="/" className="inline-block shrink-0">
-          <Logo className="text-2xl" />
+          <Logo className="text-xl sm:text-2xl" />
         </Link>
         <nav>
-          <ul className="flex items-center gap-4 sm:gap-6 text-sm">
+          <ul className="flex items-center gap-3 sm:gap-6 text-sm">
             <li>
               <Link href="/" className="text-mist hover:text-cream transition-colors">
                 Home
