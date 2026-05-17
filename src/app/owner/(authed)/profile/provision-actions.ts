@@ -84,6 +84,14 @@ export async function provisionCampgroundAction(
     }
 
     // 1) Create the campground.
+    //
+    // trial_started_at + trial_ends_at are set explicitly to 30 days so
+    // a recovery-flow owner ends up on the same trial window as one who
+    // came in through Stripe Checkout. Without this, the row inherits
+    // the column default from migration 0046 — also 30 days, but pinning
+    // it here keeps the two funnels in sync if the default ever moves.
+    const trialStart = new Date()
+    const trialEnd = new Date(trialStart.getTime() + 30 * 24 * 60 * 60 * 1000)
     const slug = `${slugify(campground_name)}-${user.id.slice(0, 6)}`
     console.log('[provision-recovery] inserting campground with slug:', slug)
     const { data: campground, error: cgError } = await admin
@@ -93,6 +101,8 @@ export async function provisionCampgroundAction(
         slug,
         owner_email: user.email ?? null,
         is_active: true,
+        trial_started_at: trialStart.toISOString(),
+        trial_ends_at: trialEnd.toISOString(),
       })
       .select('id')
       .single()

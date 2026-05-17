@@ -211,6 +211,14 @@ export async function ownerSetupAction(
   // 2) Create campground. Slug is collision-checked against existing
   // rows before insert — the previous scheme of `{name}-{userId[:6]}`
   // collided when the same owner reused a campground name across tests.
+  //
+  // trial_started_at + trial_ends_at are set explicitly to 30 days so
+  // OAuth signups land on the same trial window as Stripe-Checkout
+  // signups. Without this, the row inherits the column default from
+  // migration 0046, which is also 30 days — but pinning it here means
+  // a future default change can't silently desync the two funnels.
+  const trialStart = new Date()
+  const trialEnd = new Date(trialStart.getTime() + 30 * 24 * 60 * 60 * 1000)
   const slug = await uniqueSlugFor(admin, campground_name, userId)
   const { data: campground, error: cgError } = await admin
     .from('campgrounds')
@@ -223,6 +231,8 @@ export async function ownerSetupAction(
       website: website || null,
       phone: phone || null,
       is_active: true,
+      trial_started_at: trialStart.toISOString(),
+      trial_ends_at: trialEnd.toISOString(),
     })
     .select('id')
     .single()
