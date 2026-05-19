@@ -29,23 +29,33 @@ export default async function OwnerQrPage() {
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.getroadwave.com'
 
+  // Two QR URLs since Phase D of the guest-hub pivot (2026-05-20):
+  //   * guestHubUrl: the unified no-login guest hub. This is the
+  //     Front Desk QR every campground gets by default. Works for
+  //     anonymous traffic with zero account friction.
+  //   * camperConnectionUrl: the same hub URL plus ?token=<uuid>,
+  //     which triggers the camper check-in flow for guests who want
+  //     to opt into private waves, visibility modes, Crossed Paths,
+  //     etc. Only available when a campground_qr_tokens row exists.
+  const guestHubUrl = `${siteUrl}/campground/${campground.slug}`
+  const camperConnectionUrl = tokenRow
+    ? `${siteUrl}/campground/${campground.slug}?token=${tokenRow.token}`
+    : null
+
   return (
     <div className="space-y-6">
       <PageHeading
-        eyebrow="QR code"
-        title="Print and post at your entrance"
-        subtitle="Guests scan this and check in for 24 hours."
+        eyebrow="QR codes"
+        title="Two QR codes for your campground"
+        subtitle="One for the front desk (no login). One optional for camper connection."
       />
       <OwnerQrPanel
         campgroundId={campground.id}
         campgroundName={campground.name}
         token={tokenRow?.token ?? null}
         rotatedAt={tokenRow?.rotated_at ?? null}
-        checkInUrl={
-          tokenRow
-            ? `${siteUrl}/campground/${campground.slug}?token=${tokenRow.token}`
-            : null
-        }
+        guestHubUrl={guestHubUrl}
+        camperConnectionUrl={camperConnectionUrl}
       />
     </div>
   )

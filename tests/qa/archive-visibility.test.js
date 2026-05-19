@@ -13,17 +13,19 @@
 import { expect, test } from '@playwright/test'
 
 const ARCHIVED_TEST_SLUGS = [
-  // Original slugs of the 5 archived test campgrounds — these should
-  // all 404 because (a) the rows were renamed with _archived_ prefix
-  // and (b) is_active = false.
+  // Original slugs of archived test campgrounds — these should 404
+  // because (a) the rows were renamed with _archived_ prefix and
+  // (b) is_active = false on the archived row.
+  //
+  // Note: `avalon` was originally on this list, but a real owner
+  // signed up at that slug on 2026-05-19 after the archive, so it
+  // is now a legitimate active campground. The slug is removed from
+  // this list to avoid a false-positive failure on a real row.
   'test-stripe-campground',
   'final-stripe-test-campground',
   'test-10',
-  'avalon',
-  // Test 4's original slug was never set as a plain word; it was
-  // _archived_launch_test_2026_05_18 from the start of its archived
-  // life. The renamed archived slugs themselves should also 404
-  // because is_active=false.
+  // Renamed archived slugs (with the _archived_ prefix). These
+  // should also 404 because is_active=false gates the page render.
   '_archived_launch_test_2026_05_18',
   '_archived_test_10_2026_05_19',
   '_archived_avalon_2026_05_19',
