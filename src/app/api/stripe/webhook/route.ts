@@ -239,6 +239,22 @@ async function handleCheckoutCompleted(
     console.error('[stripe/webhook] campground_admins insert failed:', linkError.message)
   }
 
+  // 3b. Promote profiles.role to 'owner'. The handle_new_user trigger
+  // creates the profile row with role='guest' by default; without this
+  // update the /owner/(authed) layout bounces the user to /checkin on
+  // their first dashboard visit because role='guest' is treated as a
+  // camper. Symptom in production: the "Open Your Dashboard" link in
+  // the onboarding email lands the owner on the camper check-in flow.
+  // Mirrors the same role-promotion done by /owner/setup and the
+  // manual recovery action in provisionCampgroundAction.
+  const { error: roleError } = await admin
+    .from('profiles')
+    .update({ role: 'owner' })
+    .eq('id', userId)
+  if (roleError) {
+    console.error('[stripe/webhook] profiles.role update failed:', roleError.message)
+  }
+
   // 4. Issue a magic link for the dashboard.
   //
   // The email's CTA does NOT point at the raw Supabase action_link.

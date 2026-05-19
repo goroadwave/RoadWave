@@ -25,9 +25,22 @@ type Args = {
 
 export type { SendResult }
 
-export async function sendOwnerOnboardingKitEmail(
+// Internal render-only helper. Builds the subject + html + text +
+// attachments without touching Resend. Exported so tests can call it
+// and assert on the rendered output (e.g., that the owner dashboard
+// link and the guest check-in link route to different URLs) without
+// having to mock the SDK or burn API calls. `sendOwnerOnboardingKitEmail`
+// is a thin wrapper that calls this and then `sendBrandedEmail`.
+export type RenderedOwnerOnboardingKit = {
+  subject: string
+  html: string
+  text: string
+  attachments: { filename: string; content: string; contentId: string }[]
+}
+
+export async function renderOwnerOnboardingKitEmail(
   args: Args,
-): Promise<SendResult> {
+): Promise<RenderedOwnerOnboardingKit> {
   let qrBase64: string
   try {
     const buffer = await QR.toBuffer(args.qrCheckInUrl, {
@@ -40,7 +53,7 @@ export async function sendOwnerOnboardingKitEmail(
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'QR render failed'
     console.error('[onboarding-kit] QR render failed:', msg)
-    return { ok: false, error: msg }
+    throw new Error(`QR render failed: ${msg}`)
   }
 
   const greetingName = args.ownerName?.trim() || 'there'
@@ -50,7 +63,9 @@ export async function sendOwnerOnboardingKitEmail(
   const safeQrUrl = escapeHtml(args.qrCheckInUrl)
 
   // Section 1 — Campground page intro. Sets the tone: trial active,
-  // $0 due, campground is live.
+  // $0 due, campground is live. Also calls out the two-link contract
+  // explicitly so the owner doesn't mistake the camper QR for their
+  // own dashboard.
   const campgroundSection = renderEmailSection({
     title: 'Your campground page',
     bodyHtml: `
@@ -59,21 +74,34 @@ export async function sendOwnerOnboardingKitEmail(
         check in privately from their phone — no app store, no public group
         chat.
       </p>
+      <p style="margin:0 0 8px; color:#cbd3e0; font-size:13px;">
+        This email contains <strong style="color:#f5ecd9;">two different links</strong>:
+      </p>
+      <ul style="margin:0 0 10px; padding-left:20px; color:#cbd3e0; font-size:13px; line-height:1.6;">
+        <li><strong style="color:#f5ecd9;">Open Your Dashboard</strong> (button below) — for you, the campground owner. Signs you in automatically.</li>
+        <li><strong style="color:#f5ecd9;">Guest check-in page</strong> (further down) — the public page guests scan or open from their phones. Share this; don't bookmark it as your dashboard.</li>
+      </ul>
       <p style="margin:0; color:#94a3b8; font-size:13px;">
-        Your dashboard link signs you in automatically. Bookmark it.
+        Bookmark the dashboard link.
       </p>
     `,
   })
 
-  // Section 2 — Printable QR. The QR PNG sits on a white inner card so
-  // cameras can scan it reliably regardless of email theme. The cid:
-  // reference is wired up by the attachments array below.
+  // Section 2 — Printable QR for guests. The QR PNG sits on a white
+  // inner card so cameras can scan it reliably regardless of email
+  // theme. The cid: reference is wired up by the attachments array
+  // below. The link below the QR is the *guest* check-in page — NOT
+  // the owner dashboard — so the label spells that out explicitly.
   const qrSection = renderEmailSection({
-    title: 'Printable QR code',
+    title: 'Guest check-in page (share with campers)',
     bodyHtml: `
-      <p style="margin:0 0 14px;">
-        Print this and share it at the front desk, welcome packet, activity
-        board, or check-in counter.
+      <p style="margin:0 0 8px; color:#cbd3e0;">
+        This is what your <strong style="color:#f5ecd9;">guests</strong> open. Print
+        the QR and post it at the front desk, welcome packet, activity board,
+        or check-in counter. The link below opens the same page.
+      </p>
+      <p style="margin:0 0 14px; color:#94a3b8; font-size:12px;">
+        Not your dashboard — use the "Open Your Dashboard" button at the top of this email for that.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 12px;">
         <tr>
@@ -88,7 +116,7 @@ export async function sendOwnerOnboardingKitEmail(
         </tr>
       </table>
       <p style="margin:0; color:#94a3b8; font-size:12px; line-height:1.5;">
-        Direct link:
+        Guest check-in URL:
         <a href="${safeQrUrl}" style="color:#f59e0b; text-decoration:underline;">${safeQrUrl}</a>
       </p>
     `,
@@ -154,7 +182,9 @@ export async function sendOwnerOnboardingKitEmail(
   })
 
   // Plaintext fallback for clients that don't render HTML and for
-  // spam-filter scoring.
+  // spam-filter scoring. The two URLs are labeled explicitly so a
+  // plaintext reader can't confuse the owner dashboard with the
+  // public guest page.
   const text = `Your RoadWave Campground Kit Is Ready
 
 Hi ${greetingName} — welcome to the founding pilot.
@@ -162,25 +192,28 @@ Hi ${greetingName} — welcome to the founding pilot.
 Your 30-day trial is active. $0 due today.
 ${args.campgroundName} is live on RoadWave.
 
-Open your dashboard:
+This email contains two different links:
+
+[1] OWNER DASHBOARD (for you — signs you in automatically):
 ${args.dashboardMagicLink}
 
-Printable QR code (attached): roadwave-qr.png
-Direct check-in link: ${args.qrCheckInUrl}
-Share it at the front desk, welcome packet, activity board, or check-in counter.
+[2] GUEST CHECK-IN PAGE (share this with campers — do NOT bookmark as your dashboard):
+${args.qrCheckInUrl}
+
+Printable QR code is attached as roadwave-qr.png. Print it and post it
+at the front desk, welcome packet, activity board, or check-in counter.
 
 What to do next:
-  1. Open your dashboard and take a look around.
+  1. Open your dashboard (link [1] above) and take a look around.
   2. Review your campground profile.
   3. Print the QR code and post it where guests already look.
-  4. Invite guests to check in.
+  4. Invite guests to check in via link [2].
 ${args.setupCallBookingUrl ? `\nWant to walk through it together? Book your free 30-minute setup call: ${args.setupCallBookingUrl}\n` : ''}
 Need help? Email hello@getroadwave.com — a real human reads every message.
 
 — Mark, RoadWave`
 
-  return sendBrandedEmail({
-    to: args.toEmail,
+  return {
     subject: 'Your RoadWave Campground Kit Is Ready',
     html,
     text,
@@ -191,5 +224,28 @@ Need help? Email hello@getroadwave.com — a real human reads every message.
         contentId: 'roadwave-onboarding-qr',
       },
     ],
+  }
+}
+
+// Public send wrapper. Renders the onboarding kit then ships it through
+// the branded-email sender. Kept as a thin shim so callers (the Stripe
+// webhook handler) don't need to import both helpers — and so the
+// render path stays uniformly testable in isolation.
+export async function sendOwnerOnboardingKitEmail(
+  args: Args,
+): Promise<SendResult> {
+  let rendered: RenderedOwnerOnboardingKit
+  try {
+    rendered = await renderOwnerOnboardingKitEmail(args)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'render failed'
+    return { ok: false, error: msg }
+  }
+  return sendBrandedEmail({
+    to: args.toEmail,
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
+    attachments: rendered.attachments,
   })
 }
