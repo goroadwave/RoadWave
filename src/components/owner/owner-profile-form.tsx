@@ -306,6 +306,228 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
         </Field>
       </div>
 
+      {/* Wi-Fi Info (mig 0049). Card appears on the public guest hub
+          only when the toggle is on AND a network name is set. The
+          password is readable by anon by design — this is the GUEST
+          network, not staff/admin. Helper text reinforces that. */}
+      <div className="rounded-2xl border border-leaf/20 bg-leaf/[0.04] p-4 space-y-3">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-leaf font-semibold">
+          Wi-Fi Info (optional)
+        </p>
+        <p className="text-xs text-amber-300 leading-snug">
+          <strong>Only enter guest Wi-Fi information.</strong> Do not
+          enter staff/admin Wi-Fi credentials — anyone scanning your
+          QR code can see what you put here.
+        </p>
+        <label className="flex items-start gap-2 text-sm text-cream cursor-pointer">
+          <input
+            type="checkbox"
+            name="show_wifi"
+            defaultChecked={campground.show_wifi}
+            className="mt-1 h-4 w-4 accent-leaf"
+          />
+          <span>
+            Show the Wi-Fi card on my guest hub
+            <span className="block text-xs text-mist mt-0.5">
+              Stays hidden until you also fill in the network name.
+            </span>
+          </span>
+        </label>
+        <Field
+          label="Network name (SSID)"
+          hint="What the guest sees in their phone's Wi-Fi list."
+        >
+          <input
+            name="wifi_network_name"
+            type="text"
+            defaultValue={campground.wifi_network_name ?? ''}
+            maxLength={120}
+            placeholder="Pinecrest-Guest"
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Password (optional)"
+          hint="Leave blank for open networks. Otherwise, the guest password they should enter."
+        >
+          <input
+            name="wifi_password"
+            type="text"
+            defaultValue={campground.wifi_password ?? ''}
+            maxLength={200}
+            placeholder="welcome2025"
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Wi-Fi notes (optional)"
+          hint="Quirks worth knowing — slower in Loop C, password rotates monthly, etc."
+        >
+          <textarea
+            name="wifi_notes"
+            defaultValue={campground.wifi_notes ?? ''}
+            maxLength={500}
+            rows={2}
+            placeholder="Strongest signal in the clubhouse. Password rotates the 1st of each month."
+            className={inputCls + ' resize-none'}
+          />
+        </Field>
+      </div>
+
+      {/* Rules & Policies (mig 0049). Free-form text. Owner can
+          use line breaks; the guest hub preserves them. */}
+      <div className="rounded-2xl border border-leaf/20 bg-leaf/[0.04] p-4 space-y-3">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-leaf font-semibold">
+          Rules &amp; Policies (optional)
+        </p>
+        <p className="text-xs text-mist leading-snug">
+          The rules every guest should know. Pet rules, quiet hours,
+          checkout time, pool rules, golf-cart policy, visitor policy
+          — paste them in. Line breaks are preserved.
+        </p>
+        <label className="flex items-start gap-2 text-sm text-cream cursor-pointer">
+          <input
+            type="checkbox"
+            name="show_rules"
+            defaultChecked={campground.show_rules}
+            className="mt-1 h-4 w-4 accent-leaf"
+          />
+          <span>
+            Show the Rules &amp; Policies card on my guest hub
+            <span className="block text-xs text-mist mt-0.5">
+              Stays hidden until you add text below.
+            </span>
+          </span>
+        </label>
+        <Field
+          label="Rules &amp; policies"
+          hint="Plain text. Line breaks become line breaks on the guest hub."
+        >
+          <textarea
+            name="rules_text"
+            defaultValue={campground.rules_text ?? ''}
+            maxLength={5000}
+            rows={8}
+            placeholder={`Quiet hours: 10pm-7am\nPets: 6ft leash, please pick up\nCheckout: 11am\nVisitors: register at office`}
+            className={inputCls + ' resize-y'}
+          />
+        </Field>
+      </div>
+
+      {/* Emergency Info (mig 0049). Card renders only when toggle
+          is on AND at least one field is filled. Each field is
+          optional individually; the owner only fills what applies. */}
+      <div className="rounded-2xl border border-amber-400/30 bg-amber-400/[0.04] p-4 space-y-3">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300 font-semibold">
+          Emergency Info (optional)
+        </p>
+        <p className="text-xs text-mist leading-snug">
+          What a guest needs to know at 2am. Numbers are listed in
+          the order you enter them — primary first.
+        </p>
+        <label className="flex items-start gap-2 text-sm text-cream cursor-pointer">
+          <input
+            type="checkbox"
+            name="show_emergency_info"
+            defaultChecked={campground.show_emergency_info}
+            className="mt-1 h-4 w-4 accent-amber-300"
+          />
+          <span>
+            Show the Emergency Info card on my guest hub
+            <span className="block text-xs text-mist mt-0.5">
+              Stays hidden until you add at least one field below.
+            </span>
+          </span>
+        </label>
+        <Field label="Primary emergency contact">
+          <input
+            name="emergency_contact_number"
+            type="text"
+            defaultValue={campground.emergency_contact_number ?? ''}
+            maxLength={60}
+            placeholder="555-123-4567 (24/7 office line)"
+            className={inputCls}
+          />
+        </Field>
+        <Field label="After-hours contact (optional)">
+          <input
+            name="emergency_after_hours"
+            type="text"
+            defaultValue={campground.emergency_after_hours ?? ''}
+            maxLength={300}
+            placeholder="On-call host: 555-987-6543 (call between 10pm-7am)"
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Storm shelter / evacuation notes (optional)"
+          hint="Where to go, how to know it's safe to come out, evacuation route."
+        >
+          <textarea
+            name="emergency_shelter_notes"
+            defaultValue={campground.emergency_shelter_notes ?? ''}
+            maxLength={1000}
+            rows={3}
+            placeholder="Tornado shelter: brick bathhouse next to the office. Sirens sound continuously when sheltering required."
+            className={inputCls + ' resize-none'}
+          />
+        </Field>
+        <Field
+          label="Other emergency notes (optional)"
+          hint="Nearest hospital, police non-emergency line, anything else."
+        >
+          <textarea
+            name="emergency_other_notes"
+            defaultValue={campground.emergency_other_notes ?? ''}
+            maxLength={1000}
+            rows={3}
+            placeholder="Nearest ER: Mercy Health 12 minutes east. Police non-emergency: 555-211-0000."
+            className={inputCls + ' resize-none'}
+          />
+        </Field>
+      </div>
+
+      {/* Local Recommendations (mig 0049). Free-form text for now.
+          A future migration may add a normalized table for row-
+          based add/edit; this column will remain the fallback. */}
+      <div className="rounded-2xl border border-leaf/20 bg-leaf/[0.04] p-4 space-y-3">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-leaf font-semibold">
+          Local Recommendations (optional)
+        </p>
+        <p className="text-xs text-mist leading-snug">
+          Restaurants, grocery, gas, propane, attractions, trailheads,
+          local favorites. One per line works well, but use whatever
+          format fits.
+        </p>
+        <label className="flex items-start gap-2 text-sm text-cream cursor-pointer">
+          <input
+            type="checkbox"
+            name="show_local_recommendations"
+            defaultChecked={campground.show_local_recommendations}
+            className="mt-1 h-4 w-4 accent-leaf"
+          />
+          <span>
+            Show the Local Recommendations card on my guest hub
+            <span className="block text-xs text-mist mt-0.5">
+              Stays hidden until you add text below.
+            </span>
+          </span>
+        </label>
+        <Field
+          label="Recommendations"
+          hint="Plain text. Line breaks become line breaks on the guest hub."
+        >
+          <textarea
+            name="local_recommendations_text"
+            defaultValue={campground.local_recommendations_text ?? ''}
+            maxLength={5000}
+            rows={6}
+            placeholder={`Breakfast: Joe's Diner — 8 min south on Hwy 31\nGas + propane: Sunoco at the highway exit\nKayak rentals: Riverbend Adventures (open 9-6)`}
+            className={inputCls + ' resize-y'}
+          />
+        </Field>
+      </div>
+
       <Field label="Timezone">
         <select
           name="timezone"

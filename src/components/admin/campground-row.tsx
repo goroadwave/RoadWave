@@ -30,20 +30,65 @@ type Props = {
     // URL null — owner started but didn't finish), Live (both set).
     show_park_map: boolean
     park_map_url: string | null
+    // Guest-hub sections from migration 0049. Same three-state badge
+    // model as Park Map: Off / Enabled (no content) / Live.
+    show_wifi: boolean
+    wifi_network_name: string | null
+    show_rules: boolean
+    rules_text: string | null
+    show_emergency_info: boolean
+    emergency_contact_number: string | null
+    emergency_after_hours: string | null
+    emergency_shelter_notes: string | null
+    emergency_other_notes: string | null
+    show_local_recommendations: boolean
+    local_recommendations_text: string | null
   }
 }
 
-// Three-state badge for the Park Map column. Mirrors the render
-// contract in /campground/<slug>/updates: the card is "Live" only
-// when both fields are set; an enabled-but-empty row is "Enabled"
-// (a half-configured state worth flagging to the founder).
+type HubStatus = { label: string; tone: 'on' | 'pending' | 'off' }
+
+// Three-state status helper for a guest-hub card. "Live" means the
+// card actually renders for guests; "Enabled (no content)" means the
+// owner flipped the toggle but never filled the fields, so the public
+// render is suppressed; "Off" is the default. Founders can scan the
+// admin list and spot half-configured rows to nudge.
+function hubStatus(toggleOn: boolean, hasContent: boolean): HubStatus {
+  if (toggleOn && hasContent) return { label: 'Live', tone: 'on' }
+  if (toggleOn && !hasContent) return { label: 'Enabled (no content)', tone: 'pending' }
+  return { label: 'Off', tone: 'off' }
+}
+
 function parkMapStatus(
   showPark: boolean,
   url: string | null,
-): { label: string; tone: 'on' | 'pending' | 'off' } {
-  if (showPark && url) return { label: 'Live', tone: 'on' }
-  if (showPark && !url) return { label: 'Enabled (no URL)', tone: 'pending' }
-  return { label: 'Off', tone: 'off' }
+): HubStatus {
+  return hubStatus(showPark, url !== null)
+}
+
+const HUB_BADGE_TONE: Record<HubStatus['tone'], string> = {
+  on: 'border-leaf/40 bg-leaf/10 text-leaf',
+  pending: 'border-amber-400/40 bg-amber-400/10 text-amber-300',
+  off: 'border-white/10 bg-white/5 text-mist/60',
+}
+
+function HubBadge({
+  icon,
+  name,
+  status,
+}: {
+  icon: string
+  name: string
+  status: HubStatus
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${HUB_BADGE_TONE[status.tone]}`}
+    >
+      <span aria-hidden>{icon}</span>
+      {name}: {status.label}
+    </span>
+  )
 }
 
 const SUB_LABEL: Record<Props['row']['subscription_status'], string> = {
@@ -144,28 +189,49 @@ export function CampgroundRow({ row }: Props) {
               /campground/{row.slug}
             </a>
           </p>
-          {/* Park Map status (mig 0048). One of three states, color-
-              coded so a founder can scan the list and spot owners who
-              flipped the toggle but never pasted a URL. */}
-          {(() => {
-            const pm = parkMapStatus(row.show_park_map, row.park_map_url)
-            const cls =
-              pm.tone === 'on'
-                ? 'border-leaf/40 bg-leaf/10 text-leaf'
-                : pm.tone === 'pending'
-                  ? 'border-amber-400/40 bg-amber-400/10 text-amber-300'
-                  : 'border-white/10 bg-white/5 text-mist/60'
-            return (
-              <p className="mt-1">
-                <span
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${cls}`}
-                >
-                  <span aria-hidden>🗺️</span>
-                  Park map: {pm.label}
-                </span>
-              </p>
-            )
-          })()}
+          {/* Guest hub section statuses (migs 0048, 0049). Wrapping
+              row of 5 compact badges — one per card. Three-state
+              color coding (on/pending/off) lets a founder scan the
+              list and spot owners who flipped a toggle but never
+              filled the fields. */}
+          <div className="mt-1 flex flex-wrap gap-1">
+            <HubBadge
+              icon="🗺️"
+              name="Map"
+              status={parkMapStatus(row.show_park_map, row.park_map_url)}
+            />
+            <HubBadge
+              icon="📶"
+              name="Wi-Fi"
+              status={hubStatus(row.show_wifi, row.wifi_network_name !== null)}
+            />
+            <HubBadge
+              icon="🚨"
+              name="Emergency"
+              status={hubStatus(
+                row.show_emergency_info,
+                !!(
+                  row.emergency_contact_number ||
+                  row.emergency_after_hours ||
+                  row.emergency_shelter_notes ||
+                  row.emergency_other_notes
+                ),
+              )}
+            />
+            <HubBadge
+              icon="📋"
+              name="Rules"
+              status={hubStatus(row.show_rules, row.rules_text !== null)}
+            />
+            <HubBadge
+              icon="📍"
+              name="Local"
+              status={hubStatus(
+                row.show_local_recommendations,
+                row.local_recommendations_text !== null,
+              )}
+            />
+          </div>
         </div>
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <div className="flex items-center gap-1.5">

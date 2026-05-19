@@ -85,6 +85,21 @@ const optionalUrl = z
   .nullable()
   .optional()
 
+// Trim + treat blank as null + cap length. Used by every short
+// owner-edited string field where the column is nullable and a
+// blank submission should clear the field rather than write '' to
+// the database. Reused by the guest-hub sections in mig 0049
+// (Wi-Fi, Rules, Emergency, Local Recommendations).
+function blankToNull(maxLen: number) {
+  return z
+    .string()
+    .max(maxLen)
+    .transform((s) => s.trim())
+    .transform((s) => (s === '' ? null : s))
+    .nullable()
+    .optional()
+}
+
 const schema = z.object({
   campground_id: z.string().uuid(),
   name: z.string().min(1).max(120),
@@ -133,6 +148,40 @@ const schema = z.object({
     .transform((s) => (s === '' ? null : s))
     .nullable()
     .optional(),
+  // Wi-Fi (mig 0049). Network name + password + notes. Helper text
+  // on the owner form reminds them this is the GUEST network only.
+  show_wifi: z
+    .union([z.literal('on'), z.literal('true'), z.literal('')])
+    .optional()
+    .transform((v) => v === 'on' || v === 'true'),
+  wifi_network_name: blankToNull(120),
+  wifi_password: blankToNull(200),
+  wifi_notes: blankToNull(500),
+  // Rules & Policies. Free-form long text.
+  show_rules: z
+    .union([z.literal('on'), z.literal('true'), z.literal('')])
+    .optional()
+    .transform((v) => v === 'on' || v === 'true'),
+  rules_text: blankToNull(5000),
+  // Emergency Info. Four short text fields covering the situations
+  // a guest might need at 2am: primary number, after-hours line,
+  // shelter info, and other notes.
+  show_emergency_info: z
+    .union([z.literal('on'), z.literal('true'), z.literal('')])
+    .optional()
+    .transform((v) => v === 'on' || v === 'true'),
+  emergency_contact_number: blankToNull(60),
+  emergency_after_hours: blankToNull(300),
+  emergency_shelter_notes: blankToNull(1000),
+  emergency_other_notes: blankToNull(1000),
+  // Local Recommendations. Free-form text for now; a future
+  // migration may introduce a normalized table for row-based
+  // add/edit without breaking this column.
+  show_local_recommendations: z
+    .union([z.literal('on'), z.literal('true'), z.literal('')])
+    .optional()
+    .transform((v) => v === 'on' || v === 'true'),
+  local_recommendations_text: blankToNull(5000),
 })
 
 export async function saveOwnerProfileAction(
@@ -156,6 +205,19 @@ export async function saveOwnerProfileAction(
     show_park_map: formData.get('show_park_map') ?? '',
     park_map_url: formData.get('park_map_url') ?? '',
     park_map_notes: formData.get('park_map_notes') ?? '',
+    show_wifi: formData.get('show_wifi') ?? '',
+    wifi_network_name: formData.get('wifi_network_name') ?? '',
+    wifi_password: formData.get('wifi_password') ?? '',
+    wifi_notes: formData.get('wifi_notes') ?? '',
+    show_rules: formData.get('show_rules') ?? '',
+    rules_text: formData.get('rules_text') ?? '',
+    show_emergency_info: formData.get('show_emergency_info') ?? '',
+    emergency_contact_number: formData.get('emergency_contact_number') ?? '',
+    emergency_after_hours: formData.get('emergency_after_hours') ?? '',
+    emergency_shelter_notes: formData.get('emergency_shelter_notes') ?? '',
+    emergency_other_notes: formData.get('emergency_other_notes') ?? '',
+    show_local_recommendations: formData.get('show_local_recommendations') ?? '',
+    local_recommendations_text: formData.get('local_recommendations_text') ?? '',
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()
@@ -192,6 +254,19 @@ export async function saveOwnerProfileAction(
       show_park_map: parsed.data.show_park_map,
       park_map_url: parsed.data.park_map_url ?? null,
       park_map_notes: parsed.data.park_map_notes ?? null,
+      show_wifi: parsed.data.show_wifi,
+      wifi_network_name: parsed.data.wifi_network_name ?? null,
+      wifi_password: parsed.data.wifi_password ?? null,
+      wifi_notes: parsed.data.wifi_notes ?? null,
+      show_rules: parsed.data.show_rules,
+      rules_text: parsed.data.rules_text ?? null,
+      show_emergency_info: parsed.data.show_emergency_info,
+      emergency_contact_number: parsed.data.emergency_contact_number ?? null,
+      emergency_after_hours: parsed.data.emergency_after_hours ?? null,
+      emergency_shelter_notes: parsed.data.emergency_shelter_notes ?? null,
+      emergency_other_notes: parsed.data.emergency_other_notes ?? null,
+      show_local_recommendations: parsed.data.show_local_recommendations,
+      local_recommendations_text: parsed.data.local_recommendations_text ?? null,
     })
     .eq('id', parsed.data.campground_id)
   if (error) return { error: error.message, ok: false }

@@ -53,6 +53,22 @@ type CampgroundRow = {
   show_park_map: boolean
   park_map_url: string | null
   park_map_notes: string | null
+  // Guest-hub sections from migration 0049. Each card renders only
+  // when its show_* toggle is true AND at least one content field
+  // is non-null. Half-configured states render nothing.
+  show_wifi: boolean
+  wifi_network_name: string | null
+  wifi_password: string | null
+  wifi_notes: string | null
+  show_rules: boolean
+  rules_text: string | null
+  show_emergency_info: boolean
+  emergency_contact_number: string | null
+  emergency_after_hours: string | null
+  emergency_shelter_notes: string | null
+  emergency_other_notes: string | null
+  show_local_recommendations: boolean
+  local_recommendations_text: string | null
 }
 
 type BulletinRow = {
@@ -112,7 +128,7 @@ export default async function CampgroundUpdatesPage({
   const { data: campground } = await admin
     .from('campgrounds')
     .select(
-      'id, slug, name, city, region, logo_url, is_active, amenities, amenity_notes, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, show_park_map, park_map_url, park_map_notes',
+      'id, slug, name, city, region, logo_url, is_active, amenities, amenity_notes, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, show_park_map, park_map_url, park_map_notes, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text',
     )
     .eq('slug', slug)
     .maybeSingle<CampgroundRow>()
@@ -313,6 +329,152 @@ export default async function CampgroundUpdatesPage({
               </a>
             </section>
           )}
+
+          {/* Wi-Fi (mig 0049). Renders when toggle is on AND a
+              network name is set. Password rendered as monospace +
+              tap-to-select-friendly so a guest can copy it. The
+              password is public — only the GUEST network is meant
+              to be entered here (owner UI warns about this). */}
+          {campground.show_wifi && campground.wifi_network_name && (
+            <section className="space-y-3">
+              <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+                Wi-Fi
+              </h2>
+              <div className="rounded-2xl border border-leaf/30 bg-leaf/[0.06] p-4 sm:p-5 space-y-3">
+                <div className="flex items-start gap-3">
+                  <span
+                    aria-hidden
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-leaf/40 bg-leaf/15 text-xl"
+                  >
+                    📶
+                  </span>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-mist/80 font-semibold">
+                        Network
+                      </p>
+                      <p className="text-sm font-semibold text-cream break-all">
+                        {campground.wifi_network_name}
+                      </p>
+                    </div>
+                    {campground.wifi_password && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-mist/80 font-semibold">
+                          Password
+                        </p>
+                        <p className="text-sm font-mono font-semibold text-cream break-all select-all">
+                          {campground.wifi_password}
+                        </p>
+                      </div>
+                    )}
+                    {campground.wifi_notes && (
+                      <p className="text-xs text-mist leading-snug whitespace-pre-wrap pt-1">
+                        {campground.wifi_notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Emergency Info (mig 0049). Card renders when toggle is
+              on AND at least one field has content. Amber border
+              signals importance without screaming red.  */}
+          {campground.show_emergency_info &&
+            (campground.emergency_contact_number ||
+              campground.emergency_after_hours ||
+              campground.emergency_shelter_notes ||
+              campground.emergency_other_notes) && (
+              <section className="space-y-3">
+                <h2 className="text-[11px] uppercase tracking-[0.2em] text-amber-300 font-semibold">
+                  Emergency info
+                </h2>
+                <div className="rounded-2xl border border-amber-400/30 bg-amber-400/[0.06] p-4 sm:p-5 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <span
+                      aria-hidden
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-amber-400/40 bg-amber-400/15 text-xl"
+                    >
+                      🚨
+                    </span>
+                    <div className="flex-1 min-w-0 space-y-3">
+                      {campground.emergency_contact_number && (
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
+                            Primary contact
+                          </p>
+                          <p className="text-sm font-semibold text-cream break-all">
+                            {campground.emergency_contact_number}
+                          </p>
+                        </div>
+                      )}
+                      {campground.emergency_after_hours && (
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
+                            After hours
+                          </p>
+                          <p className="text-sm text-cream whitespace-pre-wrap">
+                            {campground.emergency_after_hours}
+                          </p>
+                        </div>
+                      )}
+                      {campground.emergency_shelter_notes && (
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
+                            Storm shelter &amp; evacuation
+                          </p>
+                          <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
+                            {campground.emergency_shelter_notes}
+                          </p>
+                        </div>
+                      )}
+                      {campground.emergency_other_notes && (
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
+                            Other emergency info
+                          </p>
+                          <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
+                            {campground.emergency_other_notes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+          {/* Rules & Policies (mig 0049). Free-form text; line
+              breaks preserved with whitespace-pre-wrap. */}
+          {campground.show_rules && campground.rules_text && (
+            <section className="space-y-3">
+              <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+                Rules &amp; policies
+              </h2>
+              <div className="rounded-2xl border border-white/5 bg-card p-4 sm:p-5">
+                <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
+                  {campground.rules_text}
+                </p>
+              </div>
+            </section>
+          )}
+
+          {/* Local Recommendations (mig 0049). Free-form text for
+              now; line breaks preserved. */}
+          {campground.show_local_recommendations &&
+            campground.local_recommendations_text && (
+              <section className="space-y-3">
+                <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+                  Local recommendations
+                </h2>
+                <div className="rounded-2xl border border-white/5 bg-card p-4 sm:p-5">
+                  <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
+                    {campground.local_recommendations_text}
+                  </p>
+                </div>
+              </section>
+            )}
 
           {/* Bulletins */}
           <section className="space-y-3">

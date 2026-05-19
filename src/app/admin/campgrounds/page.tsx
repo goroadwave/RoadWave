@@ -19,6 +19,20 @@ type Campground = {
   // the toggle, whether they pasted a URL, or both.
   show_park_map: boolean
   park_map_url: string | null
+  // Guest-hub sections from migration 0049. Each section has a toggle
+  // and a "is at least one content field non-empty" status. The admin
+  // row shows a compact summary of each section's state.
+  show_wifi: boolean
+  wifi_network_name: string | null
+  show_rules: boolean
+  rules_text: string | null
+  show_emergency_info: boolean
+  emergency_contact_number: string | null
+  emergency_after_hours: string | null
+  emergency_shelter_notes: string | null
+  emergency_other_notes: string | null
+  show_local_recommendations: boolean
+  local_recommendations_text: string | null
 }
 
 type BulletinCount = { campground_id: string }
@@ -30,7 +44,7 @@ export default async function CampgroundsPage() {
     supabase
       .from('campgrounds')
       .select(
-        'id, name, slug, city, region, is_active, created_at, subscription_status, plan, trial_ends_at, show_park_map, park_map_url',
+        'id, name, slug, city, region, is_active, created_at, subscription_status, plan, trial_ends_at, show_park_map, park_map_url, show_wifi, wifi_network_name, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text',
       )
       .order('created_at', { ascending: false }),
     supabase.from('bulletins').select('campground_id'),

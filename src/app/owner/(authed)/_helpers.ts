@@ -46,6 +46,22 @@ export type OwnerCampground = {
   show_park_map: boolean
   park_map_url: string | null
   park_map_notes: string | null
+  // Guest-hub sections from migration 0049. Each section's card on
+  // the public guest hub renders only when its show_* toggle is true
+  // AND at least one content field is non-null.
+  show_wifi: boolean
+  wifi_network_name: string | null
+  wifi_password: string | null
+  wifi_notes: string | null
+  show_rules: boolean
+  rules_text: string | null
+  show_emergency_info: boolean
+  emergency_contact_number: string | null
+  emergency_after_hours: string | null
+  emergency_shelter_notes: string | null
+  emergency_other_notes: string | null
+  show_local_recommendations: boolean
+  local_recommendations_text: string | null
 }
 
 export async function loadOwnerCampground() {
@@ -72,7 +88,7 @@ export async function loadOwnerCampground() {
   const { data: cg } = await supabase
     .from('campgrounds')
     .select(
-      'id, name, slug, city, region, address, phone, website, logo_url, amenities, amenity_notes, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, email_notifications_enabled, show_park_map, park_map_url, park_map_notes',
+      'id, name, slug, city, region, address, phone, website, logo_url, amenities, amenity_notes, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, email_notifications_enabled, show_park_map, park_map_url, park_map_notes, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text',
     )
     .eq('id', link.campground_id)
     .single()
