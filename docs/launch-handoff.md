@@ -39,6 +39,7 @@
 | API secret key | `sk_live_…` (rotated 2026-05-19; old key has expired) |
 | Vercel Production env | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_MONTHLY` all set to live values |
 | Vercel Preview env | `STRIPE_SECRET_KEY` unset (Preview cannot make live charges); other Preview Stripe vars retain test-mode values |
+| Internal new-owner alert | On every successful `checkout.session.completed`, an internal alert email fires to the address in `INTERNAL_NEW_OWNER_NOTIFY_EMAIL` (currently `getroadwave@gmail.com`, Production scope only). Subject `[RoadWave] New campground trial: <name>`. Best-effort try/catch — a failed alert never breaks the webhook. To change recipients, edit the Vercel env var (accepts a single address or comma-separated list); to silence the alerts entirely, unset it (code defaults to `hello@getroadwave.com` if you do). Implementation: `src/lib/email/internal-new-owner-alert.ts` + step 6b in `webhook/route.ts`. |
 | Dead config | `STRIPE_TRIAL_DAYS` in Vercel — unused by code, you opted to leave it |
 
 ## 4. What demo campgrounds remain active
@@ -132,6 +133,7 @@ done
 | `stripe_events` table | New row for each of `checkout.session.completed`, `customer.subscription.created`, `invoice.paid` within seconds of checkout | Supabase SQL Editor: `select count(*), event_type from stripe_events group by event_type order by count(*) desc` |
 | Stripe webhook delivery | Each event delivered HTTP 200, retry count = 0 | Stripe Dashboard → Developers → Webhooks → the live endpoint → Attempts |
 | Onboarding email | Delivered to owner inbox within ~60 seconds, "Open Your Dashboard" lands on `/owner/dashboard` (not `/checkin`) | Resend Dashboard → Logs |
+| **Internal new-owner alert** | Within ~60s of a successful checkout, an email arrives at the address in `INTERNAL_NEW_OWNER_NOTIFY_EMAIL` (currently `getroadwave@gmail.com`) with subject `[RoadWave] New campground trial: <name>`. Includes campground name + slug, owner name + email, signup timestamp, Stripe `cus_…` + `sub_…`, plan, trial-end, and links to the public page + `/admin/campgrounds`. If it doesn't arrive: check Resend logs first; the webhook handler wraps the send in try/catch and logs `[stripe/webhook] internal new-owner alert failed (non-fatal): …` on failure (the owner-facing email still goes out either way). | `getroadwave@gmail.com` inbox + Resend Dashboard → Logs |
 | Magic-link consumption | `/auth/sign-in?th=…` → POST → `/owner/dashboard` | Vercel function logs (`[auth/sign-in]` prefix) |
 | Trial timer | `campgrounds.trial_ends_at = trial_started_at + 30 days` | `select trial_started_at, trial_ends_at, (trial_ends_at - trial_started_at) as len from campgrounds where slug = '<new>'` |
 | Day 30 (first real charge) | `invoice.paid` event fires; webhook flips `subscription_status: 'active'`; first $39 captured | Stripe Dashboard → Payments + `stripe_events` table |
