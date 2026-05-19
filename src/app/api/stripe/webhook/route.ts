@@ -306,6 +306,41 @@ async function handleCheckoutCompleted(
     dashboardMagicLink: magicLink,
   })
 
+  // 6b. Best-effort internal alert to RoadWave admin. Fires AFTER the
+  // owner-onboarding email so the owner-facing email is always the
+  // critical path. Wrapped in try/catch so a failed alert never
+  // bubbles up into a 5xx on the webhook — the founder's inbox
+  // getting rate-limited shouldn't cause Stripe to retry a real
+  // signup. Recipient resolution lives inside the helper (reads
+  // INTERNAL_NEW_OWNER_NOTIFY_EMAIL env var; defaults to
+  // hello@getroadwave.com). Stripe idempotency at the top of the
+  // webhook means a Stripe retry of the same event id skips this
+  // whole handler, so the alert can't double-fire.
+  try {
+    const { sendInternalNewOwnerAlert } = await import(
+      '@/lib/email/internal-new-owner-alert'
+    )
+    await sendInternalNewOwnerAlert({
+      campgroundName: submission.campground_name,
+      campgroundSlug: cg.slug,
+      ownerEmail: submission.email,
+      ownerName: submission.owner_name,
+      signupAt: new Date(),
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId,
+      subscriptionStatus: 'trial',
+      plan,
+      trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      campgroundUrl: `${origin}/campground/${cg.slug}`,
+      adminCampgroundsUrl: `${origin}/admin/campgrounds`,
+    })
+  } catch (err) {
+    console.warn(
+      '[stripe/webhook] internal new-owner alert failed (non-fatal):',
+      err instanceof Error ? err.message : String(err),
+    )
+  }
+
   // 7. Mark the submission provisioned.
   await admin
     .from('owner_signup_submissions')
