@@ -48,6 +48,11 @@ type CampgroundRow = {
   feature_book_again_enabled: boolean
   feature_contact_office_enabled: boolean
   feature_pulse_check_enabled: boolean
+  // Park Map (mig 0048). The card renders only when show_park_map is
+  // true AND park_map_url is non-null.
+  show_park_map: boolean
+  park_map_url: string | null
+  park_map_notes: string | null
 }
 
 type BulletinRow = {
@@ -107,7 +112,7 @@ export default async function CampgroundUpdatesPage({
   const { data: campground } = await admin
     .from('campgrounds')
     .select(
-      'id, slug, name, city, region, logo_url, is_active, amenities, amenity_notes, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled',
+      'id, slug, name, city, region, logo_url, is_active, amenities, amenity_notes, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, show_park_map, park_map_url, park_map_notes',
     )
     .eq('slug', slug)
     .maybeSingle<CampgroundRow>()
@@ -260,6 +265,54 @@ export default async function CampgroundUpdatesPage({
               campers.
             </p>
           </section>
+
+          {/* Park Map (mig 0048). Renders ONLY when the owner has
+              flipped show_park_map on AND pasted a URL. Half-configured
+              states render nothing. Link opens in a new tab so the
+              guest's place in the hub isn't lost; rel keeps the parent
+              tab safe from window.opener tampering. */}
+          {campground.show_park_map && campground.park_map_url && (
+            <section className="space-y-3">
+              <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+                Park map
+              </h2>
+              <a
+                href={campground.park_map_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-2xl border border-leaf/30 bg-leaf/[0.06] p-4 sm:p-5 hover:border-leaf/60 hover:bg-leaf/[0.10] transition-colors"
+              >
+                <div className="flex items-start gap-3">
+                  <span
+                    aria-hidden
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-leaf/40 bg-leaf/15 text-xl"
+                  >
+                    🗺️
+                  </span>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <p className="text-sm font-semibold text-cream">
+                      Open the park map
+                    </p>
+                    {campground.park_map_notes ? (
+                      <p className="text-xs text-mist leading-snug whitespace-pre-wrap">
+                        {campground.park_map_notes}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-mist leading-snug">
+                        Opens in a new tab.
+                      </p>
+                    )}
+                  </div>
+                  <span
+                    aria-hidden
+                    className="text-leaf shrink-0 text-sm font-semibold"
+                  >
+                    ↗
+                  </span>
+                </div>
+              </a>
+            </section>
+          )}
 
           {/* Bulletins */}
           <section className="space-y-3">

@@ -23,7 +23,27 @@ type Props = {
     trial_ends_at: string | null
     days_to_expiry: number | null
     expiring_soon: boolean
+    // Park Map status (mig 0048). show_park_map indicates the toggle;
+    // park_map_url indicates whether the owner has pasted a URL yet.
+    // The guest-hub card renders only when both are present, so the
+    // three states are: Off (toggle false), Enabled (toggle true,
+    // URL null — owner started but didn't finish), Live (both set).
+    show_park_map: boolean
+    park_map_url: string | null
   }
+}
+
+// Three-state badge for the Park Map column. Mirrors the render
+// contract in /campground/<slug>/updates: the card is "Live" only
+// when both fields are set; an enabled-but-empty row is "Enabled"
+// (a half-configured state worth flagging to the founder).
+function parkMapStatus(
+  showPark: boolean,
+  url: string | null,
+): { label: string; tone: 'on' | 'pending' | 'off' } {
+  if (showPark && url) return { label: 'Live', tone: 'on' }
+  if (showPark && !url) return { label: 'Enabled (no URL)', tone: 'pending' }
+  return { label: 'Off', tone: 'off' }
 }
 
 const SUB_LABEL: Record<Props['row']['subscription_status'], string> = {
@@ -124,6 +144,28 @@ export function CampgroundRow({ row }: Props) {
               /campground/{row.slug}
             </a>
           </p>
+          {/* Park Map status (mig 0048). One of three states, color-
+              coded so a founder can scan the list and spot owners who
+              flipped the toggle but never pasted a URL. */}
+          {(() => {
+            const pm = parkMapStatus(row.show_park_map, row.park_map_url)
+            const cls =
+              pm.tone === 'on'
+                ? 'border-leaf/40 bg-leaf/10 text-leaf'
+                : pm.tone === 'pending'
+                  ? 'border-amber-400/40 bg-amber-400/10 text-amber-300'
+                  : 'border-white/10 bg-white/5 text-mist/60'
+            return (
+              <p className="mt-1">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${cls}`}
+                >
+                  <span aria-hidden>🗺️</span>
+                  Park map: {pm.label}
+                </span>
+              </p>
+            )
+          })()}
         </div>
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <div className="flex items-center gap-1.5">

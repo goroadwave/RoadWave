@@ -14,6 +14,11 @@ type Campground = {
   subscription_status: 'trial' | 'active' | 'past_due' | 'canceled'
   plan: 'monthly' | 'annual' | null
   trial_ends_at: string | null
+  // Park Map status (mig 0048). Both fields surface in the admin row
+  // so a founder can see at-a-glance whether the owner has flipped
+  // the toggle, whether they pasted a URL, or both.
+  show_park_map: boolean
+  park_map_url: string | null
 }
 
 type BulletinCount = { campground_id: string }
@@ -25,7 +30,7 @@ export default async function CampgroundsPage() {
     supabase
       .from('campgrounds')
       .select(
-        'id, name, slug, city, region, is_active, created_at, subscription_status, plan, trial_ends_at',
+        'id, name, slug, city, region, is_active, created_at, subscription_status, plan, trial_ends_at, show_park_map, park_map_url',
       )
       .order('created_at', { ascending: false }),
     supabase.from('bulletins').select('campground_id'),

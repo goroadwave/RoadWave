@@ -116,6 +116,23 @@ const schema = z.object({
     .transform((s) => (s === '' ? null : s))
     .nullable()
     .optional(),
+  // Park Map (mig 0048). show_park_map arrives as the literal 'on'
+  // string when the checkbox is checked, undefined otherwise.
+  // park_map_url reuses the optionalUrl validator. park_map_notes is
+  // a short caption; empty strings coerce to null so we don't write
+  // blanks.
+  show_park_map: z
+    .union([z.literal('on'), z.literal('true'), z.literal('')])
+    .optional()
+    .transform((v) => v === 'on' || v === 'true'),
+  park_map_url: optionalUrl,
+  park_map_notes: z
+    .string()
+    .max(500)
+    .transform((s) => s.trim())
+    .transform((s) => (s === '' ? null : s))
+    .nullable()
+    .optional(),
 })
 
 export async function saveOwnerProfileAction(
@@ -136,6 +153,9 @@ export async function saveOwnerProfileAction(
     booking_url: formData.get('booking_url') ?? '',
     booking_message: formData.get('booking_message') ?? '',
     booking_promo_code: formData.get('booking_promo_code') ?? '',
+    show_park_map: formData.get('show_park_map') ?? '',
+    park_map_url: formData.get('park_map_url') ?? '',
+    park_map_notes: formData.get('park_map_notes') ?? '',
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()
@@ -169,6 +189,9 @@ export async function saveOwnerProfileAction(
       booking_url: parsed.data.booking_url ?? null,
       booking_message: parsed.data.booking_message ?? null,
       booking_promo_code: parsed.data.booking_promo_code ?? null,
+      show_park_map: parsed.data.show_park_map,
+      park_map_url: parsed.data.park_map_url ?? null,
+      park_map_notes: parsed.data.park_map_notes ?? null,
     })
     .eq('id', parsed.data.campground_id)
   if (error) return { error: error.message, ok: false }

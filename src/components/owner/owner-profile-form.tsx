@@ -249,6 +249,63 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
         </Field>
       </div>
 
+      {/* Park Map (mig 0048). URL-only this phase — owner pastes any
+          public URL (Google Drive, hosted PDF, Imgur, the park's own
+          website map). The public guest hub renders the card only
+          when the toggle is on AND a URL is present. */}
+      <div className="rounded-2xl border border-leaf/20 bg-leaf/[0.04] p-4 space-y-3">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-leaf font-semibold">
+          Park Map (optional)
+        </p>
+        <p className="text-xs text-mist leading-snug">
+          Link out to a map of your campground. Paste any public URL —
+          Google Drive, an image hosted anywhere, a PDF, or the map
+          page on your own website. Opens in a new tab on the guest
+          hub. File upload is coming later; for now a public link is
+          all that&apos;s needed.
+        </p>
+        <label className="flex items-start gap-2 text-sm text-cream cursor-pointer">
+          <input
+            type="checkbox"
+            name="show_park_map"
+            defaultChecked={campground.show_park_map}
+            className="mt-1 h-4 w-4 accent-leaf"
+          />
+          <span>
+            Show the Park Map card on my guest hub
+            <span className="block text-xs text-mist mt-0.5">
+              The card stays hidden until you also paste a URL below.
+            </span>
+          </span>
+        </label>
+        <Field
+          label="Park Map URL"
+          hint="Public link a guest can open. https:// required."
+        >
+          <input
+            name="park_map_url"
+            type="url"
+            defaultValue={campground.park_map_url ?? ''}
+            maxLength={500}
+            placeholder="https://drive.google.com/file/d/.../view"
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Map caption (optional)"
+          hint="A short line under the map link — e.g. 'Loop B closures highlighted in red.'"
+        >
+          <textarea
+            name="park_map_notes"
+            defaultValue={campground.park_map_notes ?? ''}
+            maxLength={500}
+            rows={2}
+            placeholder="Sites 1–40 in the Birch loop. Sites 41–80 in the Cedar loop."
+            className={inputCls + ' resize-none'}
+          />
+        </Field>
+      </div>
+
       <Field label="Timezone">
         <select
           name="timezone"

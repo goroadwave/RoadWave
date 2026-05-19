@@ -40,6 +40,12 @@ export type OwnerCampground = {
   feature_contact_office_enabled: boolean
   feature_pulse_check_enabled: boolean
   email_notifications_enabled: boolean
+  // Park Map fields (migration 0048). URL-only this phase; actual
+  // file upload comes later. The public guest hub renders a card
+  // only when show_park_map = true AND park_map_url IS NOT NULL.
+  show_park_map: boolean
+  park_map_url: string | null
+  park_map_notes: string | null
 }
 
 export async function loadOwnerCampground() {
@@ -66,7 +72,7 @@ export async function loadOwnerCampground() {
   const { data: cg } = await supabase
     .from('campgrounds')
     .select(
-      'id, name, slug, city, region, address, phone, website, logo_url, amenities, amenity_notes, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, email_notifications_enabled',
+      'id, name, slug, city, region, address, phone, website, logo_url, amenities, amenity_notes, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, email_notifications_enabled, show_park_map, park_map_url, park_map_notes',
     )
     .eq('id', link.campground_id)
     .single()
