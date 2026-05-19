@@ -9,11 +9,16 @@ proposed fix, and pointers to the test/code that flags it.
 
 ## 1. Anonymous SELECT on `public.campgrounds` returns archived rows + leaks `owner_email` + `stripe_customer_id`
 
-**Severity:** moderate. Not a launch blocker.
+**Status:** RESOLVED on 2026-05-19 by migration
+`supabase/migrations/0047_campgrounds_anon_read_hardening.sql`. The
+regression test in `tests/qa/rls-anon-reads.test.js` is now active
+(not `test.fixme`). GitHub issue #1 closed. Entry retained for
+historical context.
+
+**Severity:** moderate. Was not a launch blocker.
 
 **Discovered by:** `tests/qa/rls-anon-reads.test.js` — the
-`anon CAN read campgrounds (is_active=true rows only)` test
-(currently marked `test.fixme`).
+`anon CAN read campgrounds (is_active=true rows only)` test.
 
 **Observable today:**
 

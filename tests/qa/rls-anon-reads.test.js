@@ -69,17 +69,16 @@ test.describe('Anonymous RLS — sensitive tables not readable', () => {
     })
   }
 
-  // KNOWN ISSUE (documented in docs/known-issues.md): anonymous SELECT
-  // on public.campgrounds currently returns archived rows AND exposes
-  // owner_email + stripe_customer_id columns. Not a launch blocker —
-  // see the doc for severity analysis and the planned fix. This test
-  // is marked fixme so the default Playwright run stays green; the
-  // assertion stands as a regression check for whenever the RLS
-  // tightening migration lands.
-  //
-  // To re-enable after the fix: change `test.fixme` back to `test`.
-  test.fixme(
-    'anon CAN read campgrounds (is_active=true rows only) — see docs/known-issues.md',
+  // Regression test for GitHub issue #1 (resolved by migration 0047 on
+  // 2026-05-19). Before 0047, public.campgrounds had an open SELECT
+  // policy `using (true)` from migration 0001 that let anon read
+  // archived rows plus owner_email + stripe_customer_id + billing
+  // fields. 0047 narrowed anon SELECT to is_active=true rows AND
+  // revoked column SELECT for the 14 sensitive columns. This test
+  // asserts the post-fix invariant: any campground anon can read must
+  // be is_active=true. Future RLS regressions on this table fail here.
+  test(
+    'anon CAN read campgrounds (is_active=true rows only)',
     async () => {
       // Defensive: public campgrounds list must remain readable so the
       // welcome pages, admin tools (with admin role), etc. work.
