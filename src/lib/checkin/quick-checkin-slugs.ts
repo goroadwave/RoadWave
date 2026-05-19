@@ -21,12 +21,14 @@
 // and never auto-changes).
 
 export const QUICK_CHECKIN_SLUGS: ReadonlySet<string> = new Set([
-  // The seeded demo campground for end-to-end testing.
+  // The seeded public demo campground. Used by the live /demo flow and
+  // referenced by scripts/seed-demo-campground.mjs. Public.
   'roadwave-demo-campground',
-  // Mark's real test campgrounds used for production-style flow
-  // walkthroughs.
-  'final-stripe-test-campground',
-  'test-stripe-campground',
+  // Pre-launch test campgrounds (final-stripe-test-campground,
+  // test-stripe-campground) were removed from this allow-list on
+  // 2026-05-19 when their rows were archived during pre-launch
+  // cleanup. Their slugs were renamed in the campgrounds table; the
+  // strings above no longer match any row.
 ])
 
 export function isQuickCheckInSlug(slug: string | null | undefined): boolean {
