@@ -2,10 +2,9 @@
 
 import { useState, type ChangeEvent } from 'react'
 import {
-  saveLogoUrlAction,
+  uploadCampgroundLogoAction,
   clearLogoAction,
 } from '@/app/owner/(authed)/profile/logo-actions'
-import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
 const MAX_BYTES = 2 * 1024 * 1024 // 2 MB
@@ -40,33 +39,21 @@ export function OwnerLogoUpload({ campgroundId, currentLogoUrl }: Props) {
 
     setBusy(true)
     try {
-      // Filename must match the storage RLS policy: split_part(name,'.',1)
-      // becomes the campground id, so the file lives at "{id}.{ext}".
-      const ext = extFor(file)
-      const path = `${campgroundId}.${ext}`
-
-      const supabase = createSupabaseBrowserClient()
-      const { error: uploadErr } = await supabase.storage
-        .from('campground-logos')
-        .upload(path, file, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: file.type,
-        })
-      if (uploadErr) throw uploadErr
-
-      // Public read on the bucket; build a permanent public URL.
-      const { data } = supabase.storage
-        .from('campground-logos')
-        .getPublicUrl(path)
-      // Cache-bust so a re-upload of the same path refreshes immediately.
-      const url = `${data.publicUrl}?v=${Date.now()}`
-
-      const save = await saveLogoUrlAction(campgroundId, url)
-      if (!save.ok) {
-        throw new Error(save.error ?? 'Could not save logo.')
+      // Upload goes through a server action that authenticates the
+      // caller, verifies campground ownership, and writes to Storage
+      // via the service-role client. The previous direct-browser-to-
+      // Storage path depended on storage.objects RLS, which was failing
+      // in production for the owner role context. Server-action upload
+      // is also more robust against future auth changes because the
+      // ownership check is enforced explicitly in our code instead of
+      // implicitly via the storage RLS evaluator.
+      const formData = new FormData()
+      formData.set('file', file)
+      const result = await uploadCampgroundLogoAction(campgroundId, formData)
+      if (!result.ok || !result.url) {
+        throw new Error(result.error ?? 'Upload failed.')
       }
-      setLogoUrl(url)
+      setLogoUrl(result.url)
       setInfo('Logo updated.')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Upload failed.'
@@ -148,14 +135,4 @@ export function OwnerLogoUpload({ campgroundId, currentLogoUrl }: Props) {
       )}
     </div>
   )
-}
-
-function extFor(file: File): string {
-  // Map MIME to extension; fall back to filename.
-  if (file.type === 'image/png') return 'png'
-  if (file.type === 'image/jpeg') return 'jpg'
-  if (file.type === 'image/webp') return 'webp'
-  if (file.type === 'image/svg+xml') return 'svg'
-  const m = file.name.match(/\.([a-z0-9]+)$/i)
-  return (m?.[1] ?? 'png').toLowerCase()
 }
