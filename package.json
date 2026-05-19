@@ -10,7 +10,9 @@
     "test:e2e": "playwright test tests/smoke.test.js",
     "test:e2e:all": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "test:smoke": "playwright test tests/smoke.test.js tests/mobile-pages.test.js tests/wave-roundtrip.test.js",
+    "test:qa": "playwright test tests/qa"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.0",

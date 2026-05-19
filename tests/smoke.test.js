@@ -446,16 +446,28 @@ test.describe('Footer + legal pages', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Stripe endpoints (no real charges)', () => {
-  test('POST /api/stripe/webhook without signature → 400', async ({
+  test('POST /api/stripe/webhook without signature is rejected defensively', async ({
     request,
   }) => {
+    // The route is environment-portable:
+    //   - 400 "missing signature" when STRIPE_WEBHOOK_SECRET is set
+    //     and the request lacks a stripe-signature header (the
+    //     happy-path defensive rejection on prod).
+    //   - 503 "webhook secret not configured" when the env var is
+    //     unset (e.g. a local dev box without Stripe wired in).
+    // Both prove the route refuses to process an unauthenticated
+    // webhook delivery. A 200 or 5xx other than 503 would be the
+    // regression we care about.
     const resp = await request.post('/api/stripe/webhook', {
       data: { foo: 'bar' },
       headers: { 'content-type': 'application/json' },
     })
-    expect(resp.status()).toBe(400)
+    expect(
+      [400, 503],
+      'webhook should reject defensively (400 if secret set, 503 if not)',
+    ).toContain(resp.status())
     const body = await resp.text()
-    expect(body).toMatch(/missing signature|signature/i)
+    expect(body).toMatch(/signature|webhook secret not configured/i)
   })
 
   test('GET /api/stripe/checkout without submission_id does not 500', async ({
