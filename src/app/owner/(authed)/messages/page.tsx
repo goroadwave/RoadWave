@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { OwnerMessageBulkArchive } from '@/components/owner/owner-message-bulk-archive'
+import { OwnerMessageCopyNumber } from '@/components/owner/owner-message-copy-number'
+import { OwnerMessageReplyForm } from '@/components/owner/owner-message-reply-form'
 import { OwnerMessageSoundToggle } from '@/components/owner/owner-message-sound-toggle'
 import { OwnerMessageStatusButtons } from '@/components/owner/owner-message-status-buttons'
 import { PageHeading } from '@/components/ui/page-heading'
@@ -43,6 +45,13 @@ const PREFERRED_METHOD_LABEL: Record<string, string> = {
 }
 
 type MessageStatus = 'new' | 'read' | 'resolved' | 'archived'
+
+type ThreadReply = {
+  id: string
+  sender_type: 'owner' | 'guest'
+  body: string
+  created_at: string
+}
 
 type MessageRow = {
   id: string
@@ -126,6 +135,22 @@ export default async function OwnerMessagesPage({
   const visibleMessages = allMessages.filter((m) =>
     rowMatches(filter, m.status),
   )
+
+  // Fetch the reply threads for the visible messages in parallel.
+  // owner_message_thread RPC (mig 0055) is gated by campground_admins
+  // membership server-side, so even if the message id is wrong we get
+  // an empty thread back rather than a security error. Pulse-source
+  // rows never have replies (no guest_reply_token, so the guest reply
+  // path can never reach them), but we still call the RPC uniformly.
+  const threadEntries = await Promise.all(
+    visibleMessages.map(async (m) => {
+      const { data: replies } = await supabase
+        .rpc('owner_message_thread', { _message_id: m.id })
+        .returns<ThreadReply[]>()
+      return [m.id, (replies ?? []) as ThreadReply[]] as const
+    }),
+  )
+  const threadsByMessage = new Map<string, ThreadReply[]>(threadEntries)
 
   // Tab counts come from the full result set so the tabs always show
   // the same numbers regardless of which tab is active. The Active
@@ -239,7 +264,11 @@ export default async function OwnerMessagesPage({
       ) : (
         <ul className="space-y-3">
           {visibleMessages.map((m) => (
-            <MessageCard key={m.id} message={m} />
+            <MessageCard
+              key={m.id}
+              message={m}
+              thread={threadsByMessage.get(m.id) ?? []}
+            />
           ))}
         </ul>
       )}
@@ -247,7 +276,13 @@ export default async function OwnerMessagesPage({
   )
 }
 
-function MessageCard({ message }: { message: MessageRow }) {
+function MessageCard({
+  message,
+  thread,
+}: {
+  message: MessageRow
+  thread: ThreadReply[]
+}) {
   const isPulse = message.source === 'pulse_needs_attention'
   // Safety-concern messages get a red badge + red-tinted card border
   // so the owner sees them above ordinary "Wi-Fi is slow"-grade
@@ -349,10 +384,17 @@ function MessageCard({ message }: { message: MessageRow }) {
         {message.body}
       </p>
 
-      {/* Response action row: Email / Call / Text deep-links. Each
-          button only renders when its underlying pointer is present.
-          Hidden entirely on pulse + legacy rows that have only the
-          free-form guest_contact text. */}
+      {/* Phone row -- formatted number + Copy Number button. Desktop
+          office workflow: read off the screen and dial from the office
+          phone. The tel: deep-link inside the component is gated to
+          touch / coarse-pointer devices so a click on a laptop never
+          launches a useless phone-app handler. */}
+      {message.phone && <OwnerMessageCopyNumber phone={message.phone} />}
+
+      {/* Email + SMS secondary actions. Email stays a desktop-friendly
+          mailto: (every office machine has a default mail client).
+          The Text button is still useful from a mobile device; we keep
+          it for parity with what the form offered the guest. */}
       {(message.email || message.phone) && (
         <div className="flex flex-wrap gap-2 pt-1">
           {message.email && (
@@ -366,20 +408,11 @@ function MessageCard({ message }: { message: MessageRow }) {
           )}
           {message.phone && (
             <a
-              href={`tel:${message.phone.replace(/[^0-9+]/g, '')}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-leaf/40 bg-leaf/10 text-leaf px-3 py-1.5 text-xs font-semibold hover:bg-leaf/15 transition-colors"
-            >
-              <span aria-hidden>📞</span>
-              Call
-            </a>
-          )}
-          {message.phone && (
-            <a
               href={`sms:${message.phone.replace(/[^0-9+]/g, '')}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-leaf/40 bg-leaf/10 text-leaf px-3 py-1.5 text-xs font-semibold hover:bg-leaf/15 transition-colors"
+              className="mobile-tel-only items-center gap-1.5 rounded-lg border border-leaf/40 bg-leaf/10 text-leaf px-3 py-1.5 text-xs font-semibold hover:bg-leaf/15 transition-colors"
             >
               <span aria-hidden>💬</span>
-              Text
+              Text (mobile)
             </a>
           )}
         </div>
@@ -403,12 +436,68 @@ function MessageCard({ message }: { message: MessageRow }) {
         </p>
       )}
 
+      {/* Thread of replies (owner + guest), ordered oldest -> newest. */}
+      {thread.length > 0 && (
+        <div className="space-y-2 pt-1">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-mist font-semibold">
+            Thread
+          </p>
+          <ul className="space-y-2">
+            {thread.map((r) => (
+              <ThreadBubble key={r.id} reply={r} />
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Owner reply form. Only attached to contact_form rows -- pulse
+          rows have no guest_reply_token, so the guest reply page can't
+          resolve them anyway. Showing the Reply button on a pulse row
+          would let the owner write a reply nobody can ever read. */}
+      {message.source === 'contact_form' && (
+        <OwnerMessageReplyForm
+          messageId={message.id}
+          canEmailGuest={!!message.email}
+        />
+      )}
+
       {/* Status-mutation buttons. Server actions; revalidatePath fires
           after each so the page re-fetches with the new status. */}
       <OwnerMessageStatusButtons
         messageId={message.id}
         status={message.status}
       />
+    </li>
+  )
+}
+
+function ThreadBubble({ reply }: { reply: ThreadReply }) {
+  const isOwner = reply.sender_type === 'owner'
+  return (
+    <li
+      className={
+        isOwner
+          ? 'rounded-xl border border-flame/30 bg-flame/[0.06] p-3'
+          : 'rounded-xl border border-leaf/30 bg-leaf/[0.05] p-3'
+      }
+    >
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <span
+          className={
+            isOwner
+              ? 'text-[10px] font-semibold uppercase tracking-[0.18em] text-flame'
+              : 'text-[10px] font-semibold uppercase tracking-[0.18em] text-leaf'
+          }
+        >
+          {isOwner ? 'Office' : 'Guest'}
+        </span>
+        <span className="text-[10px] text-mist tabular-nums">
+          {formatSubmittedAt(reply.created_at)}
+        </span>
+      </div>
+      <p className="text-sm text-cream leading-relaxed whitespace-pre-wrap">
+        {reply.body}
+      </p>
     </li>
   )
 }

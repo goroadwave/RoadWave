@@ -1,6 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { sendContactMessageReplyEmail } from '@/lib/email/contact-message-reply'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 // Server actions for the /owner/messages inbox. Each one is a thin
@@ -142,6 +144,95 @@ export async function archiveAllResolvedAction(): Promise<BulkArchiveResult> {
   revalidatePath('/owner/messages')
   revalidatePath('/owner/dashboard')
   return { ok: true, archivedCount, error: null }
+}
+
+// Post an owner reply on a Contact the Office message. Wraps the
+// owner_post_message_reply SECURITY DEFINER RPC (mig 0055), which
+// enforces campground_admins membership server-side. After a successful
+// insert, fires a best-effort guest notification email if the original
+// message has an email pointer + email_notifications_enabled is on.
+export async function postOwnerReplyAction(
+  messageId: string,
+  body: string,
+): Promise<MessageStatusUpdate> {
+  if (typeof messageId !== 'string' || messageId.length < 8) {
+    return { ok: false, error: 'Invalid message id.' }
+  }
+  const trimmed = (body ?? '').trim()
+  if (trimmed.length === 0) {
+    return { ok: false, error: 'Reply body required.' }
+  }
+  if (trimmed.length > 4000) {
+    return { ok: false, error: 'Reply is too long (max 4000 chars).' }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  const { error } = await supabase.rpc('owner_post_message_reply', {
+    _message_id: messageId,
+    _body: trimmed,
+  })
+  if (error) return { ok: false, error: error.message }
+
+  // Best-effort guest notification. We use the admin client here only
+  // to read the parent message + campground row -- the owner has
+  // already passed the RPC's campground_admins gate above, so this
+  // server-side fetch is just a join we can't do cheaply through the
+  // user-scoped client. Service-role still ONLY touches what's needed
+  // to assemble the email.
+  void (async () => {
+    try {
+      const admin = createSupabaseAdminClient()
+      const { data: msg } = await admin
+        .from('campground_messages')
+        .select(
+          'id, email, site_number, last_name, guest_reply_token, campground_id',
+        )
+        .eq('id', messageId)
+        .maybeSingle<{
+          id: string
+          email: string | null
+          site_number: string | null
+          last_name: string | null
+          guest_reply_token: string | null
+          campground_id: string
+        }>()
+      if (!msg || !msg.email || !msg.guest_reply_token) return
+
+      const { data: cg } = await admin
+        .from('campgrounds')
+        .select('name, email_notifications_enabled')
+        .eq('id', msg.campground_id)
+        .maybeSingle<{ name: string; email_notifications_enabled: boolean }>()
+      if (!cg || !cg.email_notifications_enabled) return
+
+      await sendContactMessageReplyEmail({
+        toEmail: msg.email,
+        campgroundName: cg.name,
+        replyBody: trimmed,
+        replyUrl: buildGuestReplyUrl(msg.id, msg.guest_reply_token),
+        siteNumber: msg.site_number,
+        lastName: msg.last_name,
+      })
+    } catch (err) {
+      console.error('[owner reply email] failed:', err)
+    }
+  })()
+
+  revalidatePath('/owner/messages')
+  revalidatePath('/owner/dashboard')
+  return { ok: true, error: null }
+}
+
+function buildGuestReplyUrl(messageId: string, token: string): string {
+  const base = (
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.getroadwave.com'
+  ).replace(/\/$/, '')
+  return `${base}/m/${encodeURIComponent(messageId)}?t=${encodeURIComponent(token)}`
 }
 
 // Permanently delete a single ARCHIVED message. The SECURITY DEFINER

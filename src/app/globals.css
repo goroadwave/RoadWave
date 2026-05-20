@@ -157,3 +157,17 @@ body {
     animation: none;
   }
 }
+
+/* Mobile-only tel: / sms: deep links on the owner message card.
+   Tailwind v4 arbitrary-variant media queries (pointer:coarse plus
+   hover:none) generated CSS with a missing space that crashed the
+   parser, so we use a plain utility class here and reference it
+   from the React components instead. */
+.mobile-tel-only {
+  display: none;
+}
+@media (pointer: coarse) and (hover: none) {
+  .mobile-tel-only {
+    display: inline-flex;
+  }
+}

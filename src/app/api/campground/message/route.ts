@@ -1,8 +1,23 @@
+import { randomBytes } from 'node:crypto'
 import { type NextRequest, NextResponse } from 'next/server'
 import { sendContactMessageEmail } from '@/lib/email/contact-message-alert'
 import { sendPulseNeedsAttentionEmail } from '@/lib/email/pulse-needs-attention-alert'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { getRequestIp } from '@/lib/utils'
+
+// Soft expiry on the guest_reply_token: 90 days from insert. After
+// this the /m/<id>?t=<token> page returns "link expired" via the
+// guest_message_thread RPC's expiry check (mig 0055). Owners can still
+// see the thread indefinitely from /owner/messages -- the expiry only
+// affects guest-side access.
+const GUEST_TOKEN_TTL_MS = 90 * 24 * 60 * 60 * 1000
+
+// 24 random bytes encoded as base64url -- 32 URL-safe characters.
+// Node 16+ supports 'base64url' as a Buffer encoding natively, so no
+// manual character substitution is needed.
+function mintGuestReplyToken(): string {
+  return randomBytes(24).toString('base64url')
+}
 
 // Guest -> Owner structured message endpoint. Backs two surfaces on
 // the campground welcome page:
@@ -222,6 +237,17 @@ export async function POST(request: NextRequest) {
 
   const requestIp = getRequestIp(request.headers)
 
+  // Mint the guest reply token ONLY for contact_form rows. The guest
+  // /m/<id>?t=<token> page needs site_number + last_name to gate
+  // access; pulse_needs_attention rows have neither, so they get no
+  // token and aren't reachable from the guest reply flow.
+  const guestReplyToken =
+    source === 'contact_form' ? mintGuestReplyToken() : null
+  const guestReplyTokenExpiresAt =
+    guestReplyToken !== null
+      ? new Date(Date.now() + GUEST_TOKEN_TTL_MS).toISOString()
+      : null
+
   const { data: inserted, error: insertError } = await admin
     .from('campground_messages')
     .insert({
@@ -241,6 +267,9 @@ export async function POST(request: NextRequest) {
       email: source === 'contact_form' ? email : null,
       preferred_contact_method:
         source === 'contact_form' ? preferredContactMethod : null,
+      // Reply token (mig 0055). Always null for pulse rows.
+      guest_reply_token: guestReplyToken,
+      guest_reply_token_expires_at: guestReplyTokenExpiresAt,
     })
     .select('id, submitted_at')
     .single()
@@ -303,7 +332,17 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, id: inserted.id }, { status: 201 })
+  // Return the token + message id so the post-submit confirmation
+  // screen can render the /m/<id>?t=<token> link the guest will use
+  // to check the office reply. Token is null for pulse rows.
+  return NextResponse.json(
+    {
+      ok: true,
+      id: inserted.id,
+      guest_reply_token: guestReplyToken,
+    },
+    { status: 201 },
+  )
 }
 
 function buildDashboardUrl(): string {
