@@ -109,28 +109,6 @@ export default async function CampgroundGuestHubPage({
 
   if (!campground || !campground.is_active) notFound()
 
-  // TEMP DEBUG (remove after Facebook-CTA mystery resolved). Logs the
-  // resolved campground row's CTA-relevant fields so we can confirm
-  // whether the toggle + URL the owner saved are actually arriving at
-  // the camper QR render path. Grep Vercel function logs for
-  // "[debug-fb]" to surface it. The cast covers row shapes from
-  // before mig 0057 in case PostgREST's schema cache is stale.
-  console.log('[debug-fb]', {
-    slug,
-    id: campground.id,
-    name: campground.name,
-    feature_facebook_enabled: (campground as unknown as Record<string, unknown>)
-      .feature_facebook_enabled,
-    facebook_review_url: (campground as unknown as Record<string, unknown>)
-      .facebook_review_url,
-    facebook_button_label: (campground as unknown as Record<string, unknown>)
-      .facebook_button_label,
-    feature_review_enabled: campground.feature_review_enabled,
-    google_review_url: campground.google_review_url,
-    feature_book_again_enabled: campground.feature_book_again_enabled,
-    booking_url: campground.booking_url,
-  })
-
   // Token resolution. Prefer the ?token= query param (proves the
   // visitor came through a real QR scan) over the campground's stored
   // canonical token. The downstream "Meet Other Campers" CTA uses

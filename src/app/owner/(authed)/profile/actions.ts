@@ -135,6 +135,14 @@ const schema = z.object({
   // schema; custom label is plain text, capped to match the column
   // comment in the migration. Empty strings coerce to null so we
   // don't write blanks.
+  //
+  // Label refinement: reject anything that starts with http:// or
+  // https://. A live bug on production caught an owner pasting their
+  // Facebook URL into the label field by mistake -- the URL silently
+  // stored as a text label, the URL column stayed null, and the
+  // welcome page hid the Facebook button forever. The explicit refine
+  // surfaces a clear error so the owner moves the URL to the correct
+  // field above instead of saving a broken state.
   facebook_review_url: optionalUrl,
   facebook_button_label: z
     .string()
@@ -142,7 +150,11 @@ const schema = z.object({
     .transform((s) => s.trim())
     .transform((s) => (s === '' ? null : s))
     .nullable()
-    .optional(),
+    .optional()
+    .refine(
+      (v) => !v || !/^https?:\/\//i.test(v),
+      'That looks like a URL. Put your Facebook URL in the field above and leave this for a custom button label like "Follow Us on Facebook".',
+    ),
   // Park Map (mig 0048). show_park_map arrives as the literal 'on'
   // string when the checkbox is checked, undefined otherwise.
   // park_map_url reuses the optionalUrl validator. park_map_notes is
