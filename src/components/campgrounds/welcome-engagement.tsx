@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { appendCamperMessage } from '@/components/campgrounds/camper-message-storage'
+import { CamperMessageTracker } from '@/components/campgrounds/camper-message-tracker'
 
 // Guest Engagement Hub on the public campground welcome page. Four
 // independently-toggleable surfaces — each rendered only when both the
@@ -111,10 +113,24 @@ export function WelcomeEngagement(props: Props) {
   const showContact = contactEnabled
   const showPulse = pulseEnabled
 
-  if (!showReview && !showBooking && !showContact && !showPulse) return null
+  // The tracker reads localStorage and only renders if the camper
+  // has existing office messages for this campground. Even when every
+  // other surface is off, we want the tracker to keep showing so a
+  // returning camper can still find their thread.
+  const trackerNode = (
+    <CamperMessageTracker
+      campgroundId={campgroundId}
+      previewMode={previewMode}
+    />
+  )
+
+  if (!showReview && !showBooking && !showContact && !showPulse) {
+    return <div className="space-y-8">{trackerNode}</div>
+  }
 
   return (
     <div className="space-y-8">
+      {trackerNode}
       {showPulse && (
         <PulseCheck campgroundId={campgroundId} previewMode={previewMode} />
       )}
@@ -545,6 +561,18 @@ function ContactOffice({
           token: replyToken,
           siteNumber: trimmedSite,
           lastName: trimmedLast,
+        })
+        // Persist to localStorage so the CamperMessageTracker can
+        // restore the "Check replies" card after reload. Scoped per
+        // campground; entries from other campgrounds aren't touched.
+        appendCamperMessage(campgroundId, {
+          id: replyId,
+          token: replyToken,
+          siteNumber: trimmedSite,
+          lastName: trimmedLast,
+          category,
+          submittedAt: new Date().toISOString(),
+          lastSeenReplyAt: null,
         })
       }
       // Reset + show confirmation. We keep the section visible so the
