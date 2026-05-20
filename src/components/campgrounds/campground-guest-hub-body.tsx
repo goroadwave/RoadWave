@@ -133,6 +133,49 @@ export function CampgroundGuestHubBody({
 
   const where = [campground.city, campground.region].filter(Boolean).join(', ')
 
+  // Phase 2 -- precompute Quick Actions visibility. Each button shows
+  // only when its target section will actually render, so anchor links
+  // never scroll to a hidden block. Section IDs (id="park-map" etc.)
+  // are set below where each target section renders.
+  const hasParkMapSource =
+    !!campground.park_map_path || !!campground.park_map_url
+  const showParkMapAction = campground.show_park_map && hasParkMapSource
+  const showWifiAction =
+    campground.show_wifi && !!campground.wifi_network_name
+  const showContactAction = campground.feature_contact_office_enabled
+  const showCallAction = !!campground.phone
+  const showQuickActions =
+    showParkMapAction || showWifiAction || showContactAction || showCallAction
+
+  // Phase 2 -- precompute Emergency Info visibility (used twice: in the
+  // "any emergency content?" gate AND when deciding whether to render
+  // the moved-up critical-notice block near the top of the page).
+  const showEmergencyInfo =
+    campground.show_emergency_info &&
+    !!(
+      campground.emergency_contact_number ||
+      campground.emergency_after_hours ||
+      campground.emergency_shelter_notes ||
+      campground.emergency_other_notes
+    )
+
+  // Phase 2 -- amenities precomputed once for both the visibility check
+  // and the render. Was inline IIFE before; lifted here so a single
+  // splitAmenities call covers both uses.
+  const splitAmen = splitAmenities(campground.amenities)
+  const allAmenities = [
+    ...splitAmen.standard.map((label) => ({ label, isCustom: false })),
+    ...splitAmen.custom.map((label) => ({ label, isCustom: true })),
+  ]
+  const amenityNotes = campground.amenity_notes ?? {}
+
+  // Quick Action button style. One rounded card per action, tap-target
+  // sized for thumb on mobile (≥44px) and grid-aligned at the page max
+  // width. Identical structure to existing Helpful-Links buttons so
+  // visual consistency stays.
+  const quickActionCls =
+    'inline-flex items-center justify-center gap-1.5 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-3 py-3 text-xs sm:text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors leading-tight text-center'
+
   return (
     <main className="min-h-screen bg-night text-cream">
       <header className="px-4 py-5 flex items-center justify-between">
@@ -184,8 +227,8 @@ export function CampgroundGuestHubBody({
               )}
             </div>
             <p className="text-cream/90 text-sm leading-relaxed max-w-md mx-auto pt-1">
-              Park info, updates, help, feedback, reviews, rebooking, and
-              optional camper connection. No app download required.
+              Quick access to the park map, Wi-Fi, campground rules,
+              office help, updates, and optional camper connections.
             </p>
           </section>
 
@@ -198,10 +241,118 @@ export function CampgroundGuestHubBody({
             className="rounded-2xl border border-leaf/30 bg-leaf/[0.06] px-4 py-3 text-center"
           >
             <p className="text-xs text-mist leading-snug">
-              No login required to use this page. Optional camper
-              connection at the bottom.
+              No login needed for campground info. Camper connections
+              are optional.
             </p>
           </section>
+
+          {/* Phase 2 -- Emergency / critical notice moved up so any
+              storm shelter, after-hours, or "primary contact" info is
+              visible without scrolling. Same content as the original
+              "Emergency info" section; just re-positioned. Hidden when
+              the owner hasn't enabled emergency info OR has set no
+              fields. */}
+          {showEmergencyInfo && (
+            <section className="space-y-3">
+              <h2 className="text-[11px] uppercase tracking-[0.2em] text-amber-300 font-semibold">
+                Emergency info
+              </h2>
+              <div className="rounded-2xl border border-amber-400/30 bg-amber-400/[0.06] p-4 sm:p-5 space-y-3">
+                <div className="flex items-start gap-3">
+                  <span
+                    aria-hidden
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-amber-400/40 bg-amber-400/15 text-xl"
+                  >
+                    🚨
+                  </span>
+                  <div className="flex-1 min-w-0 space-y-3">
+                    {campground.emergency_contact_number && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
+                          Primary contact
+                        </p>
+                        <p className="text-sm font-semibold text-cream break-all">
+                          {campground.emergency_contact_number}
+                        </p>
+                      </div>
+                    )}
+                    {campground.emergency_after_hours && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
+                          After hours
+                        </p>
+                        <p className="text-sm text-cream whitespace-pre-wrap">
+                          {campground.emergency_after_hours}
+                        </p>
+                      </div>
+                    )}
+                    {campground.emergency_shelter_notes && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
+                          Storm shelter &amp; evacuation
+                        </p>
+                        <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
+                          {campground.emergency_shelter_notes}
+                        </p>
+                      </div>
+                    )}
+                    {campground.emergency_other_notes && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
+                          Other emergency info
+                        </p>
+                        <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
+                          {campground.emergency_other_notes}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Phase 2 -- Quick Actions strip. Anchor links jump straight
+              to the section the camper needs. Each button is gated on
+              the same data its target section is gated on, so we never
+              show a button that scrolls to nothing. Hidden entirely
+              when no buttons would render. */}
+          {showQuickActions && (
+            <section className="space-y-3">
+              <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+                Quick actions
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                {showParkMapAction && (
+                  <a href="#park-map" className={quickActionCls}>
+                    <span aria-hidden>🗺️</span>
+                    <span>Open map</span>
+                  </a>
+                )}
+                {showWifiAction && (
+                  <a href="#wifi" className={quickActionCls}>
+                    <span aria-hidden>📶</span>
+                    <span>View Wi-Fi</span>
+                  </a>
+                )}
+                {showContactAction && (
+                  <a href="#contact-office" className={quickActionCls}>
+                    <span aria-hidden>💬</span>
+                    <span>Contact office</span>
+                  </a>
+                )}
+                {showCallAction && campground.phone && (
+                  <a
+                    href={`tel:${campground.phone.replace(/[^0-9+]/g, '')}`}
+                    className={quickActionCls}
+                  >
+                    <span aria-hidden>📞</span>
+                    <span>Call office</span>
+                  </a>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Park Map. URL fallback (mig 0048) + uploaded file (mig
               0051). Renders only when the owner has flipped
@@ -237,7 +388,7 @@ export function CampgroundGuestHubBody({
 
             if (isUploadedImage) {
               return (
-                <section className="space-y-3">
+                <section id="park-map" className="space-y-3 scroll-mt-4">
                   <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
                     Park map
                   </h2>
@@ -288,7 +439,7 @@ export function CampgroundGuestHubBody({
               ? 'View Park Map (PDF)'
               : 'Open the park map'
             return (
-              <section className="space-y-3">
+              <section id="park-map" className="space-y-3 scroll-mt-4">
                 <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
                   Park map
                 </h2>
@@ -336,7 +487,7 @@ export function CampgroundGuestHubBody({
               name is set. Password rendered as monospace + select-all
               so a guest can tap-to-copy on mobile. */}
           {campground.show_wifi && campground.wifi_network_name && (
-            <section className="space-y-3">
+            <section id="wifi" className="space-y-3 scroll-mt-4">
               <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
                 Wi-Fi
               </h2>
@@ -378,72 +529,49 @@ export function CampgroundGuestHubBody({
             </section>
           )}
 
-          {/* Emergency Info (mig 0049). Card renders when toggle is
-              on AND at least one field has content. Amber border
-              signals importance without screaming red. */}
-          {campground.show_emergency_info &&
-            (campground.emergency_contact_number ||
-              campground.emergency_after_hours ||
-              campground.emergency_shelter_notes ||
-              campground.emergency_other_notes) && (
-              <section className="space-y-3">
-                <h2 className="text-[11px] uppercase tracking-[0.2em] text-amber-300 font-semibold">
-                  Emergency info
-                </h2>
-                <div className="rounded-2xl border border-amber-400/30 bg-amber-400/[0.06] p-4 sm:p-5 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <span
-                      aria-hidden
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-amber-400/40 bg-amber-400/15 text-xl"
+          {/* Phase 2 -- the Emergency Info section moved up near the
+              top so weather / after-hours / shelter info is visible
+              without scrolling. See the moved-up version above. */}
+
+          {/* Phase 2 -- Campground amenities, moved up so guests see
+              what's available before scrolling past bulletins/meetups.
+              Vertical 2-col (mobile) / 3-col (desktop) card grid with
+              owner-written per-amenity notes from mig 0045. Custom
+              amenities the owner typed get a dashed-flame border so
+              they're visually distinct from the brand-curated presets.
+              Hidden entirely when no amenities. */}
+          {allAmenities.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+                Campground amenities
+              </h2>
+              <ul className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 pt-1">
+                {allAmenities.map((a) => {
+                  const note =
+                    typeof amenityNotes[a.label] === 'string'
+                      ? amenityNotes[a.label].trim()
+                      : ''
+                  return (
+                    <li
+                      key={`${a.isCustom ? 'c' : 's'}-${a.label}`}
+                      className={
+                        a.isCustom
+                          ? 'rounded-xl border border-dashed border-flame/40 bg-card/40 p-3 sm:p-4 space-y-1'
+                          : 'rounded-xl border border-white/5 bg-card p-3 sm:p-4 space-y-1'
+                      }
                     >
-                      🚨
-                    </span>
-                    <div className="flex-1 min-w-0 space-y-3">
-                      {campground.emergency_contact_number && (
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
-                            Primary contact
-                          </p>
-                          <p className="text-sm font-semibold text-cream break-all">
-                            {campground.emergency_contact_number}
-                          </p>
-                        </div>
+                      <p className="text-sm font-semibold text-cream leading-tight">
+                        {a.label}
+                      </p>
+                      {note && (
+                        <p className="text-xs text-mist leading-snug">{note}</p>
                       )}
-                      {campground.emergency_after_hours && (
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
-                            After hours
-                          </p>
-                          <p className="text-sm text-cream whitespace-pre-wrap">
-                            {campground.emergency_after_hours}
-                          </p>
-                        </div>
-                      )}
-                      {campground.emergency_shelter_notes && (
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
-                            Storm shelter &amp; evacuation
-                          </p>
-                          <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
-                            {campground.emergency_shelter_notes}
-                          </p>
-                        </div>
-                      )}
-                      {campground.emergency_other_notes && (
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
-                            Other emergency info
-                          </p>
-                          <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
-                            {campground.emergency_other_notes}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </section>
+          )}
 
           {/* Rules & Policies (mig 0049). Free-form text; line breaks
               preserved with whitespace-pre-wrap. */}
@@ -550,86 +678,28 @@ export function CampgroundGuestHubBody({
             )}
           </section>
 
-          {/* Campground Amenities — dedicated, labeled section. Renders
-              standard + custom amenities (in display order) as a 2-col
-              mobile / 3-col desktop card grid. Each card shows the
-              amenity name plus the optional owner-written note from
-              campgrounds.amenity_notes (migration 0045). Custom
-              amenities the owner typed get a dashed-flame border so
-              they're visually distinct from the brand-curated presets.
-              Hidden entirely when the campground has no amenities. */}
-          {(() => {
-            const { standard, custom } = splitAmenities(campground.amenities)
-            const all = [
-              ...standard.map((label) => ({ label, isCustom: false })),
-              ...custom.map((label) => ({ label, isCustom: true })),
-            ]
-            if (all.length === 0) return null
-            const notes = campground.amenity_notes ?? {}
-            return (
-              <section className="space-y-3">
-                <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-                  Campground amenities
-                </h2>
-                <ul className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 pt-1">
-                  {all.map((a) => {
-                    const note =
-                      typeof notes[a.label] === 'string'
-                        ? notes[a.label].trim()
-                        : ''
-                    return (
-                      <li
-                        key={`${a.isCustom ? 'c' : 's'}-${a.label}`}
-                        className={
-                          a.isCustom
-                            ? 'rounded-xl border border-dashed border-flame/40 bg-card/40 p-3 sm:p-4 space-y-1'
-                            : 'rounded-xl border border-white/5 bg-card p-3 sm:p-4 space-y-1'
-                        }
-                      >
-                        <p className="text-sm font-semibold text-cream leading-tight">
-                          {a.label}
-                        </p>
-                        {note && (
-                          <p className="text-xs text-mist leading-snug">
-                            {note}
-                          </p>
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
-              </section>
-            )
-          })()}
+          {/* Phase 2 -- Amenities moved up near the Wi-Fi section.
+              See the moved version higher on the page. */}
 
-          {/* Helpful Campground Links — Visit Website + Call Office. */}
-          {(campground.website || campground.phone) && (
+          {/* Visit campground website. Call Office moved to the Quick
+              Actions strip at the top so a guest can dial in one tap
+              from anywhere on the page. Hidden when no website set. */}
+          {campground.website && (
             <section className="space-y-3">
               <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
                 Helpful campground links
               </h2>
               <div className="grid gap-2 sm:grid-cols-2">
-                {campground.website && (
-                  <TrackedLinkButton
-                    href={campground.website}
-                    campgroundId={campground.id}
-                    eventType="campground_website_click"
-                    previewMode={previewMode}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-4 py-3 text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
-                  >
-                    <span aria-hidden>🌐</span>
-                    Visit campground website
-                  </TrackedLinkButton>
-                )}
-                {campground.phone && (
-                  <a
-                    href={`tel:${campground.phone.replace(/[^0-9+]/g, '')}`}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-4 py-3 text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
-                  >
-                    <span aria-hidden>📞</span>
-                    Call the office
-                  </a>
-                )}
+                <TrackedLinkButton
+                  href={campground.website}
+                  campgroundId={campground.id}
+                  eventType="campground_website_click"
+                  previewMode={previewMode}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-4 py-3 text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
+                >
+                  <span aria-hidden>🌐</span>
+                  Visit campground website
+                </TrackedLinkButton>
               </div>
             </section>
           )}

@@ -661,8 +661,11 @@ function ContactOffice({
   // confirmation paragraph, no border, no background. Click the
   // link to open a fresh form for another submission.
   if (sent) {
+    // Anchor target still attached so the Quick Actions "Contact
+    // office" button doesn't scroll past nothing after a successful
+    // submit -- the tiny "Send another" link is what they land on.
     return (
-      <p className="text-xs text-mist">
+      <p id="contact-office" className="text-xs text-mist scroll-mt-4">
         <button
           type="button"
           onClick={() => setSent(false)}
@@ -675,7 +678,7 @@ function ContactOffice({
   }
 
   return (
-    <section className="space-y-3">
+    <section id="contact-office" className="space-y-3 scroll-mt-4">
       <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
         Contact the office
       </h2>
