@@ -369,8 +369,14 @@ export function CamperMessageTracker({
       if (!live) return prev
       return { ...prev, [entry.id]: { ...live, latestOwnerReplyAt: null } }
     })
+    // Append &from=<slug> when we know it so the /m/[id] page can
+    // render the "Back to campground page" link. The thread page
+    // validates the slug before linking to /campground/<slug>.
+    const fromParam = entry.campgroundSlug
+      ? `&from=${encodeURIComponent(entry.campgroundSlug)}`
+      : ''
     window.open(
-      `/m/${encodeURIComponent(entry.id)}?t=${encodeURIComponent(entry.token)}`,
+      `/m/${encodeURIComponent(entry.id)}?t=${encodeURIComponent(entry.token)}${fromParam}`,
       '_blank',
       'noopener,noreferrer',
     )
@@ -397,10 +403,10 @@ export function CamperMessageTracker({
         <div className="rounded-2xl border border-flame/40 bg-flame/[0.08] p-4 flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-cream">
-              The office replied to your message
+              The office replied
             </p>
             <p className="text-xs text-mist leading-snug">
-              Open the private thread to read the reply.
+              The campground office replied to your message.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -410,7 +416,7 @@ export function CamperMessageTracker({
               className="inline-flex items-center gap-1.5 rounded-lg bg-flame text-night px-3 py-1.5 text-xs font-semibold hover:bg-amber-400 transition-colors"
             >
               <span aria-hidden>📬</span>
-              View reply
+              View office reply
             </button>
             <button
               type="button"
@@ -457,6 +463,22 @@ function CamperMessageCard({
 
   const sentAt = formatRelative(entry.submittedAt)
 
+  // Distinct copy for "office replied" vs "still waiting for reply" so
+  // a returning camper sees at a glance whether there's something new.
+  const title = hasUnreadReply
+    ? 'The office replied'
+    : 'Message sent to the office'
+  const body =
+    entry.status === 'missing'
+      ? 'This thread is no longer available. The link may have expired.'
+      : hasUnreadReply
+        ? 'The campground office replied to your message.'
+        : 'You can check for replies from the campground office here.'
+  const buttonLabel = hasUnreadReply ? 'View office reply' : 'Check replies'
+  const buttonClass = hasUnreadReply
+    ? 'inline-flex items-center gap-1.5 rounded-lg bg-flame text-night px-3 py-1.5 text-xs font-semibold hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors'
+    : 'inline-flex items-center gap-1.5 rounded-lg border border-leaf/40 bg-leaf/10 text-leaf px-3 py-1.5 text-xs font-semibold hover:bg-leaf/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors'
+
   return (
     <li
       className={
@@ -466,34 +488,31 @@ function CamperMessageCard({
       }
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <span className="rounded-full bg-white/5 text-cream px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]">
             {category}
           </span>
           {hasUnreadReply && (
             <span className="rounded-full bg-flame/20 text-flame px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] border border-flame/40">
-              New reply
+              The office replied
             </span>
           )}
         </div>
         <span className="text-[10px] text-mist tabular-nums">Sent {sentAt}</span>
       </div>
 
-      <p className="text-sm text-cream leading-snug">
-        {entry.status === 'missing'
-          ? 'This thread is no longer available. The link may have expired.'
-          : 'You can check the office reply here.'}
-      </p>
+      <p className="text-sm font-semibold text-cream">{title}</p>
+      <p className="text-xs text-mist leading-snug">{body}</p>
 
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={onOpen}
           disabled={entry.status === 'missing'}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-leaf/40 bg-leaf/10 text-leaf px-3 py-1.5 text-xs font-semibold hover:bg-leaf/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className={buttonClass}
         >
           <span aria-hidden>📬</span>
-          Check replies
+          {buttonLabel}
         </button>
         <button
           type="button"

@@ -31,6 +31,11 @@ export type StoredCamperMessage = {
   category: string | null
   submittedAt: string
   lastSeenReplyAt: string | null
+  /** The campground slug the camper submitted from. Used to build the
+   *  "Back to campground page" link on the /m/[id] thread page. NULL
+   *  for entries written before this field existed (legacy rows
+   *  pre-2026-05-21); the thread page falls back to "/" in that case. */
+  campgroundSlug: string | null
 }
 
 // Custom event the tracker subscribes to so it can re-read localStorage
@@ -51,17 +56,32 @@ export function loadCamperMessages(
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter((e): e is StoredCamperMessage => {
-      if (!e || typeof e !== 'object') return false
-      const r = e as Record<string, unknown>
-      return (
-        typeof r.id === 'string' &&
-        typeof r.token === 'string' &&
-        typeof r.siteNumber === 'string' &&
-        typeof r.lastName === 'string' &&
-        typeof r.submittedAt === 'string'
-      )
-    })
+    return parsed
+      .filter((e): e is Record<string, unknown> => {
+        if (!e || typeof e !== 'object') return false
+        const r = e as Record<string, unknown>
+        return (
+          typeof r.id === 'string' &&
+          typeof r.token === 'string' &&
+          typeof r.siteNumber === 'string' &&
+          typeof r.lastName === 'string' &&
+          typeof r.submittedAt === 'string'
+        )
+      })
+      .map((r) => ({
+        id: r.id as string,
+        token: r.token as string,
+        siteNumber: r.siteNumber as string,
+        lastName: r.lastName as string,
+        category: typeof r.category === 'string' ? r.category : null,
+        submittedAt: r.submittedAt as string,
+        lastSeenReplyAt:
+          typeof r.lastSeenReplyAt === 'string' ? r.lastSeenReplyAt : null,
+        // Legacy entries written before campgroundSlug existed get null
+        // and the thread page falls back to a safe default.
+        campgroundSlug:
+          typeof r.campgroundSlug === 'string' ? r.campgroundSlug : null,
+      }))
   } catch {
     return []
   }

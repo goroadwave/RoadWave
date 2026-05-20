@@ -3,6 +3,18 @@ import Link from 'next/link'
 import { Logo } from '@/components/ui/logo'
 import { GuestMessageThread } from '@/components/guest/guest-message-thread'
 
+// Slug allow-list -- accept lowercase letters, digits, and hyphens
+// only, length-bounded. Anything else gets dropped to null so the
+// "Back to campground page" link won't render. Defense in depth even
+// though the link target is always same-origin /campground/<slug>.
+const SLUG_RE = /^[a-z0-9-]{1,80}$/
+
+function normalizeFromSlug(raw: string | string[] | undefined): string | null {
+  if (typeof raw !== 'string') return null
+  const trimmed = raw.trim().toLowerCase()
+  return SLUG_RE.test(trimmed) ? trimmed : null
+}
+
 export const metadata: Metadata = {
   title: 'Private reply thread — RoadWave',
   description:
@@ -38,10 +50,14 @@ export default async function GuestThreadPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ t?: string }>
+  searchParams: Promise<{ t?: string; from?: string | string[] }>
 }) {
   const { id } = await params
-  const { t: token } = await searchParams
+  const sp = await searchParams
+  const token = typeof sp.t === 'string' ? sp.t : ''
+  const fromSlug = normalizeFromSlug(sp.from)
+  const backHref = fromSlug ? `/campground/${fromSlug}` : '/'
+  const backLabel = fromSlug ? '← Back to campground page' : '← Back to home'
 
   return (
     <main className="min-h-screen">
@@ -49,12 +65,20 @@ export default async function GuestThreadPage({
         <Link href="/" className="inline-block">
           <Logo className="text-2xl" />
         </Link>
+        <Link
+          href={backHref}
+          className="text-xs font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
+        >
+          {backLabel}
+        </Link>
       </header>
       <div className="px-4 pb-16">
         <div className="mx-auto max-w-xl space-y-4">
           <GuestMessageThread
             messageId={id}
-            token={typeof token === 'string' ? token : ''}
+            token={token}
+            backHref={backHref}
+            backLabel={backLabel}
           />
         </div>
       </div>

@@ -633,6 +633,7 @@ export function CampgroundGuestHubBody({
               every flag is off the component renders nothing. */}
           <WelcomeEngagement
             campgroundId={campground.id}
+            campgroundSlug={campground.slug}
             reviewUrl={campground.google_review_url}
             reviewEnabled={campground.feature_review_enabled}
             bookingUrl={campground.booking_url}

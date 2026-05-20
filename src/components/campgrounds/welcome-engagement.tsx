@@ -46,6 +46,12 @@ const CONTACT_CATEGORIES: { value: string; label: string }[] = [
 
 type Props = {
   campgroundId: string
+  /** Campground slug (e.g. "happy-trails-rv"). Stored in localStorage
+   *  alongside each office message so the /m/[id] thread page can show
+   *  a "Back to campground page" link that resolves to /campground/<slug>.
+   *  Optional so this component still mounts on demo pages without a
+   *  real slug. */
+  campgroundSlug?: string | null
   reviewUrl: string | null
   reviewEnabled: boolean
   bookingUrl: string | null
@@ -94,6 +100,7 @@ function logEvent(campgroundId: string, eventType: string) {
 export function WelcomeEngagement(props: Props) {
   const {
     campgroundId,
+    campgroundSlug = null,
     reviewUrl,
     reviewEnabled,
     bookingUrl,
@@ -145,7 +152,11 @@ export function WelcomeEngagement(props: Props) {
         />
       )}
       {showContact && (
-        <ContactOffice campgroundId={campgroundId} previewMode={previewMode} />
+        <ContactOffice
+          campgroundId={campgroundId}
+          campgroundSlug={campgroundSlug}
+          previewMode={previewMode}
+        />
       )}
     </div>
   )
@@ -413,9 +424,11 @@ type PreferredContactMethod = 'email' | 'phone' | 'text' | 'no_reply'
 
 function ContactOffice({
   campgroundId,
+  campgroundSlug,
   previewMode,
 }: {
   campgroundId: string
+  campgroundSlug: string | null
   previewMode: boolean
 }) {
   // Structured guest-info fields persisted to public.campground_messages
@@ -573,6 +586,7 @@ function ContactOffice({
           category,
           submittedAt: new Date().toISOString(),
           lastSeenReplyAt: null,
+          campgroundSlug,
         })
       }
       // Reset + show confirmation. We keep the section visible so the

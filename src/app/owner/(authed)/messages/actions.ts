@@ -205,18 +205,23 @@ export async function postOwnerReplyAction(
 
       const { data: cg } = await admin
         .from('campgrounds')
-        .select('name, email_notifications_enabled')
+        .select('name, slug, email_notifications_enabled')
         .eq('id', msg.campground_id)
-        .maybeSingle<{ name: string; email_notifications_enabled: boolean }>()
+        .maybeSingle<{
+          name: string
+          slug: string | null
+          email_notifications_enabled: boolean
+        }>()
       if (!cg || !cg.email_notifications_enabled) return
 
       await sendContactMessageReplyEmail({
         toEmail: msg.email,
         campgroundName: cg.name,
-        replyBody: trimmed,
-        replyUrl: buildGuestReplyUrl(msg.id, msg.guest_reply_token),
-        siteNumber: msg.site_number,
-        lastName: msg.last_name,
+        replyUrl: buildGuestReplyUrl(
+          msg.id,
+          msg.guest_reply_token,
+          cg.slug ?? null,
+        ),
       })
     } catch (err) {
       console.error('[owner reply email] failed:', err)
@@ -228,11 +233,18 @@ export async function postOwnerReplyAction(
   return { ok: true, error: null }
 }
 
-function buildGuestReplyUrl(messageId: string, token: string): string {
+function buildGuestReplyUrl(
+  messageId: string,
+  token: string,
+  slug: string | null,
+): string {
   const base = (
     process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.getroadwave.com'
   ).replace(/\/$/, '')
-  return `${base}/m/${encodeURIComponent(messageId)}?t=${encodeURIComponent(token)}`
+  const fromParam = slug
+    ? `&from=${encodeURIComponent(slug)}`
+    : ''
+  return `${base}/m/${encodeURIComponent(messageId)}?t=${encodeURIComponent(token)}${fromParam}`
 }
 
 // Permanently delete a single ARCHIVED message. The SECURITY DEFINER

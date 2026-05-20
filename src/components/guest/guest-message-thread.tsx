@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
@@ -39,9 +40,16 @@ type LoadedThread = {
 export function GuestMessageThread({
   messageId,
   token,
+  backHref,
+  backLabel,
 }: {
   messageId: string
   token: string
+  /** Resolved "back to campground" target. Comes from the server
+   *  component, which validates the ?from=<slug> query param. Falls
+   *  back to "/" with a "Back to home" label when no valid slug. */
+  backHref: string
+  backLabel: string
 }) {
   const [siteNumber, setSiteNumber] = useState('')
   const [lastName, setLastName] = useState('')
@@ -180,6 +188,9 @@ export function GuestMessageThread({
             message to the office. Both have to match before the thread
             loads -- this keeps the reply private to you.
           </p>
+          <p className="text-xs text-mist leading-snug">
+            You can return to the campground page anytime.
+          </p>
         </div>
         <form
           onSubmit={unlock}
@@ -210,13 +221,21 @@ export function GuestMessageThread({
             />
           </Field>
           {unlockError && <p className="text-xs text-red-300">{unlockError}</p>}
-          <button
-            type="submit"
-            disabled={unlocking}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold hover:bg-amber-400 disabled:opacity-50 transition-colors"
-          >
-            {unlocking ? 'Checking...' : 'View thread'}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              disabled={unlocking}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold hover:bg-amber-400 disabled:opacity-50 transition-colors"
+            >
+              {unlocking ? 'Checking...' : 'View thread'}
+            </button>
+            <Link
+              href={backHref}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 text-cream px-3 py-2 text-xs font-semibold hover:bg-white/10 transition-colors"
+            >
+              {backLabel}
+            </Link>
+          </div>
         </form>
       </div>
     )
@@ -309,6 +328,18 @@ export function GuestMessageThread({
         >
           {replying ? 'Sending...' : 'Send reply'}
         </button>
+      </div>
+
+      {/* Bottom return link so the camper never feels stuck on this
+          page after reading / replying. Same target as the header link
+          -- the resolved /campground/<slug> or "/" fallback. */}
+      <div className="pt-2">
+        <Link
+          href={backHref}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
+        >
+          {backLabel}
+        </Link>
       </div>
     </div>
   )
