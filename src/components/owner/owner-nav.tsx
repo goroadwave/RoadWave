@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { OwnerMessageBadge } from '@/components/owner/owner-message-badge'
 
 const TABS: { href: string; label: string }[] = [
   { href: '/owner/dashboard', label: 'Home' },
@@ -23,6 +24,7 @@ export function OwnerNav() {
         <ul className="grid grid-cols-4 sm:grid-cols-8 gap-1 text-[11px] sm:text-xs">
           {TABS.map((t) => {
             const active = pathname === t.href
+            const isMessages = t.href === '/owner/messages'
             return (
               <li key={t.href}>
                 <Link
@@ -34,7 +36,17 @@ export function OwnerNav() {
                   }
                   aria-current={active ? 'page' : undefined}
                 >
-                  {t.label}
+                  {/* Unread badge only renders next to the "Messages"
+                      label, and only when there are unread messages.
+                      Red + pulsing for safety, amber + pulsing otherwise. */}
+                  {isMessages ? (
+                    <span className="inline-flex items-center justify-center">
+                      {t.label}
+                      <OwnerMessageBadge />
+                    </span>
+                  ) : (
+                    t.label
+                  )}
                 </Link>
               </li>
             )

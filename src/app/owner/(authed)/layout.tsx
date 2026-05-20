@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { OwnerMessageToaster } from '@/components/owner/owner-message-toaster'
 import { OwnerNav } from '@/components/owner/owner-nav'
 import { OwnerSupportChat } from '@/components/support/owner-support-chat'
 import { OwnerTourOverlay } from '@/components/support/owner-tour-overlay'
@@ -109,6 +110,11 @@ export default async function AuthedOwnerLayout({
       </main>
       <OwnerSupportChat />
       <OwnerTourOverlay />
+      {/* New-message toast notifier. Polls /api/owner/message-counts
+          and fires a toast on a fresh increment. Renders nothing
+          until a new message arrives. Sound is opt-in via the
+          OwnerMessageSoundToggle (defaults off). */}
+      <OwnerMessageToaster />
     </div>
   )
 }

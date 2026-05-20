@@ -390,6 +390,11 @@ function BookAndReview({
 // Contact the Office
 // ---------------------------------------------------------------------------
 
+// Allowed values for preferred_contact_method. Mirrors mig 0052's
+// CHECK constraint + the API's allow-list. Radio order: most-common
+// first ("Email me back" tends to dominate).
+type PreferredContactMethod = 'email' | 'phone' | 'text' | 'no_reply'
+
 function ContactOffice({
   campgroundId,
   previewMode,
@@ -397,9 +402,19 @@ function ContactOffice({
   campgroundId: string
   previewMode: boolean
 }) {
+  // Structured guest-info fields persisted to public.campground_messages
+  // (mig 0052). All five contact pointers are owner-only PII; the
+  // server-side API enforces required/conditional rules in parallel
+  // with this client-side validation.
+  const [siteNumber, setSiteNumber] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [preferredMethod, setPreferredMethod] =
+    useState<PreferredContactMethod | ''>('')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [category, setCategory] = useState<string>('')
   const [body, setBody] = useState('')
-  const [contact, setContact] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
@@ -416,6 +431,14 @@ function ContactOffice({
     if (!previewMode) logEvent(campgroundId, 'office_contact_started')
   }
 
+  // Conditional UX: only show the phone input when the chosen method
+  // needs it (phone / text). Only show the email input when the
+  // method needs it (email). no_reply hides both. Keeping the fields
+  // collapsed when not needed reduces visible noise and reinforces
+  // "the office only sees what you give them."
+  const needsPhone = preferredMethod === 'phone' || preferredMethod === 'text'
+  const needsEmail = preferredMethod === 'email'
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (submitting) return
@@ -423,15 +446,42 @@ function ContactOffice({
       setError('Preview mode — submission disabled.')
       return
     }
-    if (!category) {
-      setError('Pick a category first.')
+    const trimmedSite = siteNumber.trim()
+    const trimmedLast = lastName.trim()
+    const trimmedFirst = firstName.trim()
+    const trimmedPhone = phone.trim()
+    const trimmedEmail = email.trim()
+    const trimmedBody = body.trim()
+
+    if (!trimmedSite) {
+      setError('Site number is required.')
       return
     }
-    const trimmed = body.trim()
-    if (trimmed.length === 0) {
+    if (!trimmedLast) {
+      setError('Last name is required.')
+      return
+    }
+    if (!preferredMethod) {
+      setError('Pick a preferred contact method.')
+      return
+    }
+    if (needsPhone && !trimmedPhone) {
+      setError('Phone number is required for your chosen contact method.')
+      return
+    }
+    if (needsEmail && !trimmedEmail) {
+      setError('Email is required for your chosen contact method.')
+      return
+    }
+    if (!category) {
+      setError('Pick a category.')
+      return
+    }
+    if (!trimmedBody) {
       setError('Add a short message.')
       return
     }
+
     setSubmitting(true)
     setError(null)
     try {
@@ -442,19 +492,36 @@ function ContactOffice({
           campground_id: campgroundId,
           source: 'contact_form',
           category,
-          body: trimmed,
-          guest_contact: contact.trim() || undefined,
+          body: trimmedBody,
+          site_number: trimmedSite,
+          first_name: trimmedFirst || undefined,
+          last_name: trimmedLast,
+          phone: trimmedPhone || undefined,
+          email: trimmedEmail || undefined,
+          preferred_contact_method: preferredMethod,
         }),
       })
       if (!res.ok) {
-        const text = await res.text().catch(() => '')
-        throw new Error(text || `Send failed (HTTP ${res.status})`)
+        // The API returns { ok: false, error: "..." } JSON; surface that.
+        let serverError = `Send failed (HTTP ${res.status})`
+        try {
+          const j = await res.json()
+          if (j && typeof j.error === 'string') serverError = j.error
+        } catch {
+          // Non-JSON response; keep the generic message.
+        }
+        throw new Error(serverError)
       }
       // Reset + show confirmation. We keep the section visible so the
       // guest can send another if needed.
-      setBody('')
-      setContact('')
+      setSiteNumber('')
+      setFirstName('')
+      setLastName('')
+      setPhone('')
+      setEmail('')
+      setPreferredMethod('')
       setCategory('')
+      setBody('')
       setSent(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Send failed.')
@@ -476,9 +543,139 @@ function ContactOffice({
           For emergencies, call 911. For urgent campground issues, call the
           office directly.
         </p>
+        <p className="text-[11px] text-mist/80 leading-snug">
+          Your site number and contact details go privately to the office
+          only. They aren&apos;t shown to other campers anywhere on RoadWave.
+        </p>
+
+        {/* Site number — required. Free text so RVs in alpha sites,
+            tent loops, or named sections all work. */}
+        <Field label="Site number" required>
+          <input
+            type="text"
+            value={siteNumber}
+            onChange={(e) => setSiteNumber(e.target.value)}
+            onFocus={markStarted}
+            maxLength={60}
+            placeholder="e.g. 12, A-7, Birch 14"
+            className={inputCls}
+            required
+            autoComplete="off"
+          />
+        </Field>
+
+        {/* Name row — last name required, first optional. */}
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Last name" required>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              onFocus={markStarted}
+              maxLength={80}
+              placeholder="Smith"
+              className={inputCls}
+              required
+              autoComplete="family-name"
+            />
+          </Field>
+          <Field label="First name">
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              onFocus={markStarted}
+              maxLength={80}
+              placeholder="Optional"
+              className={inputCls}
+              autoComplete="given-name"
+            />
+          </Field>
+        </div>
+
+        {/* Preferred contact method. Conditional phone/email rendering
+            below keys off this. no_reply collapses both to keep the
+            "I just want to flag something" path light. */}
         <div>
           <label className="mb-1 block text-xs font-medium text-cream">
-            What&apos;s this about?
+            How should the office reach you?{' '}
+            <span aria-hidden className="text-red-300">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {(
+              [
+                { value: 'email', label: '📧 Email me' },
+                { value: 'phone', label: '📞 Call me' },
+                { value: 'text', label: '💬 Text me' },
+                { value: 'no_reply', label: '🙅 No reply needed' },
+              ] as { value: PreferredContactMethod; label: string }[]
+            ).map((opt) => {
+              const selected = preferredMethod === opt.value
+              return (
+                <label
+                  key={opt.value}
+                  className={
+                    selected
+                      ? 'inline-flex items-center gap-2 rounded-lg border border-flame bg-flame/15 px-3 py-2 text-xs font-semibold text-flame cursor-pointer'
+                      : 'inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-cream cursor-pointer hover:border-white/20'
+                  }
+                >
+                  <input
+                    type="radio"
+                    name="preferred_contact_method"
+                    value={opt.value}
+                    checked={selected}
+                    onChange={() => {
+                      setPreferredMethod(opt.value)
+                      markStarted()
+                    }}
+                    className="sr-only"
+                  />
+                  {opt.label}
+                </label>
+              )
+            })}
+          </div>
+        </div>
+
+        {needsPhone && (
+          <Field label="Phone number" required>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              onFocus={markStarted}
+              maxLength={60}
+              placeholder="555-123-4567"
+              className={inputCls}
+              required
+              autoComplete="tel"
+              inputMode="tel"
+            />
+          </Field>
+        )}
+        {needsEmail && (
+          <Field label="Email address" required>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onFocus={markStarted}
+              maxLength={200}
+              placeholder="you@example.com"
+              className={inputCls}
+              required
+              autoComplete="email"
+              inputMode="email"
+            />
+          </Field>
+        )}
+
+        {/* Category + message. Category required, message required. */}
+        <div>
+          <label className="mb-1 block text-xs font-medium text-cream">
+            What&apos;s this about?{' '}
+            <span aria-hidden className="text-red-300">*</span>
           </label>
           <select
             value={category}
@@ -495,23 +692,19 @@ function ContactOffice({
             ))}
           </select>
         </div>
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          onFocus={markStarted}
-          rows={4}
-          maxLength={2000}
-          placeholder="Your message…"
-          className={textareaCls}
-          required
-        />
-        <input
-          value={contact}
-          onChange={(e) => setContact(e.target.value)}
-          maxLength={200}
-          placeholder="Optional: site #, name, or how to reach you"
-          className={inputCls}
-        />
+        <Field label="Your message" required>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onFocus={markStarted}
+            rows={4}
+            maxLength={2000}
+            placeholder="What can the office help with?"
+            className={textareaCls}
+            required
+          />
+        </Field>
+
         {error && <p className="text-xs text-red-300">{error}</p>}
         {sent && (
           <p className="text-xs text-leaf">Sent to the office. Thanks.</p>
@@ -525,6 +718,35 @@ function ContactOffice({
         </button>
       </form>
     </section>
+  )
+}
+
+// Small labeled-field wrapper used inside the ContactOffice form so
+// every input has the same vertical rhythm. The asterisk is rendered
+// inside the label rather than the input so screen readers announce
+// "(required)" via the input element's required attribute, not
+// twice.
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string
+  required?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-medium text-cream">
+        {label}
+        {required && (
+          <span aria-hidden className="text-red-300 ml-0.5">
+            *
+          </span>
+        )}
+      </label>
+      {children}
+    </div>
   )
 }
 

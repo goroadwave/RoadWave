@@ -53,8 +53,25 @@ const ALLOWED_CATEGORIES = new Set([
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+// Loose email format check. Server side. Front end has stricter
+// `type="email"` UI; this just keeps obvious garbage out of the DB.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const MAX_BODY = 2000
 const MAX_CONTACT = 200
+// Structured guest-info field caps. Mirrored on the front end.
+// All five are owner-only PII -- never read by any anon path.
+const MAX_SITE = 60
+const MAX_NAME = 80
+const MAX_PHONE = 60
+const MAX_EMAIL = 200
+
+const ALLOWED_CONTACT_METHODS = new Set([
+  'phone',
+  'text',
+  'email',
+  'no_reply',
+])
 
 type Payload = {
   campground_id?: unknown
@@ -62,10 +79,28 @@ type Payload = {
   category?: unknown
   body?: unknown
   guest_contact?: unknown
+  // Structured guest info — required on new contact-form rows,
+  // not posted by the pulse-needs-attention path.
+  site_number?: unknown
+  first_name?: unknown
+  last_name?: unknown
+  phone?: unknown
+  email?: unknown
+  preferred_contact_method?: unknown
 }
 
 function bad(error: string, status = 400): NextResponse {
   return NextResponse.json({ ok: false, error }, { status })
+}
+
+// Read a candidate string from the payload, trim, and cap. Empty
+// strings become null so we don't insert empty rows. Anything
+// other than a string -> null.
+function readTrimmed(value: unknown, max: number): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (trimmed.length === 0) return null
+  return trimmed.length > max ? trimmed.slice(0, max) : trimmed
 }
 
 export async function POST(request: NextRequest) {
@@ -108,6 +143,48 @@ export async function POST(request: NextRequest) {
       : rawContact.length > MAX_CONTACT
         ? rawContact.slice(0, MAX_CONTACT)
         : rawContact
+
+  // Structured guest fields (mig 0052). Only enforce requirements on
+  // the contact-form path -- pulse-needs-attention rows still post
+  // just body + optional guest_contact and store NULL for everything
+  // structured. Caps are enforced; over-cap input is truncated rather
+  // than rejected so a slightly-long pasted phone number doesn't
+  // block the whole submission.
+  const siteNumber = readTrimmed(payload.site_number, MAX_SITE)
+  const firstName = readTrimmed(payload.first_name, MAX_NAME)
+  const lastName = readTrimmed(payload.last_name, MAX_NAME)
+  const phone = readTrimmed(payload.phone, MAX_PHONE)
+  const email = readTrimmed(payload.email, MAX_EMAIL)
+  const preferredContactMethod = readTrimmed(
+    payload.preferred_contact_method,
+    32,
+  )
+
+  if (source === 'contact_form') {
+    if (!siteNumber) return bad('Site number is required.')
+    if (!lastName) return bad('Last name is required.')
+    if (!preferredContactMethod) {
+      return bad('Pick a preferred contact method.')
+    }
+    if (!ALLOWED_CONTACT_METHODS.has(preferredContactMethod)) {
+      return bad('Invalid preferred contact method.')
+    }
+    // Conditional requirements: phone iff method is phone/text,
+    // email iff method is email. no_reply requires neither.
+    if (
+      (preferredContactMethod === 'phone' ||
+        preferredContactMethod === 'text') &&
+      !phone
+    ) {
+      return bad('Phone number is required for your chosen contact method.')
+    }
+    if (preferredContactMethod === 'email' && !email) {
+      return bad('Email is required for your chosen contact method.')
+    }
+    if (email && !EMAIL_RE.test(email)) {
+      return bad('Email address looks invalid.')
+    }
+  }
 
   const admin = createSupabaseAdminClient()
 
@@ -154,6 +231,16 @@ export async function POST(request: NextRequest) {
       body: rawBody,
       guest_contact: guestContact,
       request_ip: requestIp,
+      // Structured guest info (mig 0052). For pulse_needs_attention
+      // these all stay null; the form only collects them on the
+      // contact_form path.
+      site_number: source === 'contact_form' ? siteNumber : null,
+      first_name: source === 'contact_form' ? firstName : null,
+      last_name: source === 'contact_form' ? lastName : null,
+      phone: source === 'contact_form' ? phone : null,
+      email: source === 'contact_form' ? email : null,
+      preferred_contact_method:
+        source === 'contact_form' ? preferredContactMethod : null,
     })
     .select('id, submitted_at')
     .single()

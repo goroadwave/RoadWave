@@ -1,4 +1,6 @@
 import { Eyebrow } from '@/components/ui/eyebrow'
+import { OwnerMessageSoundToggle } from '@/components/owner/owner-message-sound-toggle'
+import { OwnerMessageStatusButtons } from '@/components/owner/owner-message-status-buttons'
 import { PageHeading } from '@/components/ui/page-heading'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loadOwnerCampground } from '../_helpers'
@@ -31,6 +33,13 @@ const CATEGORY_LABEL: Record<string, string> = {
   activities: 'Activities',
 }
 
+const PREFERRED_METHOD_LABEL: Record<string, string> = {
+  email: 'Prefers email',
+  phone: 'Prefers call',
+  text: 'Prefers text',
+  no_reply: 'No reply needed',
+}
+
 type MessageRow = {
   id: string
   source: 'contact_form' | 'pulse_needs_attention'
@@ -39,6 +48,15 @@ type MessageRow = {
   guest_contact: string | null
   status: 'new' | 'read' | 'resolved'
   submitted_at: string
+  // Structured guest info (mig 0052). NULL on legacy + pulse rows.
+  site_number: string | null
+  first_name: string | null
+  last_name: string | null
+  phone: string | null
+  email: string | null
+  preferred_contact_method: string | null
+  read_at: string | null
+  resolved_at: string | null
 }
 
 export default async function OwnerMessagesPage() {
@@ -70,6 +88,14 @@ export default async function OwnerMessagesPage() {
         title="Inbox"
         subtitle="Pulse-check alerts and Contact the Office submissions from your welcome page."
       />
+
+      {/* Local-only "play sound on new message" toggle. Off by default;
+          persisted in the owner's browser localStorage. Mounted at the
+          top of the inbox so it's discoverable when the owner is here
+          actively reading messages. */}
+      <div>
+        <OwnerMessageSoundToggle />
+      </div>
 
       {error && (
         <p className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -108,16 +134,36 @@ function MessageCard({ message }: { message: MessageRow }) {
   const label = isPulse
     ? 'Needs attention'
     : (message.category && CATEGORY_LABEL[message.category]) || 'Message'
+
+  // Status pill styling. "new" → amber chip (matches the unread badge
+  // in the nav). "read" → muted neutral. "resolved" → leaf green.
+  const statusChipClass =
+    message.status === 'new'
+      ? 'rounded-full bg-flame/15 text-flame border border-flame/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]'
+      : message.status === 'resolved'
+        ? 'rounded-full bg-leaf/15 text-leaf border border-leaf/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]'
+        : 'rounded-full bg-white/5 text-mist border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]'
+
+  // Guest display name: "Smith, Jane" / "Smith" / "—"
+  const nameParts = [message.last_name, message.first_name].filter(
+    (s): s is string => !!s && s.trim().length > 0,
+  )
+  const displayName =
+    nameParts.length === 2
+      ? `${nameParts[0]}, ${nameParts[1]}`
+      : nameParts[0] ?? ''
+
   return (
     <li
       className={
         isSafety
-          ? 'rounded-2xl border border-red-500/40 bg-red-500/[0.06] p-4 space-y-2'
+          ? 'rounded-2xl border border-red-500/40 bg-red-500/[0.06] p-4 space-y-3'
           : isPulse
-            ? 'rounded-2xl border border-flame/30 bg-flame/[0.04] p-4 space-y-2'
-            : 'rounded-2xl border border-white/5 bg-card p-4 space-y-2'
+            ? 'rounded-2xl border border-flame/30 bg-flame/[0.04] p-4 space-y-3'
+            : 'rounded-2xl border border-white/5 bg-card p-4 space-y-3'
       }
     >
+      {/* Top row: category label, time, status pill. */}
       <div className="flex items-center justify-between gap-3 text-[11px]">
         <span
           className={
@@ -131,23 +177,104 @@ function MessageCard({ message }: { message: MessageRow }) {
           {isSafety ? '⚠ Safety · ' : ''}
           {label}
         </span>
-        <span className="text-mist tabular-nums">
-          {formatSubmittedAt(message.submitted_at)}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={statusChipClass}>{message.status}</span>
+          <span className="text-mist tabular-nums">
+            {formatSubmittedAt(message.submitted_at)}
+          </span>
+        </div>
       </div>
+
+      {/* Guest info row. Hidden entirely for pulse + legacy rows where
+          site_number is null -- they have no structured info to show. */}
+      {message.site_number && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+          <span className="inline-flex items-center gap-1 text-cream">
+            <span className="text-mist">Site</span>
+            <span className="font-semibold">{message.site_number}</span>
+          </span>
+          {displayName && (
+            <span className="inline-flex items-center gap-1 text-cream">
+              <span className="text-mist">·</span>
+              <span className="font-semibold">{displayName}</span>
+            </span>
+          )}
+          {message.preferred_contact_method &&
+            PREFERRED_METHOD_LABEL[message.preferred_contact_method] && (
+              <span className="inline-flex items-center gap-1 text-mist">
+                <span>·</span>
+                <span>
+                  {PREFERRED_METHOD_LABEL[message.preferred_contact_method]}
+                </span>
+              </span>
+            )}
+        </div>
+      )}
+
       <p className="text-sm text-cream leading-relaxed whitespace-pre-wrap">
         {message.body}
       </p>
-      {message.guest_contact ? (
-        <p className="text-[11px] text-mist">
-          <span className="text-cream font-semibold">Contact:</span>{' '}
-          {message.guest_contact}
-        </p>
-      ) : (
+
+      {/* Response action row: Email / Call / Text deep-links. Each
+          button only renders when its underlying pointer is present.
+          Hidden entirely on pulse + legacy rows that have only the
+          free-form guest_contact text. */}
+      {(message.email || message.phone) && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {message.email && (
+            <a
+              href={`mailto:${message.email}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-flame/40 bg-flame/10 text-flame px-3 py-1.5 text-xs font-semibold hover:bg-flame/15 transition-colors"
+            >
+              <span aria-hidden>📧</span>
+              Reply by Email
+            </a>
+          )}
+          {message.phone && (
+            <a
+              href={`tel:${message.phone.replace(/[^0-9+]/g, '')}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-leaf/40 bg-leaf/10 text-leaf px-3 py-1.5 text-xs font-semibold hover:bg-leaf/15 transition-colors"
+            >
+              <span aria-hidden>📞</span>
+              Call
+            </a>
+          )}
+          {message.phone && (
+            <a
+              href={`sms:${message.phone.replace(/[^0-9+]/g, '')}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-leaf/40 bg-leaf/10 text-leaf px-3 py-1.5 text-xs font-semibold hover:bg-leaf/15 transition-colors"
+            >
+              <span aria-hidden>💬</span>
+              Text
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Legacy free-form guest_contact line. Only renders when no
+          structured pointers exist -- otherwise it duplicates the
+          info already shown above the response buttons. */}
+      {!message.email &&
+        !message.phone &&
+        message.guest_contact &&
+        message.guest_contact.trim().length > 0 && (
+          <p className="text-[11px] text-mist">
+            <span className="text-cream font-semibold">Contact:</span>{' '}
+            {message.guest_contact}
+          </p>
+        )}
+      {!message.site_number && !message.guest_contact && (
         <p className="text-[11px] text-mist/70 italic">
           Guest did not leave a contact pointer.
         </p>
       )}
+
+      {/* Status-mutation buttons. Server actions; revalidatePath fires
+          after each so the page re-fetches with the new status. */}
+      <OwnerMessageStatusButtons
+        messageId={message.id}
+        status={message.status}
+      />
     </li>
   )
 }
