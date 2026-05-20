@@ -290,14 +290,13 @@ export default async function FrontDeskCardPrintPage() {
               </ul>
             </section>
 
-            {/* Bottom: campground guest hub URL + small "Powered by
-                RoadWave". No RoadWave contact emails, no support
-                links -- this is the campground's counter sign, not
-                a RoadWave brochure. */}
+            {/* Bottom: just the small "Powered by RoadWave" line. No
+                guest-hub URL spelled out -- the QR is the way in. No
+                RoadWave contact emails, no support links -- this is
+                the campground's counter sign, not a RoadWave
+                brochure. The guestHubUrl variable is still used to
+                encode the QR (the only place it should appear). */}
             <footer className="text-center pt-2.5 border-t border-[#e2e8f0]">
-              <p className="text-[11px] text-[#64748b] break-all mb-1">
-                {guestHubUrl}
-              </p>
               <p className="text-[10px] text-[#94a3b8]">
                 Powered by{' '}
                 <span className="font-semibold text-[#0a0f1c]">
