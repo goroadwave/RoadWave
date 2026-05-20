@@ -22,16 +22,32 @@ import { getRequestIp } from '@/lib/utils'
 // email_notifications_enabled flag is on. Email send failures don't
 // fail the request — the dashboard inbox is the source of truth.
 
+// Allow-list for the contact-form category slug. The current
+// dropdown surfaces nine slugs (see CONTACT_CATEGORIES in
+// welcome-engagement.tsx) but the legacy values from before the
+// 2026-05-20 category alignment are still accepted so old links,
+// any embedded forms, and historical event-log entries continue to
+// validate. The DB column has no CHECK constraint, so the API is
+// the single source of truth for "what gets accepted today."
 const ALLOWED_CATEGORIES = new Set([
+  // Current 9-category set surfaced in the dropdown:
   'wifi',
+  'maintenance',
+  'noise',
+  'bathroom_laundry',
+  'late_checkout',
+  'general_question',
+  'compliment',
+  'suggestion',
+  'safety_concern',
+  // Backward-compat: previous category slugs. Still accepted so
+  // older forms / older messages keep working. Not in the dropdown
+  // anymore but their labels stay in the owner inbox label maps.
   'laundry',
   'propane',
-  'late_checkout',
-  'maintenance',
   'quiet_hours',
   'local_recommendations',
   'activities',
-  'general_question',
 ])
 
 const UUID_RE =

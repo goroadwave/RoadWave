@@ -19,16 +19,27 @@ import { useState } from 'react'
 // via sendBeacon so they roll into the dashboard "This Week" card and
 // the Monday report. Message submissions go through /api/campground/message.
 
+// Nine guest-facing contact categories. Aligned with the spec ordered
+// from "most actionable in the next hour" (wifi/maintenance/safety) to
+// "soft signals" (compliment/suggestion). The DB column is plain
+// text -- no CHECK constraint -- so older categories (laundry,
+// propane, quiet_hours, local_recommendations, activities) are still
+// accepted by the API route and still render correctly in the owner
+// inbox label map; we just don't surface them in the dropdown.
+//
+// Safety concern gets the alert routing treatment downstream:
+// red badge in /owner/messages and a [Safety] prefix on the
+// owner-notification email subject.
 const CONTACT_CATEGORIES: { value: string; label: string }[] = [
-  { value: 'wifi', label: 'Wi-Fi' },
-  { value: 'laundry', label: 'Laundry' },
-  { value: 'propane', label: 'Propane' },
-  { value: 'late_checkout', label: 'Late checkout' },
-  { value: 'maintenance', label: 'Maintenance' },
-  { value: 'quiet_hours', label: 'Quiet hours / noise concern' },
-  { value: 'local_recommendations', label: 'Local recommendations' },
-  { value: 'activities', label: 'Activities' },
+  { value: 'wifi', label: 'Wi-Fi issue' },
+  { value: 'maintenance', label: 'Maintenance issue' },
+  { value: 'noise', label: 'Noise concern' },
+  { value: 'bathroom_laundry', label: 'Bathroom / laundry issue' },
+  { value: 'late_checkout', label: 'Late checkout question' },
   { value: 'general_question', label: 'General question' },
+  { value: 'compliment', label: 'Compliment' },
+  { value: 'suggestion', label: 'Suggestion' },
+  { value: 'safety_concern', label: 'Safety concern' },
 ]
 
 type Props = {

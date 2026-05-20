@@ -6,16 +6,28 @@ import { buildBrandedHtml } from '@/lib/email/templates/base-html'
 // and owner_email is non-null. Subject names the category so a busy
 // owner can triage from the inbox preview pane.
 
+// Human-readable label for each category slug. Covers both the
+// current 9-category dropdown (2026-05-20 alignment) AND the legacy
+// slugs still accepted by the API for backward compatibility. Keeping
+// both means old messages already in the DB still render with the
+// right label in the owner inbox.
 const CATEGORY_LABEL: Record<string, string> = {
-  wifi: 'Wi-Fi',
+  // Current dropdown set:
+  wifi: 'Wi-Fi issue',
+  maintenance: 'Maintenance issue',
+  noise: 'Noise concern',
+  bathroom_laundry: 'Bathroom / laundry issue',
+  late_checkout: 'Late checkout question',
+  general_question: 'General question',
+  compliment: 'Compliment',
+  suggestion: 'Suggestion',
+  safety_concern: 'Safety concern',
+  // Backward-compat from the pre-alignment categories:
   laundry: 'Laundry',
   propane: 'Propane',
-  late_checkout: 'Late checkout',
-  maintenance: 'Maintenance',
   quiet_hours: 'Quiet hours / noise concern',
   local_recommendations: 'Local recommendations',
   activities: 'Activities',
-  general_question: 'General question',
 }
 
 type Args = {
@@ -70,9 +82,18 @@ Open messages: ${args.dashboardUrl}
 
 Sent to ${args.toEmail} from hello@getroadwave.com.`
 
+  // Safety-concern messages get a [Safety] subject prefix so a busy
+  // owner's inbox preview pane surfaces them above ordinary
+  // requests. Pairs with the red badge in /owner/messages so the
+  // visual treatment is consistent across email and dashboard.
+  const isSafety = args.category === 'safety_concern'
+  const subject = isSafety
+    ? `[Safety] New safety concern — ${args.campgroundName}`
+    : `New ${label.toLowerCase()} message — ${args.campgroundName}`
+
   return sendBrandedEmail({
     to: args.toEmail,
-    subject: `New ${label.toLowerCase()} message — ${args.campgroundName}`,
+    subject,
     html,
     text,
   })

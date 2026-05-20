@@ -8,16 +8,27 @@ import { loadOwnerCampground } from '../_helpers'
 // Backed by the owner_messages_for_campground SECURITY DEFINER RPC,
 // which checks campground_admins membership server-side.
 
+// Category label map — mirrors the email alert helper so the inbox
+// row and the email subject use the same words. Covers both the
+// current 9-category dropdown AND the legacy slugs the API still
+// accepts (so older messages still render with the right label).
 const CATEGORY_LABEL: Record<string, string> = {
-  wifi: 'Wi-Fi',
+  // Current dropdown set:
+  wifi: 'Wi-Fi issue',
+  maintenance: 'Maintenance issue',
+  noise: 'Noise concern',
+  bathroom_laundry: 'Bathroom / laundry issue',
+  late_checkout: 'Late checkout question',
+  general_question: 'General question',
+  compliment: 'Compliment',
+  suggestion: 'Suggestion',
+  safety_concern: 'Safety concern',
+  // Backward-compat:
   laundry: 'Laundry',
   propane: 'Propane',
-  late_checkout: 'Late checkout',
-  maintenance: 'Maintenance',
-  quiet_hours: 'Quiet hours / noise',
+  quiet_hours: 'Quiet hours / noise concern',
   local_recommendations: 'Local recommendations',
   activities: 'Activities',
-  general_question: 'General question',
 }
 
 type MessageRow = {
@@ -88,26 +99,36 @@ export default async function OwnerMessagesPage() {
 
 function MessageCard({ message }: { message: MessageRow }) {
   const isPulse = message.source === 'pulse_needs_attention'
+  // Safety-concern messages get a red badge + red-tinted card border
+  // so the owner sees them above ordinary "Wi-Fi is slow"-grade
+  // requests. Pairs with the [Safety] subject prefix on the email
+  // alert. Pulse "needs attention" keeps its flame styling -- it's
+  // already a high-signal event but isn't strictly a safety thing.
+  const isSafety = message.category === 'safety_concern'
   const label = isPulse
     ? 'Needs attention'
     : (message.category && CATEGORY_LABEL[message.category]) || 'Message'
-  const accent = isPulse ? 'flame' : 'leaf'
   return (
     <li
       className={
-        accent === 'flame'
-          ? 'rounded-2xl border border-flame/30 bg-flame/[0.04] p-4 space-y-2'
-          : 'rounded-2xl border border-white/5 bg-card p-4 space-y-2'
+        isSafety
+          ? 'rounded-2xl border border-red-500/40 bg-red-500/[0.06] p-4 space-y-2'
+          : isPulse
+            ? 'rounded-2xl border border-flame/30 bg-flame/[0.04] p-4 space-y-2'
+            : 'rounded-2xl border border-white/5 bg-card p-4 space-y-2'
       }
     >
       <div className="flex items-center justify-between gap-3 text-[11px]">
         <span
           className={
-            isPulse
-              ? 'rounded-full bg-flame/15 text-flame px-2 py-0.5 font-semibold uppercase tracking-[0.12em]'
-              : 'rounded-full bg-white/5 text-cream px-2 py-0.5 font-semibold uppercase tracking-[0.12em]'
+            isSafety
+              ? 'rounded-full bg-red-500/20 text-red-200 px-2 py-0.5 font-semibold uppercase tracking-[0.12em]'
+              : isPulse
+                ? 'rounded-full bg-flame/15 text-flame px-2 py-0.5 font-semibold uppercase tracking-[0.12em]'
+                : 'rounded-full bg-white/5 text-cream px-2 py-0.5 font-semibold uppercase tracking-[0.12em]'
           }
         >
+          {isSafety ? '⚠ Safety · ' : ''}
           {label}
         </span>
         <span className="text-mist tabular-nums">
