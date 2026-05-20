@@ -15,6 +15,9 @@ const ALLOWED_TOGGLES = new Set([
   'feature_book_again_enabled',
   'feature_contact_office_enabled',
   'feature_pulse_check_enabled',
+  // Facebook CTA toggle (mig 0057). Defaults to false at the column
+  // level; owners opt in from the Engagement Hub list.
+  'feature_facebook_enabled',
   'email_notifications_enabled',
 ])
 

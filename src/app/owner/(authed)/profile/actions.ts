@@ -131,6 +131,18 @@ const schema = z.object({
     .transform((s) => (s === '' ? null : s))
     .nullable()
     .optional(),
+  // Facebook fields (mig 0057). URL validated by the shared optionalUrl
+  // schema; custom label is plain text, capped to match the column
+  // comment in the migration. Empty strings coerce to null so we
+  // don't write blanks.
+  facebook_review_url: optionalUrl,
+  facebook_button_label: z
+    .string()
+    .max(60)
+    .transform((s) => s.trim())
+    .transform((s) => (s === '' ? null : s))
+    .nullable()
+    .optional(),
   // Park Map (mig 0048). show_park_map arrives as the literal 'on'
   // string when the checkbox is checked, undefined otherwise.
   // park_map_url reuses the optionalUrl validator. park_map_notes is
@@ -202,6 +214,8 @@ export async function saveOwnerProfileAction(
     booking_url: formData.get('booking_url') ?? '',
     booking_message: formData.get('booking_message') ?? '',
     booking_promo_code: formData.get('booking_promo_code') ?? '',
+    facebook_review_url: formData.get('facebook_review_url') ?? '',
+    facebook_button_label: formData.get('facebook_button_label') ?? '',
     show_park_map: formData.get('show_park_map') ?? '',
     park_map_url: formData.get('park_map_url') ?? '',
     park_map_notes: formData.get('park_map_notes') ?? '',
@@ -251,6 +265,8 @@ export async function saveOwnerProfileAction(
       booking_url: parsed.data.booking_url ?? null,
       booking_message: parsed.data.booking_message ?? null,
       booking_promo_code: parsed.data.booking_promo_code ?? null,
+      facebook_review_url: parsed.data.facebook_review_url ?? null,
+      facebook_button_label: parsed.data.facebook_button_label ?? null,
       show_park_map: parsed.data.show_park_map,
       park_map_url: parsed.data.park_map_url ?? null,
       park_map_notes: parsed.data.park_map_notes ?? null,

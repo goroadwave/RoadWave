@@ -53,6 +53,15 @@ type Props = {
    *  real slug. */
   campgroundSlug?: string | null
   reviewUrl: string | null
+  /** Facebook CTA fields (mig 0057). All three together drive the
+   *  optional Recommend Us on Facebook button inside the new "Support
+   *  This Campground" section. Button only renders when
+   *  facebookEnabled is true AND facebookUrl is non-null;
+   *  facebookButtonLabel is the owner-customizable CTA text (falls
+   *  back to "Recommend Us on Facebook" when null). */
+  facebookUrl?: string | null
+  facebookButtonLabel?: string | null
+  facebookEnabled?: boolean
   reviewEnabled: boolean
   bookingUrl: string | null
   bookingMessage: string | null
@@ -103,6 +112,9 @@ export function WelcomeEngagement(props: Props) {
     campgroundSlug = null,
     reviewUrl,
     reviewEnabled,
+    facebookUrl = null,
+    facebookButtonLabel = null,
+    facebookEnabled = false,
     bookingUrl,
     bookingMessage,
     bookingPromoCode,
@@ -116,9 +128,14 @@ export function WelcomeEngagement(props: Props) {
   // up suppressed we render nothing and let the welcome page collapse
   // the gap.
   const showReview = reviewEnabled && !!reviewUrl
+  const showFacebook = facebookEnabled && !!facebookUrl
   const showBooking = bookingEnabled && !!bookingUrl
   const showContact = contactEnabled
   const showPulse = pulseEnabled
+  // "Support This Campground" renders if any of its three CTAs are
+  // configured. Each button is independently gated below; the section
+  // wrapper just decides whether the headline appears.
+  const showSupport = showReview || showFacebook || showBooking
 
   // The tracker reads localStorage and only renders if the camper
   // has existing office messages for this campground. Even when every
@@ -131,7 +148,7 @@ export function WelcomeEngagement(props: Props) {
     />
   )
 
-  if (!showReview && !showBooking && !showContact && !showPulse) {
+  if (!showReview && !showFacebook && !showBooking && !showContact && !showPulse) {
     return <div className="space-y-8">{trackerNode}</div>
   }
 
@@ -141,10 +158,12 @@ export function WelcomeEngagement(props: Props) {
       {showPulse && (
         <PulseCheck campgroundId={campgroundId} previewMode={previewMode} />
       )}
-      {(showReview || showBooking) && (
-        <BookAndReview
+      {showSupport && (
+        <SupportThisCampground
           campgroundId={campgroundId}
           reviewUrl={showReview ? reviewUrl : null}
+          facebookUrl={showFacebook ? facebookUrl : null}
+          facebookButtonLabel={facebookButtonLabel}
           bookingUrl={showBooking ? bookingUrl : null}
           bookingMessage={bookingMessage}
           bookingPromoCode={bookingPromoCode}
@@ -336,12 +355,20 @@ function NeedsAttentionForm({
 }
 
 // ---------------------------------------------------------------------------
-// Review + Book Again
+// Support This Campground -- Google Review + Facebook + Book Again
 // ---------------------------------------------------------------------------
+// Single grouped section so the three "support the campground" CTAs
+// live together with one shared headline. Each button is independently
+// gated by the (flag && url) parent rule, so missing data hides only
+// that button -- the section stays as long as at least one is set.
+// Order: Google Review -> Facebook -> Book Again. This matches the
+// spec's "Google first, Facebook second, booking after" ordering.
 
-function BookAndReview({
+function SupportThisCampground({
   campgroundId,
   reviewUrl,
+  facebookUrl,
+  facebookButtonLabel,
   bookingUrl,
   bookingMessage,
   bookingPromoCode,
@@ -349,16 +376,28 @@ function BookAndReview({
 }: {
   campgroundId: string
   reviewUrl: string | null
+  facebookUrl: string | null
+  facebookButtonLabel: string | null
   bookingUrl: string | null
   bookingMessage: string | null
   bookingPromoCode: string | null
   previewMode: boolean
 }) {
+  // Default Facebook label when the owner left the custom label blank.
+  // Mirrors the spec's preferred default copy.
+  const facebookLabel =
+    facebookButtonLabel && facebookButtonLabel.trim().length > 0
+      ? facebookButtonLabel
+      : 'Recommend Us on Facebook'
+
   return (
     <section className="space-y-3">
       <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-        Enjoying your stay?
+        Support this campground
       </h2>
+      <p className="text-xs text-mist leading-snug">
+        Enjoying your stay? Your feedback helps this campground grow.
+      </p>
       {bookingUrl && (bookingMessage || bookingPromoCode) && (
         <div className="rounded-2xl border border-flame/30 bg-flame/[0.06] px-4 py-3 space-y-1.5">
           {bookingMessage && (
@@ -378,21 +417,6 @@ function BookAndReview({
         </div>
       )}
       <div className="grid gap-2 sm:grid-cols-2">
-        {bookingUrl && (
-          <a
-            href={bookingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={
-              previewMode
-                ? undefined
-                : () => logEvent(campgroundId, 'book_again_click')
-            }
-            className={ctaCls}
-          >
-            <span aria-hidden>🛎️</span> Book Your Next Stay
-          </a>
-        )}
         {reviewUrl && (
           <a
             href={reviewUrl}
@@ -406,6 +430,36 @@ function BookAndReview({
             className={ctaCls}
           >
             <span aria-hidden>⭐</span> Leave a Google Review
+          </a>
+        )}
+        {facebookUrl && (
+          <a
+            href={facebookUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={ctaCls}
+          >
+            {/* No click event logged yet -- the campground_events
+                CHECK constraint (last extended in mig 0044) doesn't
+                include 'facebook_click'. We'll fold that into the
+                Phase 4 event-types migration so the dashboard can
+                count Facebook taps alongside Google + Book Again. */}
+            <span aria-hidden>👍</span> {facebookLabel}
+          </a>
+        )}
+        {bookingUrl && (
+          <a
+            href={bookingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={
+              previewMode
+                ? undefined
+                : () => logEvent(campgroundId, 'book_again_click')
+            }
+            className={ctaCls}
+          >
+            <span aria-hidden>🛎️</span> Book Your Next Stay
           </a>
         )}
       </div>

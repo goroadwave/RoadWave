@@ -281,6 +281,7 @@ export default async function OwnerDashboardPage() {
           feature_contact_office_enabled:
             campground.feature_contact_office_enabled,
           feature_pulse_check_enabled: campground.feature_pulse_check_enabled,
+          feature_facebook_enabled: campground.feature_facebook_enabled,
           email_notifications_enabled: campground.email_notifications_enabled,
         }}
       />

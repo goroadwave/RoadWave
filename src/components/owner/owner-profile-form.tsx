@@ -210,6 +210,32 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
           />
         </Field>
         <Field
+          label="Facebook URL (optional)"
+          hint="Your Facebook page or a recommendations / reviews link. Shown as a 'Recommend Us on Facebook' button when enabled."
+        >
+          <input
+            name="facebook_review_url"
+            type="url"
+            defaultValue={campground.facebook_review_url ?? ''}
+            maxLength={500}
+            placeholder="https://www.facebook.com/your-page"
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Facebook button label (optional)"
+          hint="Custom CTA text. Leave blank to use the default 'Recommend Us on Facebook'."
+        >
+          <input
+            name="facebook_button_label"
+            type="text"
+            defaultValue={campground.facebook_button_label ?? ''}
+            maxLength={60}
+            placeholder="Recommend Us on Facebook"
+            className={inputCls}
+          />
+        </Field>
+        <Field
           label="Book Again URL"
           hint="Direct link to your reservation page, Airbnb listing, etc."
         >

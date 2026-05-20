@@ -42,6 +42,14 @@ export type GuestHubCampground = {
   booking_url: string | null
   booking_message: string | null
   booking_promo_code: string | null
+  // Facebook CTA fields (mig 0057). Optional surface; button only
+  // renders when feature_facebook_enabled is true AND
+  // facebook_review_url is non-null. facebook_button_label is the
+  // owner-customizable CTA text; the welcome page falls back to
+  // "Recommend Us on Facebook" when null.
+  feature_facebook_enabled: boolean
+  facebook_review_url: string | null
+  facebook_button_label: string | null
   feature_review_enabled: boolean
   feature_book_again_enabled: boolean
   feature_contact_office_enabled: boolean
@@ -636,6 +644,9 @@ export function CampgroundGuestHubBody({
             campgroundSlug={campground.slug}
             reviewUrl={campground.google_review_url}
             reviewEnabled={campground.feature_review_enabled}
+            facebookUrl={campground.facebook_review_url}
+            facebookButtonLabel={campground.facebook_button_label}
+            facebookEnabled={campground.feature_facebook_enabled}
             bookingUrl={campground.booking_url}
             bookingMessage={campground.booking_message}
             bookingPromoCode={campground.booking_promo_code}

@@ -16,6 +16,7 @@ type ToggleColumn =
   | 'feature_book_again_enabled'
   | 'feature_contact_office_enabled'
   | 'feature_pulse_check_enabled'
+  | 'feature_facebook_enabled'
   | 'email_notifications_enabled'
 
 type Toggle = {
@@ -44,6 +45,13 @@ const FEATURE_TOGGLES: Toggle[] = [
     title: 'Book Your Next Stay button',
     description:
       'Linked to the Booking URL on your Profile page. Add an optional message and promo code there too.',
+    helpHref: '/owner/profile',
+  },
+  {
+    column: 'feature_facebook_enabled',
+    title: 'Recommend Us on Facebook button',
+    description:
+      'Linked to the Facebook URL on your Profile page. Hidden automatically until you add one. You can also customize the button label there.',
     helpHref: '/owner/profile',
   },
   {
