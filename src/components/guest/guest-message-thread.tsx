@@ -19,6 +19,11 @@ type ThreadRow = {
   message_body: string | null
   message_submitted_at: string | null
   campground_name: string | null
+  /** Added by mig 0056. The RPC now joins campgrounds and surfaces
+   *  the slug so legacy /m/[id] links (no ?from= in the URL,
+   *  pre-afbda07 localStorage entries) can still build an accurate
+   *  "Back to campground page" target after the camper unlocks. */
+  campground_slug: string | null
   reply_id: string | null
   reply_sender: 'owner' | 'guest' | null
   reply_body: string | null
@@ -29,12 +34,26 @@ type LoadedThread = {
   messageBody: string
   messageSubmittedAt: string
   campgroundName: string
+  campgroundSlug: string | null
   replies: {
     id: string
     sender: 'owner' | 'guest'
     body: string
     createdAt: string
   }[]
+}
+
+// Defense-in-depth slug validator (mirrors normalizeFromSlug on the
+// /m/[id] server component). The slug from the RPC comes from the
+// trusted campgrounds table, but we still constrain it to a safe
+// shape before building a navigation target.
+const SLUG_RE = /^[a-z0-9-]{1,80}$/
+
+function safeBackHrefFromSlug(slug: string | null | undefined): string | null {
+  if (typeof slug !== 'string') return null
+  const trimmed = slug.trim().toLowerCase()
+  if (!SLUG_RE.test(trimmed)) return null
+  return `/campground/${trimmed}`
 }
 
 export function GuestMessageThread({
@@ -108,6 +127,7 @@ export function GuestMessageThread({
       messageBody: first.message_body ?? '',
       messageSubmittedAt: first.message_submitted_at ?? '',
       campgroundName: first.campground_name ?? 'Campground office',
+      campgroundSlug: first.campground_slug ?? null,
       replies,
     })
   }
@@ -255,6 +275,18 @@ export function GuestMessageThread({
     )
   }
 
+  // Pick the best available back-to-campground target:
+  //   1. URL ?from=<slug> (already validated by the /m/[id] server
+  //      component and passed in as campgroundBackHref).
+  //   2. The slug returned by the RPC (mig 0056), validated again
+  //      here as defense in depth. This rescues legacy /m/[id] links
+  //      where the URL lacked &from= -- pre-afbda07 localStorage
+  //      entries and any owner-reply email links issued before the
+  //      slug field landed.
+  //   3. Null (camper sees a small "RoadWave home" footer link only).
+  const effectiveBackHref =
+    campgroundBackHref ?? safeBackHrefFromSlug(thread.campgroundSlug)
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -345,15 +377,14 @@ export function GuestMessageThread({
       </div>
 
       {/* Bottom return link so the camper never feels stuck on this
-          page after reading / replying. When we know the campground,
-          we render the prominent back link. When we don't, we degrade
-          to a small "RoadWave home" link so they at least have a way
-          out without us claiming a return-to-campground we can't
-          actually fulfil. */}
+          page after reading / replying. Uses the effective back href
+          -- URL slug first, RPC slug second, "RoadWave home" only as
+          a last resort (e.g. token expired and the RPC returned no
+          rows). */}
       <div className="pt-2">
-        {campgroundBackHref ? (
+        {effectiveBackHref ? (
           <Link
-            href={campgroundBackHref}
+            href={effectiveBackHref}
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
           >
             ← Back to campground page
