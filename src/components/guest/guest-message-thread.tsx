@@ -40,16 +40,16 @@ type LoadedThread = {
 export function GuestMessageThread({
   messageId,
   token,
-  backHref,
-  backLabel,
+  campgroundBackHref,
 }: {
   messageId: string
   token: string
-  /** Resolved "back to campground" target. Comes from the server
-   *  component, which validates the ?from=<slug> query param. Falls
-   *  back to "/" with a "Back to home" label when no valid slug. */
-  backHref: string
-  backLabel: string
+  /** Resolved "/campground/<slug>" target when the page knew which
+   *  campground the camper came from. NULL when no safe slug was
+   *  available (legacy entries / tampered query string) -- in that
+   *  case we render NO prominent "back to campground" button, only a
+   *  small "RoadWave home" footer link so the camper isn't stranded. */
+  campgroundBackHref: string | null
 }) {
   const [siteNumber, setSiteNumber] = useState('')
   const [lastName, setLastName] = useState('')
@@ -188,9 +188,11 @@ export function GuestMessageThread({
             message to the office. Both have to match before the thread
             loads -- this keeps the reply private to you.
           </p>
-          <p className="text-xs text-mist leading-snug">
-            You can return to the campground page anytime.
-          </p>
+          {campgroundBackHref && (
+            <p className="text-xs text-mist leading-snug">
+              You can return to the campground page anytime.
+            </p>
+          )}
         </div>
         <form
           onSubmit={unlock}
@@ -229,14 +231,26 @@ export function GuestMessageThread({
             >
               {unlocking ? 'Checking...' : 'View thread'}
             </button>
-            <Link
-              href={backHref}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 text-cream px-3 py-2 text-xs font-semibold hover:bg-white/10 transition-colors"
-            >
-              {backLabel}
-            </Link>
+            {campgroundBackHref && (
+              <Link
+                href={campgroundBackHref}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 text-cream px-3 py-2 text-xs font-semibold hover:bg-white/10 transition-colors"
+              >
+                ← Back to campground page
+              </Link>
+            )}
           </div>
         </form>
+        {!campgroundBackHref && (
+          <div className="pt-2">
+            <Link
+              href="/"
+              className="text-xs text-mist/80 underline-offset-2 hover:text-cream hover:underline"
+            >
+              RoadWave home
+            </Link>
+          </div>
+        )}
       </div>
     )
   }
@@ -331,15 +345,27 @@ export function GuestMessageThread({
       </div>
 
       {/* Bottom return link so the camper never feels stuck on this
-          page after reading / replying. Same target as the header link
-          -- the resolved /campground/<slug> or "/" fallback. */}
+          page after reading / replying. When we know the campground,
+          we render the prominent back link. When we don't, we degrade
+          to a small "RoadWave home" link so they at least have a way
+          out without us claiming a return-to-campground we can't
+          actually fulfil. */}
       <div className="pt-2">
-        <Link
-          href={backHref}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
-        >
-          {backLabel}
-        </Link>
+        {campgroundBackHref ? (
+          <Link
+            href={campgroundBackHref}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
+          >
+            ← Back to campground page
+          </Link>
+        ) : (
+          <Link
+            href="/"
+            className="text-xs text-mist/80 underline-offset-2 hover:text-cream hover:underline"
+          >
+            RoadWave home
+          </Link>
+        )}
       </div>
     </div>
   )

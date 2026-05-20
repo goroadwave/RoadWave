@@ -448,17 +448,12 @@ function ContactOffice({
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
   const [startedLogged, setStartedLogged] = useState(false)
-  // After a successful submit, the API returns { id, guest_reply_token }
-  // so we can render the /m/<id>?t=<token> confirmation link. Kept in
-  // state only -- never persisted, never logged. If the guest closes
-  // the page they can still retrieve replies via the email notification
-  // sent when the office replies (if they provided an email).
-  const [confirmation, setConfirmation] = useState<{
-    id: string
-    token: string
-    siteNumber: string
-    lastName: string
-  } | null>(null)
+  // After a successful submit we DON'T render a full inline "Check
+  // replies" card -- that duplicated the persistent "Your messages
+  // with the office" tracker rendered above. We just show a short
+  // confirmation line and let the tracker (which received the same
+  // entry via appendCamperMessage) be the single source of truth
+  // for the camper's office threads on this device.
 
   // Fires once per ContactOffice mount the first time the camper
   // interacts with any field. Distinct from the contact_message
@@ -569,15 +564,12 @@ function ContactOffice({
         // Body not JSON -- skip the link, still show the basic "Sent" UI.
       }
       if (replyId && replyToken) {
-        setConfirmation({
-          id: replyId,
-          token: replyToken,
-          siteNumber: trimmedSite,
-          lastName: trimmedLast,
-        })
         // Persist to localStorage so the CamperMessageTracker can
         // restore the "Check replies" card after reload. Scoped per
         // campground; entries from other campgrounds aren't touched.
+        // The tracker is the single rendering surface for the
+        // camper's threads -- the inline form just flips to a short
+        // "Sent" line below.
         appendCamperMessage(campgroundId, {
           id: replyId,
           token: replyToken,
@@ -783,16 +775,13 @@ function ContactOffice({
         </Field>
 
         {error && <p className="text-xs text-red-300">{error}</p>}
-        {sent && !confirmation && (
-          <p className="text-xs text-leaf">Sent to the office. Thanks.</p>
-        )}
-        {sent && confirmation && (
-          <CheckRepliesConfirmation
-            messageId={confirmation.id}
-            token={confirmation.token}
-            siteNumber={confirmation.siteNumber}
-            lastName={confirmation.lastName}
-          />
+        {sent && (
+          <p className="text-xs text-leaf">
+            Sent to the office. You can check for replies above under{' '}
+            <span className="font-semibold">
+              &ldquo;Your messages with the office.&rdquo;
+            </span>
+          </p>
         )}
         <button
           type="submit"
@@ -831,81 +820,6 @@ function Field({
         )}
       </label>
       {children}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Check Replies confirmation -- renders after a successful Contact the
-// Office submission. Shows a private /m/<id>?t=<token> link the guest
-// can bookmark to come back later. The guest will be asked to confirm
-// site number + last name on that page as a soft second factor
-// (validated server-side by the guest_message_thread RPC, mig 0055).
-// ---------------------------------------------------------------------------
-
-function CheckRepliesConfirmation({
-  messageId,
-  token,
-  siteNumber,
-  lastName,
-}: {
-  messageId: string
-  token: string
-  siteNumber: string
-  lastName: string
-}) {
-  // Build the URL using only the relative path. The /m/<id> page reads
-  // the token from ?t= and prompts for site number + last name -- we
-  // intentionally do NOT pre-fill those via query string so the link
-  // shared / forwarded by accident can't bypass the second factor.
-  const replyUrl = `/m/${encodeURIComponent(messageId)}?t=${encodeURIComponent(token)}`
-  const [copied, setCopied] = useState(false)
-
-  async function copy() {
-    try {
-      const absolute =
-        typeof window === 'undefined'
-          ? replyUrl
-          : new URL(replyUrl, window.location.origin).toString()
-      await navigator.clipboard.writeText(absolute)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Fall through silently; the visible link is still right there
-      // for the guest to long-press / right-click and copy.
-    }
-  }
-
-  return (
-    <div className="rounded-2xl border border-leaf/30 bg-leaf/[0.05] p-4 space-y-2">
-      <p className="text-sm font-semibold text-cream">
-        Sent to the office. Thanks.
-      </p>
-      <p className="text-xs text-mist leading-snug">
-        You can check the office reply here -- bookmark this link in case
-        you want to come back later. When you open it, you&apos;ll be asked
-        to confirm your site number ({siteNumber}) and last name (
-        {lastName}) before you can see the reply.
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <a
-          href={replyUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-leaf/40 bg-leaf/10 text-leaf px-3 py-1.5 text-xs font-semibold hover:bg-leaf/15 transition-colors"
-        >
-          <span aria-hidden>📬</span>
-          Check replies
-        </a>
-        <button
-          type="button"
-          onClick={copy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 text-cream px-3 py-1.5 text-xs font-semibold hover:bg-white/10 transition-colors"
-        >
-          <span aria-hidden>{copied ? '✓' : '⧉'}</span>
-          {copied ? 'Copied' : 'Copy link'}
-        </button>
-      </div>
     </div>
   )
 }

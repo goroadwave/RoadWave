@@ -56,8 +56,12 @@ export default async function GuestThreadPage({
   const sp = await searchParams
   const token = typeof sp.t === 'string' ? sp.t : ''
   const fromSlug = normalizeFromSlug(sp.from)
-  const backHref = fromSlug ? `/campground/${fromSlug}` : '/'
-  const backLabel = fromSlug ? '← Back to campground page' : '← Back to home'
+  // When we know a safe campground slug, build the prominent "Back to
+  // campground page" target. When we don't, we deliberately render NO
+  // prominent back button -- the client island still shows a small
+  // "RoadWave home" footer link so the camper isn't stranded, but we
+  // never pretend a generic "/" link returns them to the campground.
+  const campgroundBackHref = fromSlug ? `/campground/${fromSlug}` : null
 
   return (
     <main className="min-h-screen">
@@ -65,20 +69,21 @@ export default async function GuestThreadPage({
         <Link href="/" className="inline-block">
           <Logo className="text-2xl" />
         </Link>
-        <Link
-          href={backHref}
-          className="text-xs font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
-        >
-          {backLabel}
-        </Link>
+        {campgroundBackHref && (
+          <Link
+            href={campgroundBackHref}
+            className="text-xs font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
+          >
+            ← Back to campground page
+          </Link>
+        )}
       </header>
       <div className="px-4 pb-16">
         <div className="mx-auto max-w-xl space-y-4">
           <GuestMessageThread
             messageId={id}
             token={token}
-            backHref={backHref}
-            backLabel={backLabel}
+            campgroundBackHref={campgroundBackHref}
           />
         </div>
       </div>
