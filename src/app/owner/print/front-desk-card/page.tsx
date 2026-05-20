@@ -129,18 +129,56 @@ export default async function FrontDeskCardPrintPage() {
 
   return (
     <>
-      {/* Inline print styles. Tailwind's `print:` variants work too
-          but inlining the @media print block keeps every print rule
-          in one auditable place. */}
+      {/* Print-isolation styles for this route.
+       *
+       * Three problems we're solving:
+       *   1. The root layout (src/app/layout.tsx) mounts the global
+       *      <SiteFooter /> and <FloatingTourButton /> (Riley) as
+       *      direct body children, AFTER {children}. Without these
+       *      rules they appear under the printable card on screen
+       *      AND print onto a second page with the RoadWave email
+       *      footer, which campground owners do not want on their
+       *      counter sign.
+       *   2. The page must fit on a single 8.5x11 sheet -- we set
+       *      explicit @page size, no overflow, and page-break-inside
+       *      controls on the card itself.
+       *   3. The screen view of this page should not show those
+       *      global elements either, since this route exists only to
+       *      be printed.
+       *
+       * Selector targets:
+       *   body > footer       -- SiteFooter (the only top-level <footer>
+       *                          in the layout)
+       *   body > div.fixed... -- FloatingTourButton (Riley). Targeted by
+       *                          its Tailwind fixed-bottom-right class
+       *                          combination; the class set is unique to
+       *                          the floating button in the current
+       *                          layout. If a future component reuses
+       *                          the same exact class combo we'd want
+       *                          a data-attribute instead, but that's
+       *                          a bigger change.
+       *
+       * Hiding rules apply on BOTH screen and print so this route
+       * shows a clean card preview, and so the print preview popup
+       * (which already uses @media print) matches the on-screen view.
+       */}
       <style>{`
         @page {
-          size: auto;
+          size: letter portrait;
           margin: 0.4in;
+        }
+        body > footer,
+        body > div.fixed.bottom-5.right-5 {
+          display: none !important;
         }
         @media print {
           html, body {
             background: #ffffff !important;
             color: #0a0f1c !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
           }
           .no-print {
             display: none !important;
@@ -148,6 +186,16 @@ export default async function FrontDeskCardPrintPage() {
           .print-card {
             box-shadow: none !important;
             border: none !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            margin: 0 !important;
+          }
+          .print-card header,
+          .print-card section {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
         }
       `}</style>
@@ -157,8 +205,8 @@ export default async function FrontDeskCardPrintPage() {
           the fallback for browsers that ignore the auto-fire. */}
       <AutoPrintOnLoad />
 
-      <main className="min-h-screen bg-night text-cream py-8 px-4 sm:px-6 print:py-0 print:px-0">
-        <div className="mx-auto max-w-2xl space-y-4">
+      <main className="min-h-screen bg-night text-cream py-6 px-4 sm:px-6 print:py-0 print:px-0 print:bg-white print:min-h-0">
+        <div className="mx-auto max-w-2xl space-y-3 print:space-y-0">
           {/* Screen-only toolbar. Hidden when printing. */}
           <div className="no-print flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/5 bg-card px-4 py-3">
             <div className="text-xs text-mist leading-snug">
@@ -169,17 +217,19 @@ export default async function FrontDeskCardPrintPage() {
           </div>
 
           {/* THE PRINTABLE CARD. Light card on white so it prints
-              well on standard printers without burning ink. */}
-          <article className="print-card mx-auto rounded-2xl bg-white text-[#0a0f1c] px-6 py-7 sm:px-10 sm:py-9 shadow-2xl shadow-black/30 print:shadow-none print:rounded-none">
+              well on standard printers without burning ink. Tight
+              vertical spacing so the bullet list + QR fit on one
+              8.5x11 sheet at 0.4" margins. */}
+          <article className="print-card mx-auto rounded-2xl bg-white text-[#0a0f1c] px-6 py-6 sm:px-9 sm:py-7 shadow-2xl shadow-black/30 print:shadow-none print:rounded-none">
             {/* Top: campground identity. Campground-first, RoadWave-
                 second per the new product positioning. */}
-            <header className="text-center space-y-2 mb-4">
+            <header className="text-center space-y-1.5 mb-3">
               {campground.logo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element -- partner logos vary in dimension
                 <img
                   src={campground.logo_url}
                   alt={`${campground.name} logo`}
-                  className="mx-auto h-20 w-auto object-contain"
+                  className="mx-auto h-16 w-auto object-contain"
                 />
               ) : null}
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
@@ -195,7 +245,7 @@ export default async function FrontDeskCardPrintPage() {
 
             {/* Welcome headline + invitation. The two-line copy below
                 the campground name. */}
-            <section className="text-center space-y-1 mb-5">
+            <section className="text-center space-y-0.5 mb-3">
               <p className="text-base sm:text-lg font-bold text-[#f59e0b]">
                 Welcome to {campground.name}
               </p>
@@ -204,8 +254,9 @@ export default async function FrontDeskCardPrintPage() {
               </p>
             </section>
 
-            {/* QR on a generous white well. */}
-            <div className="mx-auto w-full max-w-[360px] aspect-square rounded-2xl border border-[#e2e8f0] bg-white p-3 mb-4 grid place-items-center">
+            {/* QR on a clean white well. Capped at 320px so the whole
+                card fits a single 8.5x11 sheet without crowding. */}
+            <div className="mx-auto w-full max-w-[320px] aspect-square rounded-2xl border border-[#e2e8f0] bg-white p-2.5 mb-2 grid place-items-center">
               {qrDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- data URL, no Next/Image needed
                 <img
@@ -218,16 +269,16 @@ export default async function FrontDeskCardPrintPage() {
               )}
             </div>
 
-            <p className="text-center text-sm text-[#475569] mb-5">
+            <p className="text-center text-sm text-[#475569] mb-3">
               No app download required for basic park info.
             </p>
 
             {/* Bullets — only enabled sections (with generic fallback). */}
-            <section className="mb-5">
-              <p className="text-center text-[11px] uppercase tracking-[0.18em] font-semibold text-[#64748b] mb-3">
+            <section className="mb-3">
+              <p className="text-center text-[11px] uppercase tracking-[0.18em] font-semibold text-[#64748b] mb-2">
                 What you can do
               </p>
-              <ul className="grid grid-cols-2 gap-y-1 gap-x-4 text-sm">
+              <ul className="grid grid-cols-2 gap-y-0.5 gap-x-4 text-sm">
                 {bullets.map((b) => (
                   <li key={b} className="flex items-start gap-2">
                     <span aria-hidden className="text-[#f59e0b] mt-0.5">
@@ -239,23 +290,20 @@ export default async function FrontDeskCardPrintPage() {
               </ul>
             </section>
 
-            {/* URL line — handy when someone wants to type it. */}
-            <p className="text-center text-[11px] text-[#64748b] mb-4 break-all">
-              {guestHubUrl}
-            </p>
-
-            {/* Bottom: Powered by RoadWave. Secondary branding. */}
-            <footer className="text-center pt-3 border-t border-[#e2e8f0]">
-              <p className="text-[11px] text-[#64748b]">
+            {/* Bottom: campground guest hub URL + small "Powered by
+                RoadWave". No RoadWave contact emails, no support
+                links -- this is the campground's counter sign, not
+                a RoadWave brochure. */}
+            <footer className="text-center pt-2.5 border-t border-[#e2e8f0]">
+              <p className="text-[11px] text-[#64748b] break-all mb-1">
+                {guestHubUrl}
+              </p>
+              <p className="text-[10px] text-[#94a3b8]">
                 Powered by{' '}
                 <span className="font-semibold text-[#0a0f1c]">
                   RoadWave
                 </span>{' '}
                 <span aria-hidden>👋</span>
-              </p>
-              <p className="text-[10px] text-[#94a3b8] mt-1">
-                Not an emergency service — call 911 first, then notify
-                campground staff.
               </p>
             </footer>
           </article>
