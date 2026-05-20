@@ -599,6 +599,41 @@ function ContactOffice({
     }
   }
 
+  // Once a message has been submitted, collapse the form entirely and
+  // render a tiny "Sent" panel pointing the camper at the persistent
+  // tracker above. Without this collapse the form area reads as a
+  // second box for the just-sent thread -- duplicated UX even though
+  // we removed the inline Check-Replies card. A "Send another message"
+  // button resets `sent` so the camper can open a fresh form if they
+  // need to flag another thing.
+  if (sent) {
+    return (
+      <section className="space-y-3">
+        <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+          Contact the office
+        </h2>
+        <div className="rounded-2xl border border-leaf/30 bg-leaf/[0.05] p-4 space-y-3">
+          <p className="text-sm text-cream leading-snug">
+            Sent to the office. Your message is saved under{' '}
+            <span className="font-semibold">
+              &ldquo;Your messages with the office&rdquo;
+            </span>{' '}
+            above. You&apos;ll be asked to confirm your site number and
+            last name before viewing replies.
+          </p>
+          <button
+            type="button"
+            onClick={() => setSent(false)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 text-cream px-3 py-1.5 text-xs font-semibold hover:bg-white/10 transition-colors"
+          >
+            <span aria-hidden>➕</span>
+            Send another message
+          </button>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="space-y-3">
       <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
@@ -775,14 +810,6 @@ function ContactOffice({
         </Field>
 
         {error && <p className="text-xs text-red-300">{error}</p>}
-        {sent && (
-          <p className="text-xs text-leaf">
-            Sent to the office. You can check for replies above under{' '}
-            <span className="font-semibold">
-              &ldquo;Your messages with the office.&rdquo;
-            </span>
-          </p>
-        )}
         <button
           type="submit"
           disabled={submitting}
