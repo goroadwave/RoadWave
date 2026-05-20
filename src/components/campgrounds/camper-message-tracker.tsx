@@ -137,6 +137,22 @@ export function CamperMessageTracker({
    *  accidentally write demo entries into their own localStorage. */
   previewMode?: boolean
 }) {
+  // The first client render MUST match SSR (which can't see
+  // localStorage). We flip `mounted` after the initial effect so any
+  // localStorage entries are picked up only on the second render --
+  // this avoids the React 18 hydration mismatch we'd otherwise hit
+  // when a returning camper has stored office threads.
+  //
+  // The eslint disable is intentional: this is the canonical
+  // post-hydration sentinel pattern. setState in this effect MUST
+  // happen exactly once to transition from "matches SSR" to "reads
+  // localStorage", and there's no callback-based alternative.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
+
   // Subscribe to the raw localStorage string via useSyncExternalStore.
   // The string is the canonical source of truth; we derive the parsed
   // entries from it below with useMemo so the reference stays stable.
@@ -153,14 +169,16 @@ export function CamperMessageTracker({
 
   // Parsed view of the localStorage entries. previewMode forces it to
   // empty so the owner preview never writes / reads demo entries.
+  // !mounted forces it to empty on the very first client render so we
+  // match the server-rendered HTML (no localStorage access during SSR).
   const stored = useMemo<StoredCamperMessage[]>(() => {
-    if (previewMode) return []
+    if (previewMode || !mounted) return []
     // storedRaw is intentionally part of the dep array even though it
     // isn't referenced inside (we just need to recompute when it
     // changes). loadCamperMessages reads from localStorage itself.
     void storedRaw
     return loadCamperMessages(campgroundId)
-  }, [campgroundId, previewMode, storedRaw])
+  }, [campgroundId, previewMode, mounted, storedRaw])
 
   // Live polling state, keyed by message id. Separate from the parsed
   // entries so refreshing localStorage doesn't blow away ongoing poll
