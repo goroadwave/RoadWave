@@ -184,17 +184,20 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
         currentLogoUrl={campground.logo_url}
       />
 
-      {/* Guest-facing links that surface as CTAs on the welcome page
-          after a guest scans the QR. Clicks are logged to
+      {/* Guest-facing links that surface as buttons on the welcome
+          page after a guest scans the QR. Clicks are logged to
           campground_events and roll into the dashboard's "This Week"
           card + the Monday weekly report email. */}
       <div className="rounded-2xl border border-flame/20 bg-flame/[0.04] p-4 space-y-3">
         <p className="text-[11px] uppercase tracking-[0.18em] text-flame font-semibold">
-          Guest CTAs (optional)
+          Support This Campground Links
         </p>
         <p className="text-xs text-mist leading-snug">
-          Show a Leave a Review or Book Again button on your welcome
-          page. We track taps so you can see them in your weekly report.
+          Add review, Facebook, and booking links that guests can use
+          from the QR page. Each button only shows when the link is
+          filled in AND its toggle is on. If all three are blank or
+          off, the whole &ldquo;Support this campground&rdquo; section
+          stays hidden.
         </p>
         <Field
           label="Google Review URL"

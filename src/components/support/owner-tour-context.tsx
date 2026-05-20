@@ -57,8 +57,8 @@ export const OWNER_TOUR_STEPS = [
   },
   {
     icon: '🎚️',
-    title: 'Engagement Hub',
-    body: "On the Home tab, flip toggles for Stay Feedback (Pulse Check), Leave a Google Review, Book Your Next Stay, and Contact the Office. Anything off is hidden from guests entirely.",
+    title: 'Guest features',
+    body: "On the Home tab, flip toggles for Stay Feedback (Pulse Check), Leave a Google Review, Recommend Us on Facebook, Book Your Next Stay, and Contact the Office. Anything off is hidden from guests entirely.",
   },
   {
     icon: '📨',

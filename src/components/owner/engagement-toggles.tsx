@@ -78,10 +78,10 @@ export function EngagementToggles({ campgroundId, initial }: Props) {
   return (
     <section className="space-y-3">
       <div className="space-y-1">
-        <Eyebrow>Engagement Hub</Eyebrow>
+        <Eyebrow>Guest features</Eyebrow>
         <p className="text-sm text-mist leading-snug">
-          Turn each guest-facing surface on or off. When off, guests
-          don&apos;t see the feature at all.
+          Turn each guest feature on or off. When off, guests
+          don&apos;t see it on your QR page at all.
         </p>
       </div>
       <ul className="rounded-2xl border border-white/5 bg-card divide-y divide-white/5 overflow-hidden">
