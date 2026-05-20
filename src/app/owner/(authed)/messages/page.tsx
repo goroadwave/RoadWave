@@ -88,7 +88,11 @@ function parseFilter(raw: string | undefined): FilterKey {
 
 function rowMatches(filter: FilterKey, status: MessageStatus): boolean {
   if (filter === 'all') return true
-  if (filter === 'active') return status !== 'archived'
+  // "Active" means rows that still need attention -- new + read.
+  // Resolved rows live under the Resolved tab (the owner has already
+  // handled them); archived rows live under Archived. This keeps the
+  // default inbox tight and stops resolved cards from stacking up.
+  if (filter === 'active') return status === 'new' || status === 'read'
   return status === filter
 }
 
@@ -124,9 +128,14 @@ export default async function OwnerMessagesPage({
   )
 
   // Tab counts come from the full result set so the tabs always show
-  // the same numbers regardless of which tab is active.
+  // the same numbers regardless of which tab is active. The Active
+  // count counts rows still requiring attention (new + read) -- it
+  // matches what the Active tab actually renders, not just "everything
+  // not archived."
   const tabCounts: Record<FilterKey, number> = {
-    active: allMessages.filter((m) => m.status !== 'archived').length,
+    active: allMessages.filter(
+      (m) => m.status === 'new' || m.status === 'read',
+    ).length,
     new: allMessages.filter((m) => m.status === 'new').length,
     resolved: allMessages.filter((m) => m.status === 'resolved').length,
     archived: allMessages.filter((m) => m.status === 'archived').length,
@@ -211,12 +220,20 @@ export default async function OwnerMessagesPage({
               ? 'No archived messages'
               : filter === 'all'
                 ? 'No messages yet'
-                : `Nothing in the ${filter === 'active' ? 'active inbox' : filter} bucket`}
+                : filter === 'active'
+                  ? 'All caught up'
+                  : filter === 'resolved'
+                    ? 'No resolved messages'
+                    : 'No new messages'}
           </Eyebrow>
           <p className="text-sm text-mist max-w-md mx-auto leading-snug">
             {filter === 'archived'
               ? 'Resolved messages you archive will show up here. You can unarchive or permanently delete them from this view.'
-              : 'When a guest taps "Something needs attention" on the Pulse Check, or sends a Contact the Office message from your welcome page, it\'ll land here.'}
+              : filter === 'active'
+                ? 'Nothing in the active inbox needs attention right now. Resolved messages live under the Resolved tab.'
+                : filter === 'resolved'
+                  ? 'When you mark a message Resolved it lands here. From this tab you can archive it or move it back to active.'
+                  : 'When a guest taps "Something needs attention" on the Pulse Check, or sends a Contact the Office message from your welcome page, it\'ll land here.'}
           </p>
         </div>
       ) : (
