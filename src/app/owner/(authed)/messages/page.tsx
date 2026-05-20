@@ -1,4 +1,6 @@
+import Link from 'next/link'
 import { Eyebrow } from '@/components/ui/eyebrow'
+import { OwnerMessageBulkArchive } from '@/components/owner/owner-message-bulk-archive'
 import { OwnerMessageSoundToggle } from '@/components/owner/owner-message-sound-toggle'
 import { OwnerMessageStatusButtons } from '@/components/owner/owner-message-status-buttons'
 import { PageHeading } from '@/components/ui/page-heading'
@@ -40,13 +42,15 @@ const PREFERRED_METHOD_LABEL: Record<string, string> = {
   no_reply: 'No reply needed',
 }
 
+type MessageStatus = 'new' | 'read' | 'resolved' | 'archived'
+
 type MessageRow = {
   id: string
   source: 'contact_form' | 'pulse_needs_attention'
   category: string | null
   body: string
   guest_contact: string | null
-  status: 'new' | 'read' | 'resolved'
+  status: MessageStatus
   submitted_at: string
   // Structured guest info (mig 0052). NULL on legacy + pulse rows.
   site_number: string | null
@@ -57,9 +61,44 @@ type MessageRow = {
   preferred_contact_method: string | null
   read_at: string | null
   resolved_at: string | null
+  // Archive support (mig 0054). NULL on rows that have never been
+  // archived. Stamped on transition to 'archived'; cleared on un-archive.
+  archived_at: string | null
 }
 
-export default async function OwnerMessagesPage() {
+// Filter tab values. ?filter=<value> in the URL drives the active
+// tab; default is "active" which shows new/read/resolved (everything
+// except archived).
+type FilterKey = 'active' | 'new' | 'resolved' | 'archived' | 'all'
+
+const FILTER_TABS: { key: FilterKey; label: string }[] = [
+  { key: 'active', label: 'Active' },
+  { key: 'new', label: 'New' },
+  { key: 'resolved', label: 'Resolved' },
+  { key: 'archived', label: 'Archived' },
+  { key: 'all', label: 'All' },
+]
+
+function parseFilter(raw: string | undefined): FilterKey {
+  if (raw === 'new' || raw === 'resolved' || raw === 'archived' || raw === 'all') {
+    return raw
+  }
+  return 'active'
+}
+
+function rowMatches(filter: FilterKey, status: MessageStatus): boolean {
+  if (filter === 'all') return true
+  if (filter === 'active') return status !== 'archived'
+  return status === filter
+}
+
+export default async function OwnerMessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>
+}) {
+  const { filter: filterRaw } = await searchParams
+  const filter = parseFilter(filterRaw)
   const { campground } = await loadOwnerCampground()
   if (!campground) {
     return (
@@ -79,7 +118,26 @@ export default async function OwnerMessagesPage() {
     })
     .returns<MessageRow[]>()
 
-  const messages = (data ?? []) as MessageRow[]
+  const allMessages = (data ?? []) as MessageRow[]
+  const visibleMessages = allMessages.filter((m) =>
+    rowMatches(filter, m.status),
+  )
+
+  // Tab counts come from the full result set so the tabs always show
+  // the same numbers regardless of which tab is active.
+  const tabCounts: Record<FilterKey, number> = {
+    active: allMessages.filter((m) => m.status !== 'archived').length,
+    new: allMessages.filter((m) => m.status === 'new').length,
+    resolved: allMessages.filter((m) => m.status === 'resolved').length,
+    archived: allMessages.filter((m) => m.status === 'archived').length,
+    all: allMessages.length,
+  }
+
+  // Bulk-archive button targets every resolved row, not just those
+  // visible in the current filter — that matches user expectation:
+  // "Archive Resolved" should drain every resolved message regardless
+  // of which tab is open.
+  const resolvedCount = tabCounts.resolved
 
   return (
     <div className="space-y-6">
@@ -93,9 +151,52 @@ export default async function OwnerMessagesPage() {
           persisted in the owner's browser localStorage. Mounted at the
           top of the inbox so it's discoverable when the owner is here
           actively reading messages. */}
-      <div>
+      <div className="flex flex-wrap items-center gap-3">
         <OwnerMessageSoundToggle />
+        <OwnerMessageBulkArchive resolvedCount={resolvedCount} />
       </div>
+
+      {/* Filter tabs. Default tab is Active (new + read + resolved),
+          which mirrors the historical inbox view -- archived rows
+          never appear here unless the owner explicitly switches tabs.
+          The active tab is encoded in the URL so the owner can
+          bookmark / share a specific view. */}
+      <nav>
+        <ul className="flex flex-wrap gap-1.5 text-xs">
+          {FILTER_TABS.map((tab) => {
+            const active = filter === tab.key
+            const count = tabCounts[tab.key]
+            const href =
+              tab.key === 'active'
+                ? '/owner/messages'
+                : `/owner/messages?filter=${tab.key}`
+            return (
+              <li key={tab.key}>
+                <Link
+                  href={href}
+                  aria-current={active ? 'page' : undefined}
+                  className={
+                    active
+                      ? 'inline-flex items-center gap-1.5 rounded-full bg-flame/15 border border-flame/40 text-flame px-3 py-1 font-semibold'
+                      : 'inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 text-mist px-3 py-1 hover:bg-white/10 hover:text-cream transition-colors'
+                  }
+                >
+                  {tab.label}
+                  <span
+                    className={
+                      active
+                        ? 'rounded-full bg-flame/20 text-flame px-1.5 text-[10px] tabular-nums'
+                        : 'rounded-full bg-white/10 text-mist px-1.5 text-[10px] tabular-nums'
+                    }
+                  >
+                    {count}
+                  </span>
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      </nav>
 
       {error && (
         <p className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -103,18 +204,24 @@ export default async function OwnerMessagesPage() {
         </p>
       )}
 
-      {messages.length === 0 ? (
+      {visibleMessages.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-card/40 p-8 text-center space-y-2">
-          <Eyebrow>No messages yet</Eyebrow>
+          <Eyebrow>
+            {filter === 'archived'
+              ? 'No archived messages'
+              : filter === 'all'
+                ? 'No messages yet'
+                : `Nothing in the ${filter === 'active' ? 'active inbox' : filter} bucket`}
+          </Eyebrow>
           <p className="text-sm text-mist max-w-md mx-auto leading-snug">
-            When a guest taps &ldquo;Something needs attention&rdquo; on the
-            Pulse Check, or sends a Contact the Office message from your
-            welcome page, it&apos;ll land here.
+            {filter === 'archived'
+              ? 'Resolved messages you archive will show up here. You can unarchive or permanently delete them from this view.'
+              : 'When a guest taps "Something needs attention" on the Pulse Check, or sends a Contact the Office message from your welcome page, it\'ll land here.'}
           </p>
         </div>
       ) : (
         <ul className="space-y-3">
-          {messages.map((m) => (
+          {visibleMessages.map((m) => (
             <MessageCard key={m.id} message={m} />
           ))}
         </ul>
@@ -137,12 +244,16 @@ function MessageCard({ message }: { message: MessageRow }) {
 
   // Status pill styling. "new" → amber chip (matches the unread badge
   // in the nav). "read" → muted neutral. "resolved" → leaf green.
+  // "archived" → muted slate (visually quieter than active states so
+  // the All view doesn't look noisy).
   const statusChipClass =
     message.status === 'new'
       ? 'rounded-full bg-flame/15 text-flame border border-flame/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]'
       : message.status === 'resolved'
         ? 'rounded-full bg-leaf/15 text-leaf border border-leaf/30 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]'
-        : 'rounded-full bg-white/5 text-mist border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]'
+        : message.status === 'archived'
+          ? 'rounded-full bg-white/[0.03] text-mist/80 border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]'
+          : 'rounded-full bg-white/5 text-mist border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]'
 
   // Guest display name: "Smith, Jane" / "Smith" / "—"
   const nameParts = [message.last_name, message.first_name].filter(
@@ -180,7 +291,13 @@ function MessageCard({ message }: { message: MessageRow }) {
         <div className="flex items-center gap-2">
           <span className={statusChipClass}>{message.status}</span>
           <span className="text-mist tabular-nums">
-            {formatSubmittedAt(message.submitted_at)}
+            {/* Archived rows show "Archived 3d ago" instead of the
+                original submission timestamp so the owner sees when
+                they archived it (useful in the Archived view). All
+                other states show submission time. */}
+            {message.status === 'archived' && message.archived_at
+              ? `Archived ${formatSubmittedAt(message.archived_at)}`
+              : formatSubmittedAt(message.submitted_at)}
           </span>
         </div>
       </div>

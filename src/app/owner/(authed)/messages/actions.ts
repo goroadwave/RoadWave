@@ -23,9 +23,15 @@ export type MessageStatusUpdate = {
   error: string | null
 }
 
+export type BulkArchiveResult = {
+  ok: boolean
+  archivedCount: number
+  error: string | null
+}
+
 async function setStatus(
   messageId: string,
-  newStatus: 'new' | 'read' | 'resolved',
+  newStatus: 'new' | 'read' | 'resolved' | 'archived',
 ): Promise<MessageStatusUpdate> {
   if (typeof messageId !== 'string' || messageId.length < 8) {
     return { ok: false, error: 'Invalid message id.' }
@@ -76,4 +82,91 @@ export async function markMessageUnreadAction(
   messageId: string,
 ): Promise<MessageStatusUpdate> {
   return setStatus(messageId, 'new')
+}
+
+export async function markMessageArchivedAction(
+  messageId: string,
+): Promise<MessageStatusUpdate> {
+  return setStatus(messageId, 'archived')
+}
+
+// Unarchive returns the row to 'resolved' (where Archive normally
+// comes from), not 'new'. An owner unarchiving by accident probably
+// wants the message back in the resolved bucket, not screaming on the
+// nav badge.
+export async function unarchiveMessageAction(
+  messageId: string,
+): Promise<MessageStatusUpdate> {
+  return setStatus(messageId, 'resolved')
+}
+
+// Bulk-archive every resolved message for the caller's most-recent
+// campground. RPC ownership-gated via campground_admins membership;
+// the action verifies the caller is signed in first.
+export async function archiveAllResolvedAction(): Promise<BulkArchiveResult> {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { ok: false, archivedCount: 0, error: 'Not signed in.' }
+  }
+
+  // Most-recent admin link — mirrors loadOwnerCampground so the bulk
+  // archive targets the same row /owner/messages reads from.
+  const { data: links } = await supabase
+    .from('campground_admins')
+    .select('campground_id, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+  const link = links?.[0]
+  if (!link) {
+    return { ok: false, archivedCount: 0, error: 'No campground linked.' }
+  }
+
+  const { data, error } = await supabase.rpc('owner_archive_all_resolved', {
+    _campground_id: link.campground_id,
+  })
+  if (error) {
+    return { ok: false, archivedCount: 0, error: error.message }
+  }
+
+  // RPC returns table(out_archived_count integer). PostgREST surfaces
+  // that as an array of one object; supabase-js's RPC return-type
+  // inference doesn't catch the set-returning shape, so cast.
+  const rows = (data as unknown as { out_archived_count: number }[] | null) ??
+    []
+  const archivedCount = Number(rows[0]?.out_archived_count ?? 0)
+
+  revalidatePath('/owner/messages')
+  revalidatePath('/owner/dashboard')
+  return { ok: true, archivedCount, error: null }
+}
+
+// Permanently delete a single ARCHIVED message. The SECURITY DEFINER
+// RPC refuses to delete anything whose status is not 'archived', so a
+// misfire from another caller can't wipe an active inbox row. The
+// strong confirmation dialog lives in the UI; this layer is the
+// last-mile call.
+export async function deleteArchivedMessageAction(
+  messageId: string,
+): Promise<MessageStatusUpdate> {
+  if (typeof messageId !== 'string' || messageId.length < 8) {
+    return { ok: false, error: 'Invalid message id.' }
+  }
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  const { error } = await supabase.rpc('owner_delete_archived_message', {
+    _message_id: messageId,
+  })
+  if (error) return { ok: false, error: error.message }
+
+  revalidatePath('/owner/messages')
+  revalidatePath('/owner/dashboard')
+  return { ok: true, error: null }
 }
