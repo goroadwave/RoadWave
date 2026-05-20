@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import {
-  drawBrandWordmark,
-  renderEmojiToPng as renderEmojiToPngShared,
-} from '@/lib/owner/qr-card-brand'
+import { renderEmojiToPng as renderEmojiToPngShared } from '@/lib/owner/qr-card-brand'
 
 // Owner-facing Marketing Kit. Generates every brand-correct, auto-
 // populated promotional asset on demand: PDFs are built client-side
@@ -33,19 +30,16 @@ const BRAND = {
   night: [0x0a, 0x0f, 0x1c] as const,
 }
 
-// Trust points shown on every printable QR card. Kept to exactly four
-// short lines so the layout stays clean at 4×6 and 4×9.
-const TRUST_POINTS: string[] = [
-  'No app download needed',
-  'No exact site numbers',
-  'No public group chat',
-  'You control your visibility',
-]
-
-const CARD_HEADLINE = 'Scan for Campground Updates'
+// Card copy. The campground brand leads (logo + name); RoadWave plays
+// a supporting role via the small "Powered by RoadWave 👋" tag below
+// the campground name and a single tagline footer at the very bottom.
+// No bulleted trust points -- the prior layout's four checkmarks
+// pushed RoadWave-branded copy harder than the campground brand.
+const CARD_HEADLINE = 'Scan for Campground Info'
 const CARD_SUBTEXT =
-  'Check in, see activities, contact the office, and connect with nearby campers only if you want.'
-const CARD_FOOTER = 'Powered by RoadWave'
+  'View the park map, Wi-Fi, rules, updates, office help, and optional camper connections.'
+const CARD_TAGLINE =
+  'Camper connections are optional. No login needed for campground info.'
 
 type Props = {
   campgroundName: string
@@ -71,6 +65,13 @@ export function MarketingKit({
   // image instead. Generated once on mount and reused across every
   // PDF download.
   const [waveDataUrl, setWaveDataUrl] = useState<string | null>(null)
+  // Campground logo, fetched + rasterised to PNG via a canvas so it
+  // can be embedded in jsPDF regardless of source format (PNG / JPEG
+  // / WebP / SVG all decode through the browser's image loader,
+  // then we re-encode as PNG). Null when the campground has no logo
+  // configured OR the fetch fails — in that case the card omits the
+  // logo block and the layout collapses to wordmark + name.
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   // Track the most recent copy attempt's label + outcome. Buttons read
   // both so they can show "Copied ✓" on success or
@@ -121,6 +122,34 @@ export function MarketingKit({
   useEffect(() => {
     setWaveDataUrl(renderEmojiToPngShared('👋', 192))
   }, [])
+
+  // Load the campground logo (any format) and re-encode to PNG so
+  // jsPDF can embed it. We use the browser's native <img> + canvas
+  // pipeline because:
+  //   1. It handles PNG, JPEG, WebP, and SVG transparently -- jsPDF
+  //      itself only reliably accepts PNG/JPEG.
+  //   2. Re-encoding to PNG strips any metadata (EXIF orientation,
+  //      ICC profile) that jsPDF doesn't honour, so the rendered
+  //      logo always looks the same as it does in the browser.
+  // Failures are silent: a null logoDataUrl just collapses the logo
+  // block in the PDF so the card still renders cleanly.
+  useEffect(() => {
+    // Skip the fetch path when there's no logoUrl; an already-loaded
+    // logoDataUrl from a prior mount stays in place until the
+    // component unmounts. Lint's react-hooks/set-state-in-effect rule
+    // doesn't permit a synchronous setLogoDataUrl(null) reset in this
+    // branch, so the slight staleness here is the accepted tradeoff
+    // (same trade made by the QR effect above).
+    if (!logoUrl) return
+    let cancelled = false
+    ;(async () => {
+      const d = await loadImageToPngDataUrl(logoUrl, 400)
+      if (!cancelled) setLogoDataUrl(d)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [logoUrl])
 
   function flashCopyResult(label: string, ok: boolean) {
     setCopyResult({ label, ok })
@@ -194,10 +223,11 @@ export function MarketingKit({
       const blob = await buildCounterCardPdf({
         qrDataUrl: qrPngDataUrl,
         waveDataUrl,
+        logoDataUrl,
         campgroundName,
         location,
       })
-      downloadBlob(blob, `${baseFilename}-counter-card-4x6.pdf`)
+      downloadBlob(blob, `${baseFilename}-front-desk-card-4x6.pdf`)
     } catch (e) {
       setRenderError(e instanceof Error ? e.message : 'PDF build failed.')
     } finally {
@@ -212,9 +242,10 @@ export function MarketingKit({
       const blob = await buildSimpleQrPdf({
         qrDataUrl: qrPngDataUrl,
         waveDataUrl,
+        logoDataUrl,
         campgroundName,
       })
-      downloadBlob(blob, `${baseFilename}-qr-print.pdf`)
+      downloadBlob(blob, `${baseFilename}-qr-sign.pdf`)
     } catch (e) {
       setRenderError(e instanceof Error ? e.message : 'PDF build failed.')
     } finally {
@@ -229,6 +260,7 @@ export function MarketingKit({
       const blob = await buildSiteCardPdf({
         qrDataUrl: qrPngDataUrl,
         waveDataUrl,
+        logoDataUrl,
         campgroundName,
         location,
       })
@@ -259,7 +291,7 @@ export function MarketingKit({
       campgroundName,
       campgroundUrl: campgroundPageUrl,
     })
-    const plain = `Scan to connect with fellow campers at ${campgroundName} — ${campgroundPageUrl}`
+    const plain = `View our campground map, Wi-Fi, updates, office help, and optional camper connections at ${campgroundName} — ${campgroundPageUrl}`
     const ok = await copyHtmlToClipboard(html, plain)
     flashCopyResult('signature', ok)
   }
@@ -343,25 +375,25 @@ export function MarketingKit({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Asset
-          title="Counter Card — 4×6 PDF"
-          description="Print-ready 4×6 card with your logo, name, location, and QR. Designed for the front desk or check-in counter."
-          where="Front desk · check-in counter · welcome packet"
+          title="Front Desk Guest Info Card — 4×6 PDF"
+          description="Place this at your check-in counter so guests can quickly access your park map, Wi-Fi, rules, office help, updates, and optional camper connections."
+          where="FRONT DESK · WELCOME PACKET · CHECK-IN COUNTER"
           actions={
             <PrimaryButton
               onClick={downloadCounterCard}
               disabled={!qrReady || busy === 'counter'}
               loading={busy === 'counter'}
             >
-              Download Counter Card PDF
+              Download Front Desk Card PDF
             </PrimaryButton>
           }
           preview={qrPngDataUrl && <QrThumb dataUrl={qrPngDataUrl} />}
         />
 
         <Asset
-          title="QR Code — High Resolution PNG"
-          description="1000×1000px PNG of your unique QR. White background, no text — drop it into anything."
-          where="Use anywhere — signs, flyers, welcome packets, social media"
+          title="QR Code PNG"
+          description="Use your campground QR code on signs, flyers, welcome packets, emails, and social media."
+          where="SIGNS · FLYERS · WELCOME PACKETS · SOCIAL MEDIA"
           actions={
             <PrimaryButton onClick={downloadQrPng} disabled={!qrReady}>
               Download QR PNG (1000×1000)
@@ -371,25 +403,25 @@ export function MarketingKit({
         />
 
         <Asset
-          title="QR Code — Print Ready PDF"
-          description="Single page, centered QR with a Scan to Check In label and your campground name below."
-          where="Quick prints · noticeboards · printer-only office setups"
+          title="Print-Ready QR Sign PDF"
+          description="Simple print-ready sign with your campground name and QR code."
+          where="OFFICE · NOTICEBOARDS · PRINTER-READY"
           actions={
             <PrimaryButton
               onClick={downloadQrPdf}
               disabled={!qrReady || busy === 'qr-pdf'}
               loading={busy === 'qr-pdf'}
             >
-              Download QR PDF
+              Download QR Sign PDF
             </PrimaryButton>
           }
           preview={qrPngDataUrl && <QrThumb dataUrl={qrPngDataUrl} />}
         />
 
         <Asset
-          title="Email Signature — Paste into Gmail or Outlook"
-          description="HTML snippet with the RoadWave wordmark, your campground line, your QR, and a link to your campground page."
-          where="Gmail · Outlook · Apple Mail · any email client"
+          title="Email Signature"
+          description="Paste this into Gmail, Outlook, Apple Mail, or your email client so guests can quickly open your campground info page."
+          where="GMAIL · OUTLOOK · APPLE MAIL · ANY EMAIL CLIENT"
           actions={
             <PrimaryButton
               onClick={copyEmailSignature}
@@ -411,8 +443,8 @@ export function MarketingKit({
 
         <Asset
           title="Guest Welcome Email — Copy & Paste"
-          description="Pre-written welcome email already personalised for your campground. Paste the HTML version into a rich-email client, or the plain-text version anywhere."
-          where="Reservation confirmations · pre-arrival emails · Mailchimp / Klaviyo blasts"
+          description="Pre-written welcome email personalized for your campground. Paste the HTML version into a rich-email client, or the plain-text version anywhere."
+          where="RESERVATION CONFIRMATIONS · PRE-ARRIVAL EMAILS · MAILCHIMP / KLAVIYO"
           actions={
             <div className="flex flex-col sm:flex-row gap-2">
               <PrimaryButton
@@ -428,18 +460,17 @@ export function MarketingKit({
           }
           preview={
             <p className="text-xs text-mist leading-relaxed bg-night/40 rounded-lg p-3 border border-white/5">
-              Welcome to <span className="text-cream">{campgroundName}</span>
-              ! We use RoadWave so our guests can see campground updates,
-              find activities, and optionally connect with fellow campers
-              — privately and without sharing exact site numbers…
+              Welcome to <span className="text-cream">{campgroundName}</span>!
+              Scan our QR code to see your park map, Wi-Fi, rules, updates,
+              office help, and optional camper connections — no login needed.
             </p>
           }
         />
 
         <Asset
-          title="Site Card — Print for Individual Sites"
-          description="4×9 print format for individual campsites or cabin doors. Same dark navy branding, your QR, name, and the amber/green CTA labels."
-          where="Cabin doors · post stakes · door hangers · in-site welcome cards"
+          title="Site Card — 4×9 PDF"
+          description="Print format for individual campsites or cabin doors. Same Front Desk Card layout in a taller 4×9 format with a larger QR."
+          where="CABIN DOORS · POST STAKES · DOOR HANGERS · IN-SITE CARDS"
           actions={
             <PrimaryButton
               onClick={downloadSiteCard}
@@ -590,16 +621,13 @@ function SignaturePreview({
         className="block shrink-0"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={qrDataUrl} alt={`${campgroundName} check-in QR`} className="h-12 w-12" />
+        <img src={qrDataUrl} alt={`${campgroundName} campground info QR`} className="h-12 w-12" />
       </a>
       <div>
-        <p className="font-bold">
-          Road<span className="text-amber-500">Wave</span>{' '}
-          <span aria-hidden>👋</span>
-        </p>
-        <p>
-          Scan to connect with fellow campers at{' '}
-          <span className="font-semibold">{campgroundName}</span>
+        <p className="font-semibold">{campgroundName}</p>
+        <p className="text-night/80">
+          View our campground map, Wi-Fi, updates, office help, and optional
+          camper connections.
         </p>
         <p>
           <a
@@ -608,8 +636,15 @@ function SignaturePreview({
             rel="noopener noreferrer"
             style={{ color: '#F5A623', fontWeight: 600 }}
           >
-            View our campground page →
+            Open the campground info page →
           </a>
+        </p>
+        <p className="text-night/60 text-[10px]">
+          Powered by{' '}
+          <span style={{ fontWeight: 600 }}>
+            Road<span style={{ color: '#F5A623' }}>Wave</span>{' '}
+            <span aria-hidden>👋</span>
+          </span>
         </p>
       </div>
     </div>
@@ -623,19 +658,25 @@ function SignaturePreview({
 type CardArgs = {
   qrDataUrl: string
   waveDataUrl: string | null
+  logoDataUrl: string | null
   campgroundName: string
   location: string
 }
 
-// 4×6 portrait, 288×432pt. Matches the spec layout: brand wordmark
-// top-left, "WELCOME TO" + name + location, two-column QR + bullet
-// area, two pill CTAs, dark footer with privacy line + green pill.
+// 4×6 portrait, 288×432pt. Front Desk Guest Info Card.
+// Layout hierarchy (top → bottom):
+//   1. Campground logo if uploaded (max 70pt tall, preserves aspect)
+//   2. Campground name (large, white)
+//   3. Location (small, mist)
+//   4. "Powered by RoadWave 👋" (small, secondary)
+//   5. Centered QR
+//   6. "Scan for Campground Info" headline (amber)
+//   7. Subtext (mist)
+//   8. "Camper connections are optional. No login needed for
+//      campground info." footer tagline
+//
+// The campground brand leads; RoadWave plays the supporting role.
 async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
-  // Clean 4×6 counter card. Centered layout, no fake buttons, no
-  // amenity pills, no FREE FOR GUESTS badge. Hierarchy: wordmark →
-  // WELCOME TO eyebrow → campground name → city/state → centered QR →
-  // headline → subtext → four trust checkmarks → "Powered by
-  // RoadWave" footer.
   const { default: JsPDF } = await import('jspdf')
   const doc = new JsPDF({
     unit: 'pt',
@@ -644,56 +685,65 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
   })
   const W = 288
   const H = 432
-  const PAD = 20
+  const PAD = 18
 
   // Background
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Canonical RoadWave wordmark, centered at the top. Cream "Road",
-  // flame "Wave", 👋 PNG flush against "Wave" — matches the site
-  // Logo component byte-for-byte.
-  const wordmarkY = PAD + 16
-  drawBrandWordmark({
-    doc,
-    fontSize: 20,
-    waveDataUrl: args.waveDataUrl,
-    y: wordmarkY,
-    align: 'center',
-    x: W / 2,
-  })
+  // ---- Logo (optional) ----
+  let cursorY = PAD + 14
+  if (args.logoDataUrl) {
+    const props = doc.getImageProperties(args.logoDataUrl)
+    const maxH = 56
+    const maxW = 120
+    const ratio = Math.min(maxW / props.width, maxH / props.height)
+    const drawW = Math.round(props.width * ratio)
+    const drawH = Math.round(props.height * ratio)
+    doc.addImage(
+      args.logoDataUrl,
+      'PNG',
+      (W - drawW) / 2,
+      cursorY,
+      drawW,
+      drawH,
+    )
+    cursorY += drawH + 10
+  }
 
-  // "WELCOME TO" eyebrow
-  doc.setFontSize(7.5)
-  setText(doc, BRAND.amber)
-  doc.text('WELCOME TO', W / 2, wordmarkY + 22, { align: 'center' })
-
-  // Campground name — centered, may wrap onto 2 lines for long names.
-  doc.setFontSize(17)
+  // ---- Campground name (the dominant element) ----
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(18)
   setText(doc, BRAND.white)
   const nameLines = doc.splitTextToSize(args.campgroundName, W - PAD * 2)
-  let nameY = wordmarkY + 44
   for (const ln of nameLines) {
-    doc.text(ln, W / 2, nameY, { align: 'center' })
-    nameY += 20
+    doc.text(ln, W / 2, cursorY + 14, { align: 'center' })
+    cursorY += 20
   }
 
-  // Location
+  // ---- Location ----
   if (args.location) {
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
+    doc.setFontSize(9.5)
     setText(doc, BRAND.mist)
-    doc.text(args.location, W / 2, nameY + 2, { align: 'center' })
-    nameY += 14
+    doc.text(args.location, W / 2, cursorY + 6, { align: 'center' })
+    cursorY += 12
   }
 
-  // Centered QR — balanced size (148pt = ~2 in on a 4-in wide card),
-  // large enough to scan from arm's length but not oversized. Reserve
-  // enough vertical space under it for the headline + subtext + four
-  // trust checkmarks + footer with comfortable margins.
-  const qrSize = 148
+  // ---- "Powered by RoadWave 👋" — small, secondary ----
+  cursorY += 10
+  drawPoweredByRoadwave(doc, {
+    fontSize: 10,
+    waveDataUrl: args.waveDataUrl,
+    y: cursorY,
+    centerX: W / 2,
+  })
+  cursorY += 16
+
+  // ---- Centered QR ----
+  const qrSize = 152
   const qrX = (W - qrSize) / 2
-  const qrY = nameY + 16
+  const qrY = cursorY + 8
   setFill(doc, BRAND.white)
   doc.roundedRect(qrX, qrY, qrSize, qrSize, 8, 8, 'F')
   const inset = 8
@@ -706,56 +756,46 @@ async function buildCounterCardPdf(args: CardArgs): Promise<Blob> {
     qrSize - inset * 2,
   )
 
-  // Headline under QR
+  // ---- Headline ----
   const belowQrY = qrY + qrSize + 22
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(13)
   setText(doc, BRAND.amber)
   doc.text(CARD_HEADLINE, W / 2, belowQrY, { align: 'center' })
 
-  // Subtext
+  // ---- Subtext ----
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
+  doc.setFontSize(8.2)
   setText(doc, BRAND.mist)
   const subLines = doc.splitTextToSize(CARD_SUBTEXT, W - PAD * 2)
-  let subY = belowQrY + 12
+  let subY = belowQrY + 13
   for (const ln of subLines) {
     doc.text(ln, W / 2, subY, { align: 'center' })
     subY += 10
   }
 
-  // Trust checkmarks — small green ✓, white label, two columns to
-  // keep the bottom of the card breathable.
-  const checksTop = subY + 8
-  const colGap = 12
-  const colW = (W - PAD * 2 - colGap) / 2
-  doc.setFontSize(8)
-  TRUST_POINTS.forEach((label, i) => {
-    const col = i % 2
-    const row = Math.floor(i / 2)
-    const x = PAD + col * (colW + colGap)
-    const y = checksTop + row * 14
-    setText(doc, BRAND.green)
-    doc.setFont('helvetica', 'bold')
-    doc.text('✓', x, y)
-    setText(doc, BRAND.white)
-    doc.setFont('helvetica', 'normal')
-    doc.text(label, x + 10, y)
-  })
-
-  // Footer — "Powered by RoadWave". Single line, centered, amber.
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8.5)
-  setText(doc, BRAND.amber)
-  doc.text(CARD_FOOTER, W / 2, H - PAD, { align: 'center' })
+  // ---- Footer tagline ----
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7.5)
+  setText(doc, BRAND.mist)
+  const tagLines = doc.splitTextToSize(CARD_TAGLINE, W - PAD * 2)
+  let tagY = H - PAD - (tagLines.length - 1) * 9
+  for (const ln of tagLines) {
+    doc.text(ln, W / 2, tagY, { align: 'center' })
+    tagY += 9
+  }
 
   return doc.output('blob')
 }
 
-// 8.5×11 portrait, single page, centered QR with label + name.
+// 8.5×11 portrait. Print-Ready QR Sign — single page with the
+// campground identity on top and a large centered QR. Same hierarchy
+// as the 4×6 card: campground brand leads, RoadWave attribution is
+// secondary.
 async function buildSimpleQrPdf(args: {
   qrDataUrl: string
   waveDataUrl: string | null
+  logoDataUrl: string | null
   campgroundName: string
 }): Promise<Blob> {
   const { default: JsPDF } = await import('jspdf')
@@ -766,25 +806,55 @@ async function buildSimpleQrPdf(args: {
   })
   const W = doc.internal.pageSize.getWidth()
   const H = doc.internal.pageSize.getHeight()
+  const PAD = 56
 
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Canonical RoadWave wordmark, centered at the top.
-  const wmY = 96
-  drawBrandWordmark({
-    doc,
-    fontSize: 36,
-    waveDataUrl: args.waveDataUrl,
-    y: wmY,
-    align: 'center',
-    x: W / 2,
-  })
+  // ---- Logo (optional) ----
+  let cursorY = 80
+  if (args.logoDataUrl) {
+    const props = doc.getImageProperties(args.logoDataUrl)
+    const maxH = 110
+    const maxW = 260
+    const ratio = Math.min(maxW / props.width, maxH / props.height)
+    const drawW = Math.round(props.width * ratio)
+    const drawH = Math.round(props.height * ratio)
+    doc.addImage(
+      args.logoDataUrl,
+      'PNG',
+      (W - drawW) / 2,
+      cursorY,
+      drawW,
+      drawH,
+    )
+    cursorY += drawH + 18
+  }
 
-  // Centered QR
-  const qrSize = 360
+  // ---- Campground name ----
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(30)
+  setText(doc, BRAND.white)
+  const nameLines = doc.splitTextToSize(args.campgroundName, W - PAD * 2)
+  for (const ln of nameLines) {
+    doc.text(ln, W / 2, cursorY + 28, { align: 'center' })
+    cursorY += 36
+  }
+
+  // ---- "Powered by RoadWave 👋" ----
+  cursorY += 8
+  drawPoweredByRoadwave(doc, {
+    fontSize: 13,
+    waveDataUrl: args.waveDataUrl,
+    y: cursorY,
+    centerX: W / 2,
+  })
+  cursorY += 28
+
+  // ---- Centered QR ----
+  const qrSize = 320
   const qrX = (W - qrSize) / 2
-  const qrY = wmY + 60
+  const qrY = cursorY
   setFill(doc, BRAND.white)
   doc.roundedRect(qrX, qrY, qrSize, qrSize, 16, 16, 'F')
   const inset = 18
@@ -797,23 +867,41 @@ async function buildSimpleQrPdf(args: {
     qrSize - inset * 2,
   )
 
-  // "Scan to Check In"
-  doc.setFontSize(20)
+  // ---- Headline ----
+  const belowQrY = qrY + qrSize + 44
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(22)
   setText(doc, BRAND.amber)
-  doc.text('Scan to Check In', W / 2, qrY + qrSize + 48, { align: 'center' })
+  doc.text(CARD_HEADLINE, W / 2, belowQrY, { align: 'center' })
 
-  // Campground name
-  doc.setFontSize(28)
-  setText(doc, BRAND.white)
-  const nameLines = doc.splitTextToSize(args.campgroundName, W - 96)
-  doc.text(nameLines, W / 2, qrY + qrSize + 86, { align: 'center' })
+  // ---- Subtext ----
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(13)
+  setText(doc, BRAND.mist)
+  const subLines = doc.splitTextToSize(CARD_SUBTEXT, W - PAD * 2)
+  let subY = belowQrY + 22
+  for (const ln of subLines) {
+    doc.text(ln, W / 2, subY, { align: 'center' })
+    subY += 16
+  }
+
+  // ---- Footer tagline ----
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(11)
+  setText(doc, BRAND.mist)
+  const tagLines = doc.splitTextToSize(CARD_TAGLINE, W - PAD * 2)
+  let tagY = H - PAD - (tagLines.length - 1) * 14
+  for (const ln of tagLines) {
+    doc.text(ln, W / 2, tagY, { align: 'center' })
+    tagY += 14
+  }
 
   return doc.output('blob')
 }
 
-// 4×9 portrait — door hanger / site card. Same clean centered
-// layout as the 4×6 counter card, just taller — bigger QR and more
-// breathing room.
+// 4×9 portrait — door hanger / site card. Same hierarchy as the
+// 4×6 Front Desk Guest Info Card, just taller, with more breathing
+// room and a larger QR.
 async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
   const { default: JsPDF } = await import('jspdf')
   // 4in × 9in = 288 × 648pt
@@ -829,45 +917,59 @@ async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
   setFill(doc, BRAND.navy)
   doc.rect(0, 0, W, H, 'F')
 
-  // Canonical RoadWave wordmark, centered at the top.
-  const wmY = PAD + 30
-  drawBrandWordmark({
-    doc,
-    fontSize: 26,
-    waveDataUrl: args.waveDataUrl,
-    y: wmY,
-    align: 'center',
-    x: W / 2,
-  })
+  // ---- Logo (optional) ----
+  let cursorY = PAD + 20
+  if (args.logoDataUrl) {
+    const props = doc.getImageProperties(args.logoDataUrl)
+    const maxH = 80
+    const maxW = 160
+    const ratio = Math.min(maxW / props.width, maxH / props.height)
+    const drawW = Math.round(props.width * ratio)
+    const drawH = Math.round(props.height * ratio)
+    doc.addImage(
+      args.logoDataUrl,
+      'PNG',
+      (W - drawW) / 2,
+      cursorY,
+      drawW,
+      drawH,
+    )
+    cursorY += drawH + 14
+  }
 
-  // "WELCOME TO" eyebrow
-  doc.setFontSize(8)
-  setText(doc, BRAND.amber)
-  doc.text('WELCOME TO', W / 2, wmY + 28, { align: 'center' })
-
-  // Campground name
+  // ---- Campground name ----
+  doc.setFont('helvetica', 'bold')
   doc.setFontSize(22)
   setText(doc, BRAND.white)
   const nameLines = doc.splitTextToSize(args.campgroundName, W - PAD * 2)
-  let nameY = wmY + 54
   for (const ln of nameLines) {
-    doc.text(ln, W / 2, nameY, { align: 'center' })
-    nameY += 26
+    doc.text(ln, W / 2, cursorY + 20, { align: 'center' })
+    cursorY += 28
   }
 
-  // Location
+  // ---- Location ----
   if (args.location) {
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(11)
     setText(doc, BRAND.mist)
-    doc.text(args.location, W / 2, nameY + 2, { align: 'center' })
-    nameY += 16
+    doc.text(args.location, W / 2, cursorY + 8, { align: 'center' })
+    cursorY += 14
   }
 
-  // Centered QR — large but not oversized for the 4×9 size.
+  // ---- "Powered by RoadWave 👋" — small, secondary ----
+  cursorY += 12
+  drawPoweredByRoadwave(doc, {
+    fontSize: 12,
+    waveDataUrl: args.waveDataUrl,
+    y: cursorY,
+    centerX: W / 2,
+  })
+  cursorY += 22
+
+  // ---- Centered QR ----
   const qrSize = 200
   const qrX = (W - qrSize) / 2
-  const qrY = nameY + 28
+  const qrY = cursorY + 8
   setFill(doc, BRAND.white)
   doc.roundedRect(qrX, qrY, qrSize, qrSize, 10, 10, 'F')
   const inset = 10
@@ -880,43 +982,34 @@ async function buildSiteCardPdf(args: CardArgs): Promise<Blob> {
     qrSize - inset * 2,
   )
 
-  // Headline under QR
-  const belowQrY = qrY + qrSize + 30
+  // ---- Headline ----
+  const belowQrY = qrY + qrSize + 32
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(15)
+  doc.setFontSize(16)
   setText(doc, BRAND.amber)
   doc.text(CARD_HEADLINE, W / 2, belowQrY, { align: 'center' })
 
-  // Subtext
+  // ---- Subtext ----
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9.5)
+  doc.setFontSize(10)
   setText(doc, BRAND.mist)
   const subLines = doc.splitTextToSize(CARD_SUBTEXT, W - PAD * 2)
-  let subY = belowQrY + 16
+  let subY = belowQrY + 18
   for (const ln of subLines) {
     doc.text(ln, W / 2, subY, { align: 'center' })
-    subY += 12
+    subY += 13
   }
 
-  // Trust checkmarks — single column centered (more vertical room
-  // on the site card means we can stack them).
-  let by = subY + 14
-  doc.setFontSize(10)
-  for (const label of TRUST_POINTS) {
-    setText(doc, BRAND.green)
-    doc.setFont('helvetica', 'bold')
-    doc.text('✓', PAD + 16, by)
-    setText(doc, BRAND.white)
-    doc.setFont('helvetica', 'normal')
-    doc.text(label, PAD + 30, by)
-    by += 16
+  // ---- Footer tagline ----
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  setText(doc, BRAND.mist)
+  const tagLines = doc.splitTextToSize(CARD_TAGLINE, W - PAD * 2)
+  let tagY = H - PAD - (tagLines.length - 1) * 11
+  for (const ln of tagLines) {
+    doc.text(ln, W / 2, tagY, { align: 'center' })
+    tagY += 11
   }
-
-  // Footer — "Powered by RoadWave"
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(10)
-  setText(doc, BRAND.amber)
-  doc.text(CARD_FOOTER, W / 2, H - PAD, { align: 'center' })
 
   return doc.output('blob')
 }
@@ -930,35 +1023,33 @@ function buildEmailSignatureHtml(args: {
   campgroundName: string
   campgroundUrl: string
 }): string {
-  // HTML emails render the 👋 emoji fine via the recipient's system
-  // font stack (Apple Color Emoji on macOS/iOS, Segoe UI Emoji on
-  // Windows, Noto Color Emoji on Android/Linux). Safe to include in
-  // the wordmark here even though the PDFs intentionally skip it.
-  //
-  // Both the QR image AND the friendly link are wrapped in real <a
-  // href> tags. The visible text never includes the URL string —
-  // some email clients (Gmail in particular) treat a pasted plain
-  // URL as a search query when the surrounding HTML looks ambiguous,
-  // dropping the hyperlink. Replacing the raw URL with "View our
-  // campground page →" sidesteps that completely.
+  // Campground brand leads the signature; the "Powered by RoadWave"
+  // attribution sits below in the supporting role. Visible text
+  // never carries the raw URL string -- Gmail's plain-text fallback
+  // treats pasted URLs as search queries when surrounding HTML looks
+  // ambiguous, dropping the hyperlink. Replacing the raw URL with
+  // "Open the campground info page →" sidesteps that completely.
   const safeName = escapeHtml(args.campgroundName)
   const safeHref = escapeHtml(args.campgroundUrl)
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <tr>
     <td style="padding-right:14px;vertical-align:top;">
       <a href="${safeHref}" target="_blank" rel="noopener" style="display:block;text-decoration:none;border:0;">
-        <img src="${args.qrDataUrl}" alt="${safeName} check-in QR" width="84" height="84" style="display:block;border:1px solid #e5e7eb;border-radius:6px;background:#ffffff;" />
+        <img src="${args.qrDataUrl}" alt="${safeName} campground info QR" width="84" height="84" style="display:block;border:1px solid #e5e7eb;border-radius:6px;background:#ffffff;" />
       </a>
     </td>
     <td style="vertical-align:top;font-size:12px;line-height:1.45;color:#111827;">
       <p style="margin:0;font-weight:700;font-size:14px;">
-        <span style="color:#111827;">Road</span><span style="color:#F5A623;">Wave</span> <span aria-hidden="true">👋</span>
+        ${safeName}
       </p>
       <p style="margin:4px 0 0;color:#374151;">
-        Scan to connect with fellow campers at <strong>${safeName}</strong>
+        View our campground map, Wi-Fi, updates, office help, and optional camper connections.
       </p>
       <p style="margin:6px 0 0;">
-        <a href="${safeHref}" target="_blank" rel="noopener" style="color:#F5A623;font-weight:600;text-decoration:none;">View our campground page &rarr;</a>
+        <a href="${safeHref}" target="_blank" rel="noopener" style="color:#F5A623;font-weight:600;text-decoration:none;">Open the campground info page &rarr;</a>
+      </p>
+      <p style="margin:6px 0 0;font-size:10px;color:#6b7280;">
+        Powered by <span style="font-weight:600;color:#111827;">Road</span><span style="font-weight:600;color:#F5A623;">Wave</span> <span aria-hidden="true">👋</span>
       </p>
     </td>
   </tr>
@@ -970,23 +1061,21 @@ function buildWelcomeEmailHtml(args: {
   campgroundName: string
   campgroundUrl: string
 }): string {
-  // Same anchor-friendly approach as the signature builder: visible
-  // text never carries the URL string, both the inline link and the
-  // QR image are real anchors so a recipient can click either one to
-  // open the welcome page.
+  // Guest info first, optional camper connections second. Same
+  // anchor-friendly approach as the signature builder.
   const safeName = escapeHtml(args.campgroundName)
   const safeHref = escapeHtml(args.campgroundUrl)
   return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#111827;line-height:1.6;font-size:15px;max-width:560px;">
   <p>Welcome to <strong>${safeName}</strong>!</p>
-  <p>We use RoadWave so our guests can see campground updates, find activities, and optionally connect with fellow campers &mdash; privately and without sharing exact site numbers.</p>
-  <p>Scan the QR code below or <a href="${safeHref}" target="_blank" rel="noopener" style="color:#F5A623;font-weight:600;text-decoration:none;">view our campground page &rarr;</a> to get started. It&rsquo;s free and takes 30 seconds.</p>
+  <p>Scan the QR code below or <a href="${safeHref}" target="_blank" rel="noopener" style="color:#F5A623;font-weight:600;text-decoration:none;">open our campground info page &rarr;</a> to see your park map, Wi-Fi, rules, updates, office help, and optional camper connections.</p>
+  <p>No login needed for campground info. Camper connections are optional.</p>
   <p style="text-align:center;padding:18px 0;">
     <a href="${safeHref}" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;border:0;">
-      <img src="${args.qrDataUrl}" alt="${safeName} RoadWave QR" width="220" height="220" style="display:inline-block;border:1px solid #e5e7eb;border-radius:8px;background:#ffffff;" />
+      <img src="${args.qrDataUrl}" alt="${safeName} campground info QR" width="220" height="220" style="display:inline-block;border:1px solid #e5e7eb;border-radius:8px;background:#ffffff;" />
     </a>
   </p>
   <p style="font-size:12px;color:#6b7280;">
-    Private by design. No exact site numbers. No public group chats. No pressure.
+    Powered by <span style="font-weight:600;color:#111827;">Road</span><span style="font-weight:600;color:#F5A623;">Wave</span> <span aria-hidden="true">👋</span>. Private by design — no exact site numbers, no public group chats.
   </p>
 </div>`
 }
@@ -995,18 +1084,17 @@ function buildWelcomeEmailText(args: {
   campgroundName: string
   campgroundUrl: string
 }): string {
-  // Renamed from checkInUrl → campgroundUrl on purpose: the only URL
-  // a guest-facing template should ever surface is the clean
-  // /campground/<slug> welcome URL, not the token-bearing
-  // /checkin?token=… variant. Tokens belong inside QR-image data only.
+  // The only URL surfaced in guest-facing copy is the clean
+  // /campground/<slug> page, not the token-bearing variant. Tokens
+  // belong inside QR-image data only.
   return [
     `Welcome to ${args.campgroundName}!`,
     '',
-    'We use RoadWave so our guests can see campground updates, find activities, and optionally connect with fellow campers — privately and without sharing exact site numbers.',
+    `Scan our QR code or visit ${args.campgroundUrl} to see your park map, Wi-Fi, rules, updates, office help, and optional camper connections.`,
     '',
-    `Scan the QR code on our welcome card or visit ${args.campgroundUrl} to get started. It's free and takes 30 seconds.`,
+    'No login needed for campground info. Camper connections are optional.',
     '',
-    'Private by design. No exact site numbers. No public group chats. No pressure.',
+    'Powered by RoadWave 👋. Private by design — no exact site numbers, no public group chats.',
   ].join('\n')
 }
 
@@ -1026,6 +1114,89 @@ function setFill(doc: any, c: Rgb) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsPDF
 function setText(doc: any, c: Rgb) {
   doc.setTextColor(c[0], c[1], c[2])
+}
+
+// Draw "Powered by RoadWave 👋" centered around centerX. The
+// "Powered by " prefix renders in mist (small-caps secondary), then
+// the canonical RoadWave wordmark with the 👋 PNG flush right. Used
+// on every marketing-kit PDF so the campground brand stays primary
+// and the RoadWave attribution lives one tier down.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- jsPDF dynamic-import types live behind the import call
+function drawPoweredByRoadwave(doc: any, args: {
+  fontSize: number
+  waveDataUrl: string | null
+  y: number
+  centerX: number
+}) {
+  const { fontSize, waveDataUrl, y, centerX } = args
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(fontSize)
+  const prefix = 'Powered by '
+  const prefixW = doc.getTextWidth(prefix)
+  doc.setFont('helvetica', 'bold')
+  const roadW = doc.getTextWidth('Road')
+  const waveW = doc.getTextWidth('Wave')
+  const waveImgGap = waveDataUrl ? fontSize * 0.18 : 0
+  const waveImgSize = waveDataUrl ? fontSize : 0
+  const totalW = prefixW + roadW + waveW + waveImgGap + waveImgSize
+  const startX = centerX - totalW / 2
+
+  // "Powered by " (mist, regular)
+  doc.setFont('helvetica', 'normal')
+  setText(doc, BRAND.mist)
+  doc.text(prefix, startX, y)
+
+  // "Road" (cream, bold)
+  doc.setFont('helvetica', 'bold')
+  setText(doc, BRAND.cream)
+  doc.text('Road', startX + prefixW, y)
+
+  // "Wave" (amber, bold)
+  setText(doc, BRAND.amber)
+  doc.text('Wave', startX + prefixW + roadW, y)
+
+  // 👋
+  if (waveDataUrl) {
+    const imgX = startX + prefixW + roadW + waveW + waveImgGap
+    const imgY = y - waveImgSize + waveImgSize * 0.15
+    doc.addImage(waveDataUrl, 'PNG', imgX, imgY, waveImgSize, waveImgSize)
+  }
+}
+
+// Load any browser-supported image URL and re-encode to a PNG data
+// URL clamped to maxDim on the long edge. Returns null on any
+// failure (network error, CORS denial, decode error). Used to embed
+// owner-uploaded logos (PNG / JPEG / WebP / SVG) in jsPDF documents.
+async function loadImageToPngDataUrl(
+  url: string,
+  maxDim: number,
+): Promise<string | null> {
+  if (typeof document === 'undefined') return null
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image()
+      i.crossOrigin = 'anonymous'
+      i.onload = () => resolve(i)
+      i.onerror = () => reject(new Error('image load failed'))
+      // Append a cache-buster only if the URL doesn't already carry
+      // one (the campground logo upload already adds ?v=<ts>). This
+      // prevents the browser from serving a stale cached response
+      // without CORS headers.
+      i.src = url
+    })
+    const ratio = Math.min(maxDim / img.width, maxDim / img.height, 1)
+    const w = Math.max(1, Math.round(img.width * ratio))
+    const h = Math.max(1, Math.round(img.height * ratio))
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(img, 0, 0, w, h)
+    return canvas.toDataURL('image/png')
+  } catch {
+    return null
+  }
 }
 
 function slugify(s: string): string {
