@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { BulletinsList } from '@/components/campgrounds/bulletins-list'
+import { Lantern } from '@/components/campgrounds/lantern'
 import { MeetupsList } from '@/components/campgrounds/meetups-list'
 import { TrackedLinkButton } from '@/components/campgrounds/tracked-link-button'
 import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
@@ -180,20 +181,33 @@ export function CampgroundGuestHubBody({
 
   return (
     <main className="min-h-screen bg-night text-cream">
-      <header className="px-4 py-5 flex items-center justify-between">
+      <header className="px-4 py-5 flex items-center justify-between gap-3">
         <Link href="/" className="inline-block">
           <Logo className="text-2xl" />
         </Link>
-        <Link
-          href={
-            resolvedToken
-              ? `/login?next=${encodeURIComponent(checkInUrlSigned)}`
-              : '/login'
-          }
-          className="text-xs font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
-        >
-          Sign in
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* Phase 3b -- Lantern lives top-right next to Sign in.
+              Dim by default, lights up + shows a count when there's
+              a new bulletin, meetup, or office reply the camper
+              hasn't seen yet. Driven entirely by client events from
+              the existing pollers (BulletinsList, MeetupsList,
+              CamperMessageTracker) -- no extra network calls. */}
+          <Lantern
+            campgroundId={campground.id}
+            campgroundSlug={campground.slug}
+            previewMode={previewMode}
+          />
+          <Link
+            href={
+              resolvedToken
+                ? `/login?next=${encodeURIComponent(checkInUrlSigned)}`
+                : '/login'
+            }
+            className="text-xs font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
+          >
+            Sign in
+          </Link>
+        </div>
       </header>
 
       {/* Mobile bottom padding accounts for iOS Safari's URL bar and
@@ -606,32 +620,31 @@ export function CampgroundGuestHubBody({
               </section>
             )}
 
-          {/* Campground announcements (bulletins). Phase 3a -- the
-              list is now a client island that quietly re-polls
-              /api/campground/[slug]/dynamic every 60s while the tab
-              is visible, so a new owner-posted announcement appears
-              without a route reload. The heading + empty-state copy
-              live here (server side) so they don't flicker between
-              polls; only the list body re-renders. */}
-          <section className="space-y-3">
+          {/* Campground announcements (bulletins). Phase 3a -- client
+              island polls every 60s. Phase 3b -- island also fires
+              LANTERN_BULLETINS_EVENT on poll-detected changes so the
+              header Lantern can recompute unread state. id="bulletins"
+              is the Lantern's anchor target. */}
+          <section id="bulletins" className="space-y-3 scroll-mt-4">
             <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
               Campground announcements
             </h2>
             <BulletinsList
               campgroundSlug={campground.slug}
+              campgroundId={campground.id}
               initial={bulletins}
             />
           </section>
 
-          {/* Upcoming meetups. Same client-island treatment as the
-              bulletin list above -- 60s visibility-gated poll, no
-              flicker, no form-input wipe. */}
-          <section className="space-y-3">
+          {/* Upcoming meetups. Same Phase 3a/3b treatment as bulletins
+              above. id="meetups" is the Lantern's anchor target. */}
+          <section id="meetups" className="space-y-3 scroll-mt-4">
             <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
               Upcoming meetups
             </h2>
             <MeetupsList
               campgroundSlug={campground.slug}
+              campgroundId={campground.id}
               initial={meetups}
             />
           </section>

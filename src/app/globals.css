@@ -158,6 +158,30 @@ body {
   }
 }
 
+/* Phase 3b -- Lantern pulse. Subtle flame-tinted glow while there's
+   at least one unread notification. The animation is intentionally
+   gentle (no scale, no shake) so it doesn't compete with content.
+   prefers-reduced-motion suppresses the animation entirely; the
+   icon still renders lit (border + background color) so the camper
+   still sees there's something new. */
+.lantern-pulse {
+  animation: lanternPulse 2.4s ease-in-out infinite;
+}
+@keyframes lanternPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lantern-pulse {
+    animation: none;
+  }
+}
+
 /* Mobile-only tel: / sms: deep links on the owner message card.
    Tailwind v4 arbitrary-variant media queries (pointer:coarse plus
    hover:none) generated CSS with a missing space that crashed the

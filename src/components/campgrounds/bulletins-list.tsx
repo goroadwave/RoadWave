@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import type { GuestHubBulletin } from '@/components/campgrounds/campground-guest-hub-body'
+import { LANTERN_BULLETINS_EVENT } from '@/components/campgrounds/lantern-storage'
 import { useCamperPoll } from '@/components/campgrounds/use-camper-poll'
 
 // Client island for the "Campground announcements" section. Renders
@@ -31,9 +32,15 @@ const POLL_INTERVAL_MS = 60_000
 
 export function BulletinsList({
   campgroundSlug,
+  campgroundId,
   initial,
 }: {
   campgroundSlug: string
+  /** Used to scope Lantern event dispatches per campground -- the
+   *  Lantern subscribes to events filtered by this id so a single
+   *  page can host multiple campground hubs safely (preview vs live,
+   *  future multi-campground views). */
+  campgroundId: string
   initial: GuestHubBulletin[]
 }) {
   const [items, setItems] = useState<GuestHubBulletin[]>(initial)
@@ -48,8 +55,28 @@ export function BulletinsList({
     if (!json || typeof json !== 'object') return
     const next = (json as { bulletins?: GuestHubBulletin[] }).bulletins
     if (!Array.isArray(next)) return
-    setItems((prev) => (sameList(prev, next) ? prev : next))
-  }, [campgroundSlug])
+    setItems((prev) => {
+      if (sameList(prev, next)) return prev
+      // Phase 3b -- notify the Lantern of the fresh list. Fires only
+      // when the payload actually changed, so the Lantern doesn't
+      // recompute on every poll, only when there's real news.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent(LANTERN_BULLETINS_EVENT, {
+            detail: {
+              campgroundId,
+              bulletins: next.map((b) => ({
+                id: b.id,
+                message: b.message,
+                created_at: b.created_at,
+              })),
+            },
+          }),
+        )
+      }
+      return next
+    })
+  }, [campgroundSlug, campgroundId])
 
   useCamperPoll(poll, POLL_INTERVAL_MS)
 

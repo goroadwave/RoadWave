@@ -16,6 +16,10 @@ import {
   removeCamperMessage,
   type StoredCamperMessage,
 } from '@/components/campgrounds/camper-message-storage'
+import {
+  LANTERN_MARK_SEEN_EVENT,
+  LANTERN_OFFICE_REPLY_EVENT,
+} from '@/components/campgrounds/lantern-storage'
 
 // Persistent "Your messages with the office" card list shown above the
 // engagement surfaces on the campground welcome page. Drives:
@@ -196,6 +200,23 @@ export function CamperMessageTracker({
   >({})
   const [bannerEntryId, setBannerEntryId] = useState<string | null>(null)
 
+  // Phase 3b -- when the Lantern marks notifications seen, drop our
+  // in-page "Office replied" banner so the two surfaces stay
+  // coordinated. The per-card flame chip is derived from
+  // lastSeenReplyAt on each entry and clears naturally on the next
+  // openThread call.
+  useEffect(() => {
+    if (previewMode) return
+    function onLanternSeen(e: Event) {
+      const ce = e as CustomEvent<{ campgroundId?: string }>
+      if (ce.detail?.campgroundId !== campgroundId) return
+      setBannerEntryId(null)
+    }
+    window.addEventListener(LANTERN_MARK_SEEN_EVENT, onLanternSeen)
+    return () =>
+      window.removeEventListener(LANTERN_MARK_SEEN_EVENT, onLanternSeen)
+  }, [campgroundId, previewMode])
+
   // Merge stored + live into the LiveEntry shape the UI renders.
   const entries: LiveEntry[] = useMemo(
     () =>
@@ -341,7 +362,21 @@ export function CamperMessageTracker({
         }
       }
       setLiveById((prev) => ({ ...prev, ...updates }))
-      if (firedBannerFor) setBannerEntryId(firedBannerFor)
+      if (firedBannerFor) {
+        setBannerEntryId(firedBannerFor)
+        // Phase 3b -- nudge the Lantern that a new reply landed. The
+        // Lantern recomputes its unread state from the existing
+        // tracker localStorage entries (lastSeenReplyAt === null
+        // => unread). We just fire so the Lantern re-runs the
+        // derivation without polling on its own.
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent(LANTERN_OFFICE_REPLY_EVENT, {
+              detail: { campgroundId, threadId: firedBannerFor },
+            }),
+          )
+        }
+      }
 
       timerId = setTimeout(tick, POLL_INTERVAL_MS)
     }

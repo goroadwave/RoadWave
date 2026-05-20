@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import type { GuestHubMeetup } from '@/components/campgrounds/campground-guest-hub-body'
+import { LANTERN_MEETUPS_EVENT } from '@/components/campgrounds/lantern-storage'
 import { useCamperPoll } from '@/components/campgrounds/use-camper-poll'
 
 // Client island for the "Upcoming meetups" section. Same shape as
@@ -14,9 +15,12 @@ const POLL_INTERVAL_MS = 60_000
 
 export function MeetupsList({
   campgroundSlug,
+  campgroundId,
   initial,
 }: {
   campgroundSlug: string
+  /** See BulletinsList for the same campgroundId-scoping rationale. */
+  campgroundId: string
   initial: GuestHubMeetup[]
 }) {
   const [items, setItems] = useState<GuestHubMeetup[]>(initial)
@@ -31,8 +35,27 @@ export function MeetupsList({
     if (!json || typeof json !== 'object') return
     const next = (json as { meetups?: GuestHubMeetup[] }).meetups
     if (!Array.isArray(next)) return
-    setItems((prev) => (sameList(prev, next) ? prev : next))
-  }, [campgroundSlug])
+    setItems((prev) => {
+      if (sameList(prev, next)) return prev
+      // Phase 3b -- notify the Lantern. Only fires when payload
+      // actually changed (sameList returned false above).
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent(LANTERN_MEETUPS_EVENT, {
+            detail: {
+              campgroundId,
+              meetups: next.map((m) => ({
+                id: m.id,
+                title: m.title,
+                start_at: m.start_at,
+              })),
+            },
+          }),
+        )
+      }
+      return next
+    })
+  }, [campgroundSlug, campgroundId])
 
   useCamperPoll(poll, POLL_INTERVAL_MS)
 
