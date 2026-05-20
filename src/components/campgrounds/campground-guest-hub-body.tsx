@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { BulletinsList } from '@/components/campgrounds/bulletins-list'
+import { MeetupsList } from '@/components/campgrounds/meetups-list'
 import { TrackedLinkButton } from '@/components/campgrounds/tracked-link-button'
 import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
 import { Logo } from '@/components/ui/logo'
@@ -604,78 +606,34 @@ export function CampgroundGuestHubBody({
               </section>
             )}
 
-          {/* Campground announcements (bulletins) */}
+          {/* Campground announcements (bulletins). Phase 3a -- the
+              list is now a client island that quietly re-polls
+              /api/campground/[slug]/dynamic every 60s while the tab
+              is visible, so a new owner-posted announcement appears
+              without a route reload. The heading + empty-state copy
+              live here (server side) so they don't flicker between
+              polls; only the list body re-renders. */}
           <section className="space-y-3">
             <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
               Campground announcements
             </h2>
-            {bulletins && bulletins.length > 0 ? (
-              <ul className="space-y-3">
-                {bulletins.map((b) => (
-                  <li
-                    key={b.id}
-                    className="rounded-2xl border border-white/5 bg-card p-4 sm:p-5 space-y-2"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span
-                        className={`text-[10px] uppercase tracking-[0.18em] font-semibold ${categoryColor(b.category)}`}
-                      >
-                        {categoryLabel(b.category)}
-                      </span>
-                      <span className="text-[11px] text-mist/70">
-                        {formatPostedAt(b.created_at)}
-                      </span>
-                    </div>
-                    <p className="text-sm sm:text-base text-cream leading-relaxed whitespace-pre-wrap">
-                      {b.message}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="rounded-2xl border border-dashed border-white/10 bg-card/60 p-5 text-center text-sm text-mist">
-                No active announcements right now. Check back later.
-              </p>
-            )}
+            <BulletinsList
+              campgroundSlug={campground.slug}
+              initial={bulletins}
+            />
           </section>
 
-          {/* Upcoming meetups */}
+          {/* Upcoming meetups. Same client-island treatment as the
+              bulletin list above -- 60s visibility-gated poll, no
+              flicker, no form-input wipe. */}
           <section className="space-y-3">
             <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
               Upcoming meetups
             </h2>
-            {meetups && meetups.length > 0 ? (
-              <ul className="space-y-3">
-                {meetups.map((m) => (
-                  <li
-                    key={m.id}
-                    className="rounded-2xl border border-white/5 bg-card p-4 sm:p-5 space-y-2"
-                  >
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-flame font-semibold">
-                      {formatMeetupTime(m.start_at, m.end_at)}
-                    </p>
-                    <h3 className="font-display text-lg font-extrabold text-cream leading-tight">
-                      {m.title}
-                    </h3>
-                    {m.location && (
-                      <p className="text-sm text-mist">
-                        <span aria-hidden>📍 </span>
-                        {m.location}
-                      </p>
-                    )}
-                    {m.description && (
-                      <p className="text-sm text-cream/90 leading-relaxed whitespace-pre-wrap">
-                        {m.description}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="rounded-2xl border border-dashed border-white/10 bg-card/60 p-5 text-center text-sm text-mist">
-                No meetups scheduled right now.
-              </p>
-            )}
+            <MeetupsList
+              campgroundSlug={campground.slug}
+              initial={meetups}
+            />
           </section>
 
           {/* Phase 2 -- Amenities moved up near the Wi-Fi section.
@@ -795,80 +753,9 @@ export function CampgroundGuestHubBody({
   )
 }
 
-function categoryLabel(c: GuestHubBulletin['category']): string {
-  switch (c) {
-    case 'event':
-      return 'Event'
-    case 'special':
-      return 'Special'
-    case 'alert':
-      return 'Alert'
-    case 'general':
-    default:
-      return 'Update'
-  }
-}
-
-function categoryColor(c: GuestHubBulletin['category']): string {
-  // Alert lights up red so storm/weather notices stand out at a glance;
-  // everything else uses the brand amber.
-  return c === 'alert' ? 'text-red-300' : 'text-flame'
-}
-
-// Posted timestamp in a relative form when fresh, absolute when older.
-function formatPostedAt(iso: string): string {
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return ''
-  const diffMs = Date.now() - then
-  const minutes = Math.floor(diffMs / 60_000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-// Meetup time: "Today, 7:00 PM" / "Tomorrow, 8:00 AM" / "Sat Jul 12, 6:30 PM"
-// — with optional end time appended.
-function formatMeetupTime(startIso: string, endIso: string | null): string {
-  const start = new Date(startIso)
-  if (Number.isNaN(start.getTime())) return ''
-
-  const today = new Date()
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-
-  const tomorrow = new Date(today)
-  tomorrow.setDate(today.getDate() + 1)
-
-  let dayPart: string
-  if (isSameDay(start, today)) dayPart = 'Today'
-  else if (isSameDay(start, tomorrow)) dayPart = 'Tomorrow'
-  else
-    dayPart = start.toLocaleDateString(undefined, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    })
-
-  const timeOpts: Intl.DateTimeFormatOptions = {
-    hour: 'numeric',
-    minute: '2-digit',
-  }
-  const startTime = start.toLocaleTimeString(undefined, timeOpts)
-
-  if (!endIso) return `${dayPart}, ${startTime}`
-
-  const end = new Date(endIso)
-  if (Number.isNaN(end.getTime())) return `${dayPart}, ${startTime}`
-
-  const endTime = end.toLocaleTimeString(undefined, timeOpts)
-  return `${dayPart}, ${startTime} – ${endTime}`
-}
+// Phase 3a -- the categoryLabel / categoryColor / formatPostedAt /
+// formatMeetupTime helpers moved to bulletins-list.tsx and
+// meetups-list.tsx respectively, since those are the only callers
+// after the lists became client islands. The helpers there mirror
+// these byte-for-byte so first-paint output matches the SSR string
+// and no hydration mismatch fires.
