@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { loadCamperMessages } from '@/components/campgrounds/camper-message-storage'
 import {
   LANTERN_BULLETINS_EVENT,
+  LANTERN_CRITICAL_EVENT,
   LANTERN_MARK_SEEN_EVENT,
   LANTERN_MEETUPS_EVENT,
   LANTERN_OFFICE_REPLY_EVENT,
+  loadAckedCriticalIds,
   loadLanternSeen,
   saveLanternSeen,
 } from '@/components/campgrounds/lantern-storage'
@@ -66,11 +68,24 @@ type MeetupItem = {
   title: string
 }
 
-type LanternItem = ReplyItem | BulletinItem | MeetupItem
+type CriticalItem = {
+  kind: 'critical'
+  id: string
+  occurredAt: string
+  preview: string
+}
+
+type LanternItem = ReplyItem | BulletinItem | MeetupItem | CriticalItem
 
 type DynamicPayload = {
   bulletins?: { id: string; message: string; created_at: string }[]
   meetups?: { id: string; title: string; start_at: string }[]
+  critical?: {
+    id: string
+    message: string
+    expires_at: string | null
+    created_at: string
+  } | null
 }
 
 const CATEGORY_PREVIEW: Record<string, string> = {
@@ -124,6 +139,19 @@ export function Lantern({
     bulletinSeenThrough: null as string | null,
     meetupSeenThrough: null as string | null,
   }))
+  // Phase 3c -- active critical bulletin (or null). The Lantern
+  // counts it as unread in the badge ONLY while it's not yet
+  // acknowledged by the camper (acked ids tracked separately so a
+  // dismissed critical stays visible in the panel list as a pinned
+  // item but stops contributing to the badge count).
+  const [critical, setCritical] = useState<{
+    id: string
+    message: string
+    created_at: string
+  } | null>(null)
+  const [ackedCriticalIds, setAckedCriticalIds] = useState<Set<string>>(
+    () => new Set(),
+  )
 
   const [panelOpen, setPanelOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement | null>(null)
@@ -144,6 +172,7 @@ export function Lantern({
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSeen(loadLanternSeen(campgroundId))
+    setAckedCriticalIds(loadAckedCriticalIds(campgroundId))
 
     async function loadDynamic() {
       try {
@@ -156,6 +185,19 @@ export function Lantern({
         if (cancelled) return
         if (Array.isArray(json.bulletins)) setBulletinList(json.bulletins)
         if (Array.isArray(json.meetups)) setMeetupList(json.meetups)
+        // Phase 3c -- pick up the current critical so the badge
+        // count is accurate before the next poll fires.
+        if (json.critical !== undefined) {
+          setCritical(
+            json.critical
+              ? {
+                  id: json.critical.id,
+                  message: json.critical.message,
+                  created_at: json.critical.created_at,
+                }
+              : null,
+          )
+        }
       } catch {
         // Background fetch -- silently degrade.
       }
@@ -197,22 +239,73 @@ export function Lantern({
       setTrackerVersion((v) => v + 1)
     }
 
+    // Phase 3c -- critical bulletin updates from BulletinsList's
+    // poll. detail.critical is null when there's no active critical
+    // (e.g. the owner removed it or it expired).
+    function onCritical(e: Event) {
+      const ce = e as CustomEvent<{
+        campgroundId?: string
+        critical?: {
+          id: string
+          message: string
+          created_at: string
+        } | null
+      }>
+      if (ce.detail?.campgroundId !== campgroundId) return
+      const next = ce.detail.critical ?? null
+      setCritical(next)
+      // Refresh acked ids on every critical change in case the
+      // CriticalBanner just wrote a new one to localStorage.
+      setAckedCriticalIds(loadAckedCriticalIds(campgroundId))
+    }
+
+    // Refresh acked ids whenever the CriticalBanner writes one
+    // (same-tab writes don't fire the storage event, so the
+    // CriticalBanner's acknowledge() doesn't automatically tell us
+    // -- but onCritical above + the storage event below cover the
+    // common cases).
+    function onStorage(e: StorageEvent) {
+      if (e.key === `roadwave:critical-ack:${campgroundId}`) {
+        setAckedCriticalIds(loadAckedCriticalIds(campgroundId))
+      }
+    }
+
     window.addEventListener(LANTERN_BULLETINS_EVENT, onBulletins)
     window.addEventListener(LANTERN_MEETUPS_EVENT, onMeetups)
     window.addEventListener(LANTERN_OFFICE_REPLY_EVENT, onReply)
+    window.addEventListener(LANTERN_CRITICAL_EVENT, onCritical)
+    window.addEventListener('storage', onStorage)
     return () => {
       window.removeEventListener(LANTERN_BULLETINS_EVENT, onBulletins)
       window.removeEventListener(LANTERN_MEETUPS_EVENT, onMeetups)
       window.removeEventListener(LANTERN_OFFICE_REPLY_EVENT, onReply)
+      window.removeEventListener(LANTERN_CRITICAL_EVENT, onCritical)
+      window.removeEventListener('storage', onStorage)
     }
   }, [mounted, previewMode, campgroundId])
 
-  // Derived unread items. Bulletins/meetups compared against the
+  // Derived items. Bulletins/meetups compared against the
   // seen-through timestamp; office replies derived from the stored
-  // camper message entries (which the tracker already maintains).
+  // camper message entries (which the tracker already maintains);
+  // critical bulletin pinned as long as it's active. The badge
+  // count is a SEPARATE derivation -- it excludes critical items
+  // that have been acknowledged but still includes them in the
+  // panel list as pinned entries (per Q6 = 6a).
   const items: LanternItem[] = useMemo(() => {
     if (!mounted || previewMode) return []
     const out: LanternItem[] = []
+
+    // Critical bulletin pin -- always at the top of the panel
+    // while active, regardless of acked state. The badge derivation
+    // below decides whether it contributes to the count.
+    if (critical) {
+      out.push({
+        kind: 'critical',
+        id: critical.id,
+        occurredAt: critical.created_at,
+        preview: critical.message.slice(0, 80),
+      })
+    }
 
     // Bulletins newer than seen cursor.
     const bSeen = seen.bulletinSeenThrough
@@ -292,10 +385,36 @@ export function Lantern({
       }
     }
 
-    // Newest first.
-    out.sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1))
-    return out
-  }, [mounted, previewMode, campgroundId, bulletinList, meetupList, seen, trackerVersion])
+    // Newest first -- EXCEPT the critical bulletin which stays at
+    // the top regardless of its timestamp. We sort the non-critical
+    // tail, then re-prepend the critical if there was one.
+    const criticalItem = out.find((it) => it.kind === 'critical') ?? null
+    const others = out.filter((it) => it.kind !== 'critical')
+    others.sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1))
+    return criticalItem ? [criticalItem, ...others] : others
+  }, [
+    mounted,
+    previewMode,
+    campgroundId,
+    bulletinList,
+    meetupList,
+    seen,
+    trackerVersion,
+    critical,
+  ])
+
+  // Badge count -- like items.length, but excludes critical items
+  // the camper has already acknowledged. Acked critical stays
+  // visible in the panel as a pinned item; it just no longer
+  // contributes to the "unread" badge.
+  const unreadBadgeCount = useMemo(() => {
+    let count = 0
+    for (const it of items) {
+      if (it.kind === 'critical' && ackedCriticalIds.has(it.id)) continue
+      count += 1
+    }
+    return count
+  }, [items, ackedCriticalIds])
 
   // Compute "latest bulletin / meetup created_at" so marking seen
   // can capture the right cursor without missing items that arrive
@@ -353,7 +472,7 @@ export function Lantern({
     }
   }, [panelOpen, markAllSeen])
 
-  const unreadCount = items.length
+  const unreadCount = unreadBadgeCount
 
   function openItem(item: LanternItem) {
     if (item.kind === 'reply') {
@@ -374,9 +493,16 @@ export function Lantern({
       document
         .getElementById('bulletins')
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    } else {
+    } else if (item.kind === 'meetup') {
       document
         .getElementById('meetups')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      // Critical bulletin -- scroll to the top so the camper sees
+      // the prominent banner (or its acked chip). The CriticalBanner
+      // lives above the welcome section.
+      document
+        .getElementById('critical-notice')
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
     setPanelOpen(false)
@@ -459,15 +585,25 @@ export function Lantern({
                         ? '📬'
                         : item.kind === 'bulletin'
                           ? '📣'
-                          : '📅'}
+                          : item.kind === 'meetup'
+                            ? '📅'
+                            : '⚠'}
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-semibold text-cream leading-tight">
+                      <span
+                        className={
+                          item.kind === 'critical'
+                            ? 'block text-sm font-bold text-red-200 leading-tight'
+                            : 'block text-sm font-semibold text-cream leading-tight'
+                        }
+                      >
                         {item.kind === 'reply'
                           ? 'The office replied'
                           : item.kind === 'bulletin'
                             ? 'New announcement'
-                            : 'New meetup'}
+                            : item.kind === 'meetup'
+                              ? 'New meetup'
+                              : 'Weather & safety notice'}
                       </span>
                       <span className="block text-xs text-mist mt-0.5 leading-snug line-clamp-2">
                         {item.kind === 'reply'
@@ -476,7 +612,9 @@ export function Lantern({
                             : 'Your message'
                           : item.kind === 'bulletin'
                             ? item.preview
-                            : item.title}
+                            : item.kind === 'meetup'
+                              ? item.title
+                              : item.preview}
                       </span>
                       <span className="block text-[10px] text-mist/70 mt-1 tabular-nums">
                         {formatRelative(item.occurredAt)}

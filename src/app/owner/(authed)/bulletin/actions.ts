@@ -15,6 +15,13 @@ const schema = z.object({
   message: z.string().min(1).max(280),
   category: z.enum(['event', 'special', 'alert', 'general']),
   duration: z.enum(['today', '3days', '1week']),
+  // Phase 3c (mig 0058) -- elevates this bulletin to a critical
+  // weather / safety notice. Checkbox posts the literal 'true' when
+  // checked, undefined when not. Normalized to boolean.
+  is_critical: z
+    .union([z.literal('true'), z.literal('on'), z.literal('')])
+    .optional()
+    .transform((v) => v === 'true' || v === 'on'),
 })
 
 function expiryFor(duration: 'today' | '3days' | '1week'): Date {
@@ -44,6 +51,7 @@ export async function postBulletinAction(
     message: formData.get('message'),
     category: formData.get('category'),
     duration: formData.get('duration'),
+    is_critical: formData.get('is_critical') ?? '',
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()
@@ -77,6 +85,9 @@ export async function postBulletinAction(
     category: parsed.data.category,
     posted_by: user.id,
     expires_at: expiryFor(parsed.data.duration).toISOString(),
+    // Phase 3c (mig 0058). Defaults to false at the column level;
+    // the form only sets true when the owner explicitly opts in.
+    is_critical: parsed.data.is_critical,
   })
   if (error) return { error: error.message, ok: false }
 

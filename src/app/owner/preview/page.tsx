@@ -91,28 +91,50 @@ export default async function OwnerPreviewPage() {
     .maybeSingle<{ token: string }>()
   const resolvedToken = tokenRow?.token ?? null
 
-  // Bulletins + meetups via the admin client. Same query shape as
-  // the guest hub page; previewMode controls what side effects fire
-  // inside the body, not what data we fetch.
+  // Bulletins + meetups + active critical via the admin client. Same
+  // query shape as the guest hub page; previewMode controls what
+  // side effects fire inside the body, not what data we fetch.
   const nowIso = new Date().toISOString()
-  const [{ data: bulletins }, { data: meetups }] = await Promise.all([
-    admin
-      .from('bulletins')
-      .select('id, message, category, expires_at, created_at')
-      .eq('campground_id', campground.id)
-      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-      .order('created_at', { ascending: false })
-      .limit(30)
-      .returns<GuestHubBulletin[]>(),
-    admin
-      .from('meetups')
-      .select('id, title, description, location, start_at, end_at')
-      .eq('campground_id', campground.id)
-      .gte('start_at', nowIso)
-      .order('start_at', { ascending: true })
-      .limit(30)
-      .returns<GuestHubMeetup[]>(),
-  ])
+  const [{ data: bulletins }, { data: meetups }, { data: criticalRows }] =
+    await Promise.all([
+      admin
+        .from('bulletins')
+        .select('id, message, category, expires_at, created_at')
+        .eq('campground_id', campground.id)
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+        .order('created_at', { ascending: false })
+        .limit(30)
+        .returns<GuestHubBulletin[]>(),
+      admin
+        .from('meetups')
+        .select('id, title, description, location, start_at, end_at')
+        .eq('campground_id', campground.id)
+        .gte('start_at', nowIso)
+        .order('start_at', { ascending: true })
+        .limit(30)
+        .returns<GuestHubMeetup[]>(),
+      admin
+        .from('bulletins')
+        .select('id, message, expires_at, created_at')
+        .eq('campground_id', campground.id)
+        .eq('is_critical', true)
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .returns<
+          {
+            id: string
+            message: string
+            expires_at: string | null
+            created_at: string
+          }[]
+        >(),
+    ])
+
+  const critical =
+    Array.isArray(criticalRows) && criticalRows.length > 0
+      ? criticalRows[0]
+      : null
 
   return (
     <>
@@ -121,6 +143,7 @@ export default async function OwnerPreviewPage() {
         campground={campground}
         bulletins={bulletins ?? []}
         meetups={meetups ?? []}
+        critical={critical}
         resolvedToken={resolvedToken}
         previewMode
       />

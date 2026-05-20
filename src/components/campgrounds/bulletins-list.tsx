@@ -1,9 +1,19 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { GuestHubBulletin } from '@/components/campgrounds/campground-guest-hub-body'
-import { LANTERN_BULLETINS_EVENT } from '@/components/campgrounds/lantern-storage'
+import {
+  LANTERN_BULLETINS_EVENT,
+  LANTERN_CRITICAL_EVENT,
+} from '@/components/campgrounds/lantern-storage'
 import { useCamperPoll } from '@/components/campgrounds/use-camper-poll'
+
+type CriticalPayload = {
+  id: string
+  message: string
+  expires_at: string | null
+  created_at: string
+} | null
 
 // Client island for the "Campground announcements" section. Renders
 // the SSR'd bulletins on first paint, then quietly polls
@@ -44,6 +54,12 @@ export function BulletinsList({
   initial: GuestHubBulletin[]
 }) {
   const [items, setItems] = useState<GuestHubBulletin[]>(initial)
+  // Phase 3c -- BulletinsList already fetches the full /dynamic
+  // payload, which now also includes the active critical bulletin
+  // (or null). We track its identity across polls in a ref and
+  // dispatch LANTERN_CRITICAL_EVENT only when it changes -- avoids
+  // a separate poll loop just for the critical banner.
+  const lastCriticalRef = useRef<CriticalPayload>(null)
 
   const poll = useCallback(async () => {
     const res = await fetch(
@@ -53,7 +69,34 @@ export function BulletinsList({
     if (!res.ok) return
     const json: unknown = await res.json()
     if (!json || typeof json !== 'object') return
+
     const next = (json as { bulletins?: GuestHubBulletin[] }).bulletins
+    const critical =
+      (json as { critical?: CriticalPayload }).critical ?? null
+
+    // Critical-bulletin change detection. Fires the LANTERN_CRITICAL
+    // event when the active critical bulletin appeared, disappeared,
+    // or changed id/expires_at. Separate from the bulletin-list
+    // change check so a new critical can fire even if the
+    // (non-critical) bulletin list happens to be identical.
+    const prevCritical = lastCriticalRef.current
+    const criticalChanged =
+      (!!prevCritical) !== (!!critical) ||
+      (!!prevCritical &&
+        !!critical &&
+        (prevCritical.id !== critical.id ||
+          prevCritical.expires_at !== critical.expires_at))
+    if (criticalChanged) {
+      lastCriticalRef.current = critical
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent(LANTERN_CRITICAL_EVENT, {
+            detail: { campgroundId, critical },
+          }),
+        )
+      }
+    }
+
     if (!Array.isArray(next)) return
     setItems((prev) => {
       if (sameList(prev, next)) return prev

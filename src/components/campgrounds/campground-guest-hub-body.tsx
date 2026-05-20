@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { BulletinsList } from '@/components/campgrounds/bulletins-list'
+import { CriticalBanner } from '@/components/campgrounds/critical-banner'
 import { Lantern } from '@/components/campgrounds/lantern'
 import { MeetupsList } from '@/components/campgrounds/meetups-list'
 import { TrackedLinkButton } from '@/components/campgrounds/tracked-link-button'
@@ -96,10 +97,22 @@ export type GuestHubMeetup = {
   end_at: string | null
 }
 
+// Phase 3c -- minimal shape needed by the CriticalBanner client
+// island. Pulled from the most recent active is_critical bulletin
+// (mig 0058) in the SSR fetch + the dynamic poll. Null when no
+// critical bulletin is active for this campground.
+export type GuestHubCritical = {
+  id: string
+  message: string
+  expires_at: string | null
+  created_at: string
+}
+
 type Props = {
   campground: GuestHubCampground
   bulletins: GuestHubBulletin[]
   meetups: GuestHubMeetup[]
+  critical: GuestHubCritical | null
   /** Canonical QR token for this campground. Drives the URL of the
    *  Meet Other Campers CTA — when present, the camper lands on the
    *  check-in flow with the token preserved; when null, they land
@@ -115,6 +128,7 @@ export function CampgroundGuestHubBody({
   campground,
   bulletins,
   meetups,
+  critical,
   resolvedToken,
   previewMode = false,
 }: Props) {
@@ -215,6 +229,21 @@ export function CampgroundGuestHubBody({
           covered. */}
       <article className="px-4 pb-[calc(env(safe-area-inset-bottom)+8rem)] sm:pb-24">
         <div className="mx-auto max-w-xl space-y-10">
+          {/* Phase 3c -- Critical weather / safety notice. Pinned at
+              the very top of the page when there's an active
+              is_critical bulletin. Renders nothing when there isn't.
+              Camper can acknowledge to collapse to a small chip; the
+              chip stays until the bulletin expires or the owner
+              deactivates it. id="critical-notice" is the Lantern's
+              anchor target. */}
+          <div id="critical-notice" className="scroll-mt-4">
+            <CriticalBanner
+              campgroundId={campground.id}
+              initial={critical}
+              previewMode={previewMode}
+            />
+          </div>
+
           {/* ----- Welcome header ----- */}
           <section className="text-center space-y-4 pt-4 sm:pt-8">
             {campground.logo_url ? (

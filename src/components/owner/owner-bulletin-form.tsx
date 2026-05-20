@@ -79,6 +79,35 @@ export function OwnerBulletinForm({ campgroundId }: { campgroundId: string }) {
         </div>
       </div>
 
+      {/* Phase 3c -- critical weather / safety notice elevator. When
+          checked, this bulletin renders as a prominent red banner at
+          the very top of the camper QR page (above the welcome
+          header) AND lights up the Lantern with a dedicated item
+          type. Stays pinned until the bulletin expires or the owner
+          un-checks. Most recent active critical wins if more than
+          one exists. */}
+      <div className="rounded-xl border border-red-500/30 bg-red-500/[0.05] p-3">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            name="is_critical"
+            value="true"
+            className="mt-0.5 h-4 w-4 rounded border-red-400/60 bg-night text-red-400 focus:ring-red-400 focus:ring-offset-night"
+          />
+          <span className="space-y-1">
+            <span className="block text-sm font-semibold text-red-200">
+              Mark as Critical Weather / Safety Notice
+            </span>
+            <span className="block text-xs text-mist leading-snug">
+              Pins this to the top of the camper QR page with a red
+              banner. Use sparingly — for severe weather, evacuation,
+              shelter-in-place, or other urgent safety information.
+              For emergencies, campers should always call 911 first.
+            </span>
+          </span>
+        </label>
+      </div>
+
       {state.error && (
         <p className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-300">
           {state.error}

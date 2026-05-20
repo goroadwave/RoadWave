@@ -14,7 +14,18 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 //
 // Shape mirrors the SSR fetch in /campground/[slug]/page.tsx so the
 // client islands can hot-swap their state with no flicker:
-//   { bulletins: GuestHubBulletin[], meetups: GuestHubMeetup[] }
+//   {
+//     bulletins: GuestHubBulletin[],
+//     meetups: GuestHubMeetup[],
+//     critical: CriticalBulletin | null,   -- Phase 3c
+//   }
+//
+// Phase 3c -- the `critical` slot holds the most recent active
+// is_critical=true bulletin for the campground, or null. The camper
+// QR page pins this above the welcome header with strong red
+// styling; the Lantern counts it as a distinct item type. Older
+// criticals (still active but not the most recent) stay in the
+// regular bulletins list with their existing styling.
 //
 // Caching: explicit no-store. Each poll must hit the database; a CDN
 // or browser cache hit would defeat the freshness goal.
@@ -22,15 +33,18 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 // RLS: bulletins + meetups already have public-read policies for
 // active rows (mig 0009). We use the admin client for parity with
 // the SSR path so result shape stays identical.
-//
-// Phase 3c will extend this payload to include the active is_critical
-// bulletin (if any). Until then, criticals would appear in the
-// regular bulletins list with their existing styling.
 
 type BulletinRow = {
   id: string
   message: string
   category: 'event' | 'special' | 'alert' | 'general'
+  expires_at: string | null
+  created_at: string
+}
+
+type CriticalBulletinRow = {
+  id: string
+  message: string
   expires_at: string | null
   created_at: string
 }
@@ -71,7 +85,11 @@ export async function GET(
   }
 
   const nowIso = new Date().toISOString()
-  const [{ data: bulletins }, { data: meetups }] = await Promise.all([
+  const [
+    { data: bulletins },
+    { data: meetups },
+    { data: criticalRows },
+  ] = await Promise.all([
     admin
       .from('bulletins')
       .select('id, message, category, expires_at, created_at')
@@ -88,13 +106,31 @@ export async function GET(
       .order('start_at', { ascending: true })
       .limit(LIST_CAP)
       .returns<MeetupRow[]>(),
+    // Phase 3c -- the most recent active is_critical bulletin. Backed
+    // by the bulletins_critical_idx partial index from mig 0058 so
+    // this is a cheap lookup even on campgrounds with many rows.
+    admin
+      .from('bulletins')
+      .select('id, message, expires_at, created_at')
+      .eq('campground_id', cg.id)
+      .eq('is_critical', true)
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .returns<CriticalBulletinRow[]>(),
   ])
+
+  const critical =
+    Array.isArray(criticalRows) && criticalRows.length > 0
+      ? criticalRows[0]
+      : null
 
   return NextResponse.json(
     {
       ok: true,
       bulletins: bulletins ?? [],
       meetups: meetups ?? [],
+      critical,
     },
     {
       status: 200,

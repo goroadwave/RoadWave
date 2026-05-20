@@ -177,31 +177,59 @@ export default async function CampgroundGuestHubPage({
   // Bulletins (active = no expiry or future expiry) and upcoming
   // meetups (start_at >= now). Both capped at 30 so a campground
   // with a long history doesn't bloat the page.
+  //
+  // Phase 3c -- also fetch the most recent active is_critical
+  // bulletin so the camper page can SSR the red banner above the
+  // welcome header on first paint, no flicker. Backed by the
+  // bulletins_critical_idx partial index from mig 0058.
   const nowIso = new Date().toISOString()
-  const [{ data: bulletins }, { data: meetups }] = await Promise.all([
-    admin
-      .from('bulletins')
-      .select('id, message, category, expires_at, created_at')
-      .eq('campground_id', campground.id)
-      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-      .order('created_at', { ascending: false })
-      .limit(30)
-      .returns<GuestHubBulletin[]>(),
-    admin
-      .from('meetups')
-      .select('id, title, description, location, start_at, end_at')
-      .eq('campground_id', campground.id)
-      .gte('start_at', nowIso)
-      .order('start_at', { ascending: true })
-      .limit(30)
-      .returns<GuestHubMeetup[]>(),
-  ])
+  const [{ data: bulletins }, { data: meetups }, { data: criticalRows }] =
+    await Promise.all([
+      admin
+        .from('bulletins')
+        .select('id, message, category, expires_at, created_at')
+        .eq('campground_id', campground.id)
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+        .order('created_at', { ascending: false })
+        .limit(30)
+        .returns<GuestHubBulletin[]>(),
+      admin
+        .from('meetups')
+        .select('id, title, description, location, start_at, end_at')
+        .eq('campground_id', campground.id)
+        .gte('start_at', nowIso)
+        .order('start_at', { ascending: true })
+        .limit(30)
+        .returns<GuestHubMeetup[]>(),
+      admin
+        .from('bulletins')
+        .select('id, message, expires_at, created_at')
+        .eq('campground_id', campground.id)
+        .eq('is_critical', true)
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .returns<
+          {
+            id: string
+            message: string
+            expires_at: string | null
+            created_at: string
+          }[]
+        >(),
+    ])
+
+  const critical =
+    Array.isArray(criticalRows) && criticalRows.length > 0
+      ? criticalRows[0]
+      : null
 
   return (
     <CampgroundGuestHubBody
       campground={campground}
       bulletins={bulletins ?? []}
       meetups={meetups ?? []}
+      critical={critical}
       resolvedToken={resolvedToken}
     />
   )
