@@ -38,6 +38,7 @@ export const AMENITY_GROUPS: AmenityGroup[] = [
     amenities: [
       'Playground',
       'Walking Trails',
+      'Hiking Trails',
       'Bike Trails',
       'Pickleball Courts',
       'Tennis Courts',
@@ -68,6 +69,7 @@ export const AMENITY_GROUPS: AmenityGroup[] = [
       'WiFi',
       'Restrooms',
       'Showers',
+      'Bathhouse',
       'Laundry',
       'Clubhouse',
       'Fitness Center',
@@ -82,6 +84,7 @@ export const AMENITY_GROUPS: AmenityGroup[] = [
       'Dump Station',
       'Recycling',
       'Trash Station',
+      'Trash Pickup',
       'EV Charging',
     ],
   },

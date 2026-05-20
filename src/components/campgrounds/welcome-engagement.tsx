@@ -301,7 +301,7 @@ function BookAndReview({
   return (
     <section className="space-y-3">
       <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-        Loved your stay?
+        Enjoying your stay?
       </h2>
       {bookingUrl && (bookingMessage || bookingPromoCode) && (
         <div className="rounded-2xl border border-flame/30 bg-flame/[0.06] px-4 py-3 space-y-1.5">
