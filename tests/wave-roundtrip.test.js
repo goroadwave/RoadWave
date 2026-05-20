@@ -108,10 +108,18 @@ async function waveAtFirstCamper(page) {
     return null
   }
   // Try each visible Wave button in turn until one either succeeds
-  // (state pill appears) or all are exhausted (the RLS denial message
-  // appears for every card). Both outcomes are proof the wave pipeline
-  // works end-to-end — successful insert or graceful privacy denial.
-  for (let i = 0; i < count; i++) {
+  // (state pill appears) or we've tried the first MAX_ATTEMPTS cards.
+  // Both outcomes are proof the wave pipeline works end-to-end --
+  // successful insert or graceful RLS denial -- and the cap keeps the
+  // test deterministic against the demo campground, which accumulates
+  // throwaway quickcheckin users from prior smoke runs (each one
+  // produces a Wave button that returns the privacy/check-in denial,
+  // burning ~5-8s per click). 6+ stale buttons × two campers easily
+  // blew the 60s test timeout when the demo had been busy. 3 attempts
+  // per camper is plenty to confirm the pipeline.
+  const MAX_ATTEMPTS = 3
+  const attempts = Math.min(count, MAX_ATTEMPTS)
+  for (let i = 0; i < attempts; i++) {
     const btn = waveButtons.nth(i)
     if (await btn.count() === 0) continue
     await btn.scrollIntoViewIfNeeded()
