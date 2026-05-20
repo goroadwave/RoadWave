@@ -56,7 +56,7 @@ export function loadCamperMessages(
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed
+    const normalized = parsed
       .filter((e): e is Record<string, unknown> => {
         if (!e || typeof e !== 'object') return false
         const r = e as Record<string, unknown>
@@ -68,7 +68,7 @@ export function loadCamperMessages(
           typeof r.submittedAt === 'string'
         )
       })
-      .map((r) => ({
+      .map<StoredCamperMessage>((r) => ({
         id: r.id as string,
         token: r.token as string,
         siteNumber: r.siteNumber as string,
@@ -82,6 +82,44 @@ export function loadCamperMessages(
         campgroundSlug:
           typeof r.campgroundSlug === 'string' ? r.campgroundSlug : null,
       }))
+
+    // Dedupe by message id. Legacy localStorage states from earlier
+    // buggy builds could carry duplicate ids -- the tracker would
+    // render the same message twice. We keep the earliest occurrence
+    // (lower index) since the list order is "newest first" by
+    // appendCamperMessage convention, so the first-seen id IS the
+    // most recent write. The lastSeenReplyAt field is merged: any
+    // entry with a non-null lastSeenReplyAt wins so we don't lose
+    // "already seen" state from a stale duplicate.
+    const seen = new Map<string, StoredCamperMessage>()
+    for (const e of normalized) {
+      const prior = seen.get(e.id)
+      if (!prior) {
+        seen.set(e.id, e)
+      } else if (!prior.lastSeenReplyAt && e.lastSeenReplyAt) {
+        seen.set(e.id, { ...prior, lastSeenReplyAt: e.lastSeenReplyAt })
+      }
+    }
+    const deduped = [...seen.values()]
+
+    // Sanitize-write-back: if dedup actually changed anything, push the
+    // cleaned array back to localStorage so the next load is cheap and
+    // inspectable. Guarded so we don't write on every page load.
+    if (deduped.length !== parsed.length || deduped.length !== normalized.length) {
+      try {
+        const key = storageKey(campgroundId)
+        if (deduped.length === 0) {
+          window.localStorage.removeItem(key)
+        } else {
+          window.localStorage.setItem(key, JSON.stringify(deduped))
+        }
+      } catch {
+        // Quota / disabled storage -- the in-memory dedup still works,
+        // we just don't get the persistence-side cleanup.
+      }
+    }
+
+    return deduped
   } catch {
     return []
   }

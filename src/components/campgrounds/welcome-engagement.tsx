@@ -599,30 +599,24 @@ function ContactOffice({
     }
   }
 
-  // Once a message has been submitted, collapse the form entirely
-  // and render JUST a small inline success line + a plain text
-  // "Send another message" link. NO bordered panel, no background,
-  // no card-like container -- the persistent tracker card above is
-  // the single visual surface for the just-sent thread. The form
-  // section under "Contact the office" is intentionally near-empty
-  // so it doesn't read as a duplicate message card.
+  // Once a message has been submitted, the persistent tracker card
+  // above ("Your messages with the office") is the sole UI for the
+  // just-sent thread. We collapse this whole section to ONE tiny
+  // underline link so there's nothing here that could read as a
+  // second card -- no eyebrow heading, no green check, no
+  // confirmation paragraph, no border, no background. Click the
+  // link to open a fresh form for another submission.
   if (sent) {
     return (
-      <section className="space-y-2">
-        <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-          Contact the office
-        </h2>
-        <p className="text-xs text-leaf">
-          Sent to the office. Check replies above.
-        </p>
+      <p className="text-xs text-mist">
         <button
           type="button"
           onClick={() => setSent(false)}
-          className="text-xs text-mist underline-offset-2 hover:text-cream hover:underline"
+          className="underline-offset-2 hover:text-cream hover:underline"
         >
-          Send another message
+          + Send another message
         </button>
-      </section>
+      </p>
     )
   }
 
