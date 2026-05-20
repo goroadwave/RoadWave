@@ -52,6 +52,14 @@ type Props = {
   bookingEnabled: boolean
   contactEnabled: boolean
   pulseEnabled: boolean
+  /** Preview mode (owner /owner/preview). When true:
+   *   - logEvent calls no-op (no stat rows polluted by owner clicks).
+   *   - Form submissions are blocked client-side and show a small
+   *     "Preview — submission disabled" badge instead of posting.
+   *   - Outbound CTA links (Book Again, Review) still navigate so the
+   *     owner can verify the URL is correct.
+   *  Defaults to false (live guest behavior). */
+  previewMode?: boolean
 }
 
 function logEvent(campgroundId: string, eventType: string) {
@@ -92,6 +100,7 @@ export function WelcomeEngagement(props: Props) {
     bookingEnabled,
     contactEnabled,
     pulseEnabled,
+    previewMode = false,
   } = props
 
   // Each section can be hidden independently — if every section ends
@@ -106,7 +115,9 @@ export function WelcomeEngagement(props: Props) {
 
   return (
     <div className="space-y-8">
-      {showPulse && <PulseCheck campgroundId={campgroundId} />}
+      {showPulse && (
+        <PulseCheck campgroundId={campgroundId} previewMode={previewMode} />
+      )}
       {(showReview || showBooking) && (
         <BookAndReview
           campgroundId={campgroundId}
@@ -114,9 +125,12 @@ export function WelcomeEngagement(props: Props) {
           bookingUrl={showBooking ? bookingUrl : null}
           bookingMessage={bookingMessage}
           bookingPromoCode={bookingPromoCode}
+          previewMode={previewMode}
         />
       )}
-      {showContact && <ContactOffice campgroundId={campgroundId} />}
+      {showContact && (
+        <ContactOffice campgroundId={campgroundId} previewMode={previewMode} />
+      )}
     </div>
   )
 }
@@ -127,16 +141,22 @@ export function WelcomeEngagement(props: Props) {
 
 type PulseStage = 'prompt' | 'thanks' | 'needs-form' | 'needs-sent'
 
-function PulseCheck({ campgroundId }: { campgroundId: string }) {
+function PulseCheck({
+  campgroundId,
+  previewMode,
+}: {
+  campgroundId: string
+  previewMode: boolean
+}) {
   const [stage, setStage] = useState<PulseStage>('prompt')
 
   function chooseGood(eventType: 'pulse_great' | 'pulse_good') {
-    logEvent(campgroundId, eventType)
+    if (!previewMode) logEvent(campgroundId, eventType)
     setStage('thanks')
   }
 
   function chooseNeedsAttention() {
-    logEvent(campgroundId, 'pulse_needs_attention')
+    if (!previewMode) logEvent(campgroundId, 'pulse_needs_attention')
     setStage('needs-form')
   }
 
@@ -167,6 +187,7 @@ function PulseCheck({ campgroundId }: { campgroundId: string }) {
         <NeedsAttentionForm
           campgroundId={campgroundId}
           onSent={() => setStage('needs-sent')}
+          previewMode={previewMode}
         />
       )}
       {stage === 'needs-sent' && (
@@ -201,9 +222,11 @@ function PulseButton({
 function NeedsAttentionForm({
   campgroundId,
   onSent,
+  previewMode,
 }: {
   campgroundId: string
   onSent: () => void
+  previewMode: boolean
 }) {
   const [body, setBody] = useState('')
   const [contact, setContact] = useState('')
@@ -213,6 +236,10 @@ function NeedsAttentionForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (submitting) return
+    if (previewMode) {
+      setError('Preview mode — submission disabled.')
+      return
+    }
     const trimmed = body.trim()
     if (trimmed.length === 0) {
       setError('Tell the team what needs attention.')
@@ -291,12 +318,14 @@ function BookAndReview({
   bookingUrl,
   bookingMessage,
   bookingPromoCode,
+  previewMode,
 }: {
   campgroundId: string
   reviewUrl: string | null
   bookingUrl: string | null
   bookingMessage: string | null
   bookingPromoCode: string | null
+  previewMode: boolean
 }) {
   return (
     <section className="space-y-3">
@@ -327,7 +356,11 @@ function BookAndReview({
             href={bookingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => logEvent(campgroundId, 'book_again_click')}
+            onClick={
+              previewMode
+                ? undefined
+                : () => logEvent(campgroundId, 'book_again_click')
+            }
             className={ctaCls}
           >
             <span aria-hidden>🛎️</span> Book Your Next Stay
@@ -338,7 +371,11 @@ function BookAndReview({
             href={reviewUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => logEvent(campgroundId, 'review_click')}
+            onClick={
+              previewMode
+                ? undefined
+                : () => logEvent(campgroundId, 'review_click')
+            }
             className={ctaCls}
           >
             <span aria-hidden>⭐</span> Leave a Google Review
@@ -353,7 +390,13 @@ function BookAndReview({
 // Contact the Office
 // ---------------------------------------------------------------------------
 
-function ContactOffice({ campgroundId }: { campgroundId: string }) {
+function ContactOffice({
+  campgroundId,
+  previewMode,
+}: {
+  campgroundId: string
+  previewMode: boolean
+}) {
   const [category, setCategory] = useState<string>('')
   const [body, setBody] = useState('')
   const [contact, setContact] = useState('')
@@ -370,12 +413,16 @@ function ContactOffice({ campgroundId }: { campgroundId: string }) {
   function markStarted() {
     if (startedLogged) return
     setStartedLogged(true)
-    logEvent(campgroundId, 'office_contact_started')
+    if (!previewMode) logEvent(campgroundId, 'office_contact_started')
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (submitting) return
+    if (previewMode) {
+      setError('Preview mode — submission disabled.')
+      return
+    }
     if (!category) {
       setError('Pick a category first.')
       return

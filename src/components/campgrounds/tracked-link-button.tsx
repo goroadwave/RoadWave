@@ -18,6 +18,9 @@ type Props = {
   className?: string
   /** Open in a new tab; defaults to true for outbound campground links. */
   openInNewTab?: boolean
+  /** Preview mode (owner /owner/preview): the link still navigates so the
+   *  owner can verify the URL, but no event is logged. Defaults to false. */
+  previewMode?: boolean
 }
 
 function logEvent(campgroundId: string, eventType: string) {
@@ -50,13 +53,14 @@ export function TrackedLinkButton({
   children,
   className,
   openInNewTab = true,
+  previewMode = false,
 }: Props) {
   return (
     <a
       href={href}
       target={openInNewTab ? '_blank' : undefined}
       rel={openInNewTab ? 'noopener noreferrer' : undefined}
-      onClick={() => logEvent(campgroundId, eventType)}
+      onClick={previewMode ? undefined : () => logEvent(campgroundId, eventType)}
       className={className}
     >
       {children}

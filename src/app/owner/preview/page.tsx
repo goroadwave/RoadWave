@@ -1,11 +1,40 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { OwnerPreview } from '@/components/owner/owner-preview'
+import {
+  CampgroundGuestHubBody,
+  type GuestHubBulletin,
+  type GuestHubMeetup,
+} from '@/components/campgrounds/campground-guest-hub-body'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-// Owner-only Guest View preview. Lives outside the (authed) layout group so
-// it can render full-screen without the owner header chrome — the auth gate
-// is inlined here. Guests have no role.owner so they bounce to /checkin if
-// they ever land here, exactly like the (authed) layout does.
+// Owner-only "this is what your guests see" preview. Sits OUTSIDE
+// the (authed) layout group so the owner header / bottom nav / Riley
+// don't appear over the simulated guest view — auth is inlined here.
+//
+// As of 2026-05-20 this page mounts the same component the public
+// guest hub at /campground/<slug> uses. The only difference is the
+// sticky preview banner above the guest hub body. previewMode=true
+// disables:
+//   * /api/campground/event logging (TrackedLinkButton onClick)
+//   * /api/campground/message form submissions (Pulse needs-attention
+//     + Contact Office)
+//   * pulse_great / pulse_good / pulse_needs_attention event logs
+//   * book_again_click + review_click event logs
+//   * office_contact_started event logs
+//
+// Outbound CTA links (Book Again, Google Review) still navigate so
+// the owner can confirm the URL is correct. Everything else renders
+// identically to the live guest page.
+//
+// Data source: same column list as the guest hub page reads via the
+// service-role admin client; row identity comes from the owner's
+// most-recent campground_admins link (matches loadOwnerCampground).
+
+export const dynamic = 'force-dynamic'
+
+type CampgroundRow = Parameters<typeof CampgroundGuestHubBody>[0]['campground']
+
 export default async function OwnerPreviewPage() {
   const supabase = await createSupabaseServerClient()
   const {
@@ -21,10 +50,8 @@ export default async function OwnerPreviewPage() {
     .single()
   if (profile?.role === 'guest') redirect('/checkin')
 
-  // Find the campground this owner is linked to. Use .limit(1) on an
-  // array (not .maybeSingle()) so an owner managing 2+ campgrounds
-  // doesn't silently get null and see the "no campground" screen.
-  // Picks the most-recent admin link, mirroring loadOwnerCampground.
+  // Most-recent owner admin link — mirrors loadOwnerCampground so an
+  // owner managing 2+ campgrounds sees the same row in both places.
   const { data: links } = await supabase
     .from('campground_admins')
     .select('campground_id, created_at')
@@ -33,100 +60,114 @@ export default async function OwnerPreviewPage() {
     .limit(1)
   const link = links?.[0]
   if (!link) {
-    return (
-      <NoCampground />
-    )
+    return <NoCampground />
   }
 
-  const cgId = link.campground_id
-  const nowIso = new Date().toISOString()
+  const admin = createSupabaseAdminClient()
 
-  // Pull everything in parallel.
-  const [
-    { data: campground },
-    { data: bulletin },
-    { data: meetups },
-    { data: adminRows },
-  ] = await Promise.all([
-    supabase
-      .from('campgrounds')
-      .select(
-        'id, name, address, phone, website, logo_url, amenities, timezone',
-      )
-      .eq('id', cgId)
-      .single(),
-    supabase
-      .from('bulletins')
-      .select('id, message, category, expires_at, created_at')
-      .eq('campground_id', cgId)
-      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from('meetups')
-      .select('id, title, description, location, start_at, end_at, posted_by')
-      .eq('campground_id', cgId)
-      .order('start_at', { ascending: true }),
-    supabase
-      .from('campground_admins')
-      .select('user_id')
-      .eq('campground_id', cgId),
-  ])
+  // Use the SAME service-role SELECT list the public guest hub uses,
+  // so the preview is a true mirror. Drift between the two
+  // SELECTs is the bug that previously made /owner/preview show a
+  // stale social-dashboard mock.
+  const { data: campground } = await admin
+    .from('campgrounds')
+    .select(
+      'id, slug, name, city, region, logo_url, is_active, amenities, amenity_notes, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, show_park_map, park_map_url, park_map_notes, park_map_path, park_map_file_type, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text',
+    )
+    .eq('id', link.campground_id)
+    .maybeSingle<CampgroundRow & { is_active: boolean }>()
 
   if (!campground) {
     return <NoCampground />
   }
 
-  const adminIds = new Set((adminRows ?? []).map((r) => r.user_id))
-  // eslint-disable-next-line react-hooks/purity -- server component, request-scoped now
-  const now = Date.now()
-  const upcoming = (meetups ?? []).filter(
-    (m) => new Date(m.start_at).getTime() >= now,
-  )
-  const hostedUpcoming = upcoming.filter((m) => adminIds.has(m.posted_by))
-  const camperUpcoming = upcoming.filter((m) => !adminIds.has(m.posted_by))
+  // Resolve the campground's canonical QR token so the Meet Other
+  // Campers CTA inside the body builds the right /signup?next= URL
+  // (same logic the public hub uses when no ?token= is on the URL).
+  const { data: tokenRow } = await admin
+    .from('campground_qr_tokens')
+    .select('token')
+    .eq('campground_id', campground.id)
+    .maybeSingle<{ token: string }>()
+  const resolvedToken = tokenRow?.token ?? null
+
+  // Bulletins + meetups via the admin client. Same query shape as
+  // the guest hub page; previewMode controls what side effects fire
+  // inside the body, not what data we fetch.
+  const nowIso = new Date().toISOString()
+  const [{ data: bulletins }, { data: meetups }] = await Promise.all([
+    admin
+      .from('bulletins')
+      .select('id, message, category, expires_at, created_at')
+      .eq('campground_id', campground.id)
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .order('created_at', { ascending: false })
+      .limit(30)
+      .returns<GuestHubBulletin[]>(),
+    admin
+      .from('meetups')
+      .select('id, title, description, location, start_at, end_at')
+      .eq('campground_id', campground.id)
+      .gte('start_at', nowIso)
+      .order('start_at', { ascending: true })
+      .limit(30)
+      .returns<GuestHubMeetup[]>(),
+  ])
 
   return (
-    <OwnerPreview
-      campground={{
-        name: campground.name,
-        logoUrl: campground.logo_url,
-        amenities: campground.amenities ?? [],
-        timezone: campground.timezone,
-        address: campground.address,
-        phone: campground.phone,
-        website: campground.website,
-      }}
-      bulletin={
-        bulletin
-          ? {
-              message: bulletin.message,
-              category: bulletin.category,
-            }
-          : null
-      }
-      hostedMeetups={hostedUpcoming.map((m) => ({
-        id: m.id,
-        title: m.title,
-        description: m.description,
-        location: m.location,
-        startAt: m.start_at,
-      }))}
-      camperMeetups={camperUpcoming.map((m) => ({
-        id: m.id,
-        title: m.title,
-        description: m.description,
-        location: m.location,
-        startAt: m.start_at,
-      }))}
-    />
+    <>
+      <PreviewBanner />
+      <CampgroundGuestHubBody
+        campground={campground}
+        bulletins={bulletins ?? []}
+        meetups={meetups ?? []}
+        resolvedToken={resolvedToken}
+        previewMode
+      />
+    </>
+  )
+}
+
+function PreviewBanner() {
+  return (
+    <div
+      className="sticky top-0 z-30 px-4 py-2.5 flex items-center justify-between gap-3 shadow-md"
+      style={{ background: '#7c3aed', color: '#ffffff' }}
+    >
+      <p className="text-xs sm:text-sm font-semibold tracking-wide">
+        <span className="text-[10px] uppercase tracking-[0.2em] opacity-80 mr-2">
+          Preview mode
+        </span>
+        This is what your guests see
+      </p>
+      <div className="flex items-center gap-2 shrink-0">
+        <Link
+          href="/owner/dashboard"
+          className="rounded-md px-3 py-1 text-xs font-semibold whitespace-nowrap"
+          style={{ background: 'rgba(255,255,255,0.18)', color: '#ffffff' }}
+        >
+          Exit Preview ✕
+        </Link>
+        {/* Sign-out reachable from the preview page (which sits
+            outside the owner (authed) chrome) so the owner can't be
+            trapped here without a way to log out. */}
+        <form action="/auth/sign-out?next=/owner/login" method="post">
+          <button
+            type="submit"
+            className="rounded-md px-3 py-1 text-xs font-semibold whitespace-nowrap"
+            style={{ background: 'rgba(255,255,255,0.18)', color: '#ffffff' }}
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
+    </div>
   )
 }
 
 function NoCampground() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-night text-cream">
       <p className="text-sm text-mist mb-3">
         No campground linked yet — finish setup first.
       </p>
