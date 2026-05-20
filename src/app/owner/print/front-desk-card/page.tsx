@@ -97,7 +97,9 @@ export default async function FrontDeskCardPrintPage() {
 
   const bullets = buildBullets({
     hasWifi: campground.show_wifi && !!campground.wifi_network_name,
-    hasMap: campground.show_park_map && !!campground.park_map_url,
+    hasMap:
+      campground.show_park_map &&
+      !!(campground.park_map_path || campground.park_map_url),
     hasRules: campground.show_rules && !!campground.rules_text,
     hasEmergency:
       campground.show_emergency_info &&

@@ -70,11 +70,17 @@ type CampgroundRow = {
   feature_book_again_enabled: boolean
   feature_contact_office_enabled: boolean
   feature_pulse_check_enabled: boolean
-  // Park Map (mig 0048). The card renders only when show_park_map is
-  // true AND park_map_url is non-null.
+  // Park Map. URL fallback (mig 0048) + uploaded file (mig 0051).
+  // The card renders only when show_park_map is true AND at least
+  // one of (park_map_path, park_map_url) is non-null. The uploaded
+  // file takes precedence over the URL fallback.
+  // park_map_path stores the full Supabase Storage public URL
+  // (column name is a misnomer; see _helpers.ts comment).
   show_park_map: boolean
   park_map_url: string | null
   park_map_notes: string | null
+  park_map_path: string | null
+  park_map_file_type: string | null
   // Guest-hub sections from migration 0049. Each card renders only
   // when its show_* toggle is true AND at least one content field is
   // non-null. Half-configured states render nothing.
@@ -158,7 +164,7 @@ export default async function CampgroundGuestHubPage({
   const { data: campground } = await admin
     .from('campgrounds')
     .select(
-      'id, slug, name, city, region, logo_url, is_active, amenities, amenity_notes, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, show_park_map, park_map_url, park_map_notes, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text',
+      'id, slug, name, city, region, logo_url, is_active, amenities, amenity_notes, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, show_park_map, park_map_url, park_map_notes, park_map_path, park_map_file_type, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text',
     )
     .eq('slug', slug)
     .maybeSingle<CampgroundRow>()
@@ -348,53 +354,134 @@ export default async function CampgroundGuestHubPage({
             </p>
           </section>
 
-          {/* Park Map (mig 0048). Renders ONLY when the owner has
-              flipped show_park_map on AND pasted a URL. Half-configured
-              states render nothing. Link opens in a new tab so the
-              guest's place in the hub isn't lost; rel keeps the parent
-              tab safe from window.opener tampering. */}
-          {campground.show_park_map && campground.park_map_url && (
-            <section className="space-y-3">
-              <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-                Park map
-              </h2>
-              <a
-                href={campground.park_map_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block rounded-2xl border border-leaf/30 bg-leaf/[0.06] p-4 sm:p-5 hover:border-leaf/60 hover:bg-leaf/[0.10] transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <span
-                    aria-hidden
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-leaf/40 bg-leaf/15 text-xl"
-                  >
-                    🗺️
-                  </span>
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <p className="text-sm font-semibold text-cream">
-                      Open the park map
-                    </p>
-                    {campground.park_map_notes ? (
-                      <p className="text-xs text-mist leading-snug whitespace-pre-wrap">
-                        {campground.park_map_notes}
-                      </p>
-                    ) : (
+          {/* Park Map. URL fallback (mig 0048) + uploaded file (mig
+              0051). Renders only when the owner has flipped
+              show_park_map on AND at least one of (uploaded file,
+              URL) is set. The uploaded file takes precedence; the URL
+              is the fallback for owners who'd rather paste a link.
+              Three render variants:
+                * Uploaded IMAGE -> inline preview + "Open full size"
+                  link. Tapping the image opens the raw asset in a new
+                  tab so the mobile browser's native viewer handles
+                  pinch-zoom for free.
+                * Uploaded PDF   -> "View Park Map (PDF)" card; opens
+                  the PDF in a new tab.
+                * URL fallback   -> the original tap-anywhere card.
+              All three open in a new tab so the guest's place in the
+              hub isn't lost; rel keeps the parent tab safe from
+              window.opener tampering. */}
+          {(() => {
+            if (!campground.show_park_map) return null
+            const fileUrl = campground.park_map_path
+            const fileType = campground.park_map_file_type
+            const fallbackUrl = campground.park_map_url
+            const sourceUrl = fileUrl ?? fallbackUrl
+            if (!sourceUrl) return null
+
+            const isUploadedImage =
+              !!fileUrl &&
+              (fileType === 'image/png' ||
+                fileType === 'image/jpeg' ||
+                fileType === 'image/webp')
+            const isUploadedPdf =
+              !!fileUrl && fileType === 'application/pdf'
+
+            if (isUploadedImage) {
+              return (
+                <section className="space-y-3">
+                  <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+                    Park map
+                  </h2>
+                  <div className="rounded-2xl border border-leaf/30 bg-leaf/[0.06] p-3 sm:p-4 space-y-3">
+                    <a
+                      href={sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-xl overflow-hidden border border-white/5 bg-night/40 hover:border-leaf/60 transition-colors"
+                      aria-label="Open the campground map at full size"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- owner-uploaded asset, dimensions vary */}
+                      <img
+                        src={sourceUrl}
+                        alt={`Campground map for ${campground.name}`}
+                        className="block w-full h-auto max-h-[60vh] object-contain bg-night/30"
+                      />
+                    </a>
+                    <div className="flex items-center justify-between gap-3">
                       <p className="text-xs text-mist leading-snug">
-                        Opens in a new tab.
+                        Find the office, amenities, bathhouse, laundry,
+                        trails, and other park areas.
+                      </p>
+                      <a
+                        href={sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-leaf/40 bg-leaf/[0.10] text-cream px-3 py-1.5 text-xs font-semibold hover:bg-leaf/[0.18] hover:border-leaf/60 transition-colors"
+                      >
+                        Open full size <span aria-hidden>↗</span>
+                      </a>
+                    </div>
+                    {campground.park_map_notes && (
+                      <p className="text-xs text-mist leading-snug whitespace-pre-wrap pt-0.5">
+                        {campground.park_map_notes}
                       </p>
                     )}
                   </div>
-                  <span
-                    aria-hidden
-                    className="text-leaf shrink-0 text-sm font-semibold"
-                  >
-                    ↗
-                  </span>
-                </div>
-              </a>
-            </section>
-          )}
+                </section>
+              )
+            }
+
+            // PDF upload OR plain URL fallback -- both render as a
+            // tap-anywhere card with the link icon. The CTA text
+            // adapts to the source so a guest knows what tapping will
+            // do.
+            const ctaText = isUploadedPdf
+              ? 'View Park Map (PDF)'
+              : 'Open the park map'
+            return (
+              <section className="space-y-3">
+                <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+                  Park map
+                </h2>
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-2xl border border-leaf/30 bg-leaf/[0.06] p-4 sm:p-5 hover:border-leaf/60 hover:bg-leaf/[0.10] transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <span
+                      aria-hidden
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-leaf/40 bg-leaf/15 text-xl"
+                    >
+                      {isUploadedPdf ? '📄' : '🗺️'}
+                    </span>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <p className="text-sm font-semibold text-cream">
+                        {ctaText}
+                      </p>
+                      {campground.park_map_notes ? (
+                        <p className="text-xs text-mist leading-snug whitespace-pre-wrap">
+                          {campground.park_map_notes}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-mist leading-snug">
+                          Find the office, amenities, bathhouse,
+                          laundry, trails, and other park areas.
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      aria-hidden
+                      className="text-leaf shrink-0 text-sm font-semibold"
+                    >
+                      ↗
+                    </span>
+                  </div>
+                </a>
+              </section>
+            )
+          })()}
 
           {/* Wi-Fi (mig 0049). Renders when toggle is on AND a network
               name is set. Password rendered as monospace + select-all

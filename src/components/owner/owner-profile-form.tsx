@@ -7,6 +7,7 @@ import {
 } from '@/app/owner/(authed)/profile/actions'
 import type { OwnerCampground } from '@/app/owner/(authed)/_helpers'
 import { OwnerLogoUpload } from '@/components/owner/owner-logo-upload'
+import { OwnerParkMapUpload } from '@/components/owner/owner-park-map-upload'
 import {
   AMENITY_GROUPS,
   MAX_AMENITY_NOTE_CHARS,
@@ -249,22 +250,35 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
         </Field>
       </div>
 
-      {/* Park Map (mig 0048). URL-only this phase — owner pastes any
-          public URL (Google Drive, hosted PDF, Imgur, the park's own
-          website map). The public guest hub renders the card only
-          when the toggle is on AND a URL is present. */}
+      {/* Park Map. File upload (mig 0051) + URL fallback (mig 0048).
+          The uploaded file takes precedence over the URL when both
+          are set. The card on the public guest hub renders only when
+          the toggle is on AND at least one of (file, URL) is set. */}
       <div className="rounded-2xl border border-leaf/20 bg-leaf/[0.04] p-4 space-y-3">
         <p className="text-[11px] uppercase tracking-[0.18em] text-leaf font-semibold">
           Park Map (optional)
         </p>
         <p className="text-xs text-mist leading-snug">
-          Link out to a map of your campground. Paste any public URL —
-          Google Drive, an image hosted anywhere, a PDF, or the map
-          page on your own website. Opens in a new tab on the guest
-          hub. File upload is coming later; for now a public link is
-          all that&apos;s needed.
+          Upload a campground map so guests can quickly find sites,
+          amenities, bathhouses, laundry, trails, and office locations
+          from your QR page. PNG, JPG, WebP, or PDF up to 10 MB. Or,
+          if you&apos;d rather, paste a public link below — the
+          uploaded file takes precedence when both are set.
         </p>
-        <label className="flex items-start gap-2 text-sm text-cream cursor-pointer">
+
+        {/* File upload widget. Writes to Storage + persists the public
+            URL + MIME + filename + timestamp directly via a server
+            action. The "URL" passed in here is the value of
+            park_map_path (semantically a URL despite the column
+            name; see _helpers.ts comment). */}
+        <OwnerParkMapUpload
+          campgroundId={campground.id}
+          currentUrl={campground.park_map_path}
+          currentMime={campground.park_map_file_type}
+          currentFileName={campground.park_map_file_name}
+        />
+
+        <label className="flex items-start gap-2 text-sm text-cream cursor-pointer pt-1">
           <input
             type="checkbox"
             name="show_park_map"
@@ -274,13 +288,13 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
           <span>
             Show the Park Map card on my guest hub
             <span className="block text-xs text-mist mt-0.5">
-              The card stays hidden until you also paste a URL below.
+              Stays hidden until you also upload a file or paste a URL.
             </span>
           </span>
         </label>
         <Field
-          label="Park Map URL"
-          hint="Public link a guest can open. https:// required."
+          label="Park Map URL (optional fallback)"
+          hint="Public link a guest can open — Google Drive, hosted PDF, your park website map page. The uploaded file above wins if both are set."
         >
           <input
             name="park_map_url"

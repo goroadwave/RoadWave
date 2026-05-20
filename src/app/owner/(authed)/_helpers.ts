@@ -40,12 +40,23 @@ export type OwnerCampground = {
   feature_contact_office_enabled: boolean
   feature_pulse_check_enabled: boolean
   email_notifications_enabled: boolean
-  // Park Map fields (migration 0048). URL-only this phase; actual
-  // file upload comes later. The public guest hub renders a card
-  // only when show_park_map = true AND park_map_url IS NOT NULL.
+  // Park Map fields. URL field (migration 0048) + upload fields
+  // (migration 0051). The public guest hub renders the card only
+  // when show_park_map = true AND at least one of
+  // (park_map_path, park_map_url) is non-null. The uploaded file
+  // takes precedence over the URL fallback when both are set.
+  //
+  // park_map_path is a misnomer — semantically it stores a full
+  // public Supabase Storage URL (with ?v=<ts> cache buster), the
+  // same convention as logo_url. Kept as "path" for consistency
+  // with the applied 0051 schema.
   show_park_map: boolean
   park_map_url: string | null
   park_map_notes: string | null
+  park_map_path: string | null
+  park_map_file_type: string | null
+  park_map_file_name: string | null
+  park_map_updated_at: string | null
   // Guest-hub sections from migration 0049. Each section's card on
   // the public guest hub renders only when its show_* toggle is true
   // AND at least one content field is non-null.
@@ -88,7 +99,7 @@ export async function loadOwnerCampground() {
   const { data: cg } = await supabase
     .from('campgrounds')
     .select(
-      'id, name, slug, city, region, address, phone, website, logo_url, amenities, amenity_notes, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, email_notifications_enabled, show_park_map, park_map_url, park_map_notes, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text',
+      'id, name, slug, city, region, address, phone, website, logo_url, amenities, amenity_notes, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, email_notifications_enabled, show_park_map, park_map_url, park_map_notes, park_map_path, park_map_file_type, park_map_file_name, park_map_updated_at, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text',
     )
     .eq('id', link.campground_id)
     .single()
