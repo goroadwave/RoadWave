@@ -167,3 +167,63 @@ export function addAckedCriticalId(
     // Quota / disabled storage -- the in-session state still works.
   }
 }
+
+// Per-camper "fully cleared" critical bulletins. Two-tier
+// dismissal model:
+//   Tier 1 -- Acknowledge ("I see it"): collapses the prominent
+//             red banner to a small pinned chip; the critical
+//             stays visible in the Lantern panel as a pinned item.
+//             Lantern badge stops counting it.
+//   Tier 2 -- Clear from device: removes the chip AND drops the
+//             item from the Lantern panel entirely. Stored only
+//             for that browser/device -- does NOT affect other
+//             campers or remove the underlying bulletin. A NEW
+//             critical bulletin (different id) reappears in full.
+//
+// Storage key: roadwave:critical-cleared:<campgroundId>
+// Value: JSON array of cleared bulletin ids.
+
+function clearedStorageKey(campgroundId: string): string {
+  return `roadwave:critical-cleared:${campgroundId}`
+}
+
+// Same-tab notification when the cleared set changes -- the native
+// `storage` event only fires across tabs, so we synthesize this so
+// CriticalBanner / Lantern in the same page can react immediately.
+export const LANTERN_CRITICAL_CLEARED_EVENT =
+  'roadwave:lantern-critical-cleared'
+
+export function loadClearedCriticalIds(campgroundId: string): Set<string> {
+  if (typeof window === 'undefined') return new Set()
+  try {
+    const raw = window.localStorage.getItem(clearedStorageKey(campgroundId))
+    if (!raw) return new Set()
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return new Set()
+    return new Set(parsed.filter((v): v is string => typeof v === 'string'))
+  } catch {
+    return new Set()
+  }
+}
+
+export function addClearedCriticalId(
+  campgroundId: string,
+  bulletinId: string,
+): void {
+  if (typeof window === 'undefined') return
+  try {
+    const current = loadClearedCriticalIds(campgroundId)
+    current.add(bulletinId)
+    window.localStorage.setItem(
+      clearedStorageKey(campgroundId),
+      JSON.stringify([...current]),
+    )
+    window.dispatchEvent(
+      new CustomEvent(LANTERN_CRITICAL_CLEARED_EVENT, {
+        detail: { campgroundId, bulletinId },
+      }),
+    )
+  } catch {
+    // Quota / disabled storage -- the in-session state still works.
+  }
+}

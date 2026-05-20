@@ -106,3 +106,28 @@ export async function deleteBulletinAction(formData: FormData) {
   revalidatePath('/owner/dashboard')
   revalidatePath('/home')
 }
+
+// Phase 3c cleanup -- "End critical notice". Flips is_critical to
+// false on the bulletin without deleting it, so the announcement
+// stays visible in the camper QR bulletins list but no longer
+// pins to the top with the red banner + Lantern badge.
+//
+// The camper QR page will pick this up on its next /api/campground/
+// [slug]/dynamic poll (the critical slot becomes null), which
+// dispatches LANTERN_CRITICAL_EVENT and the CriticalBanner +
+// Lantern both clear the prominent treatment within ~60s.
+//
+// RLS on the bulletins table (mig 0009 bulletins_owner_all policy)
+// gates this -- only the campground's admin can write.
+export async function endCriticalNoticeAction(formData: FormData) {
+  const id = formData.get('id')
+  if (typeof id !== 'string') return
+  const supabase = await createSupabaseServerClient()
+  await supabase
+    .from('bulletins')
+    .update({ is_critical: false })
+    .eq('id', id)
+  revalidatePath('/owner/bulletin')
+  revalidatePath('/owner/dashboard')
+  revalidatePath('/home')
+}

@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react'
 import {
   addAckedCriticalId,
+  addClearedCriticalId,
+  LANTERN_CRITICAL_CLEARED_EVENT,
   LANTERN_CRITICAL_EVENT,
   loadAckedCriticalIds,
+  loadClearedCriticalIds,
 } from '@/components/campgrounds/lantern-storage'
 
 // Phase 3c -- prominent red weather/safety banner at the very top of
@@ -52,6 +55,11 @@ export function CriticalBanner({
 }) {
   const [critical, setCritical] = useState<CriticalBulletin | null>(initial)
   const [acked, setAcked] = useState<Set<string>>(() => new Set())
+  // Per-device "fully cleared" critical ids -- the second-tier
+  // dismiss. When the active critical's id is in this set, the
+  // banner + chip both render nothing; the Lantern also drops it
+  // from its panel. A NEW critical (different id) reappears.
+  const [cleared, setCleared] = useState<Set<string>>(() => new Set())
   // Whether the chip-collapsed state has been re-expanded by the
   // camper (overrides the localStorage ack for this session only,
   // so they can re-see the message without un-acking).
@@ -67,6 +75,7 @@ export function CriticalBanner({
     setMounted(true)
     if (!previewMode) {
       setAcked(loadAckedCriticalIds(campgroundId))
+      setCleared(loadClearedCriticalIds(campgroundId))
     }
   }, [campgroundId, previewMode])
 
@@ -101,11 +110,28 @@ export function CriticalBanner({
       // from the previous bulletin.
       setForceExpand(false)
     }
+    // Same-tab refresh when the Lantern panel clears a critical
+    // (or vice-versa). Cross-tab is handled via the storage event,
+    // but we don't subscribe to that here -- the next critical
+    // poll will re-trigger onCritical and pick up the new state.
+    function onCleared(e: Event) {
+      const ce = e as CustomEvent<{ campgroundId?: string }>
+      if (ce.detail?.campgroundId !== campgroundId) return
+      setCleared(loadClearedCriticalIds(campgroundId))
+    }
     window.addEventListener(LANTERN_CRITICAL_EVENT, onCritical)
-    return () => window.removeEventListener(LANTERN_CRITICAL_EVENT, onCritical)
+    window.addEventListener(LANTERN_CRITICAL_CLEARED_EVENT, onCleared)
+    return () => {
+      window.removeEventListener(LANTERN_CRITICAL_EVENT, onCritical)
+      window.removeEventListener(LANTERN_CRITICAL_CLEARED_EVENT, onCleared)
+    }
   }, [campgroundId, previewMode])
 
   if (!critical) return null
+  // Cleared (Tier 2 dismiss) -- camper removed this from their
+  // view entirely. Renders nothing. A NEW critical (different id)
+  // wouldn't be in this set so the banner reappears.
+  if (mounted && cleared.has(critical.id)) return null
 
   const isAcked = mounted && acked.has(critical.id) && !forceExpand
 
@@ -130,28 +156,57 @@ export function CriticalBanner({
     setForceExpand(false)
   }
 
+  // Tier 2 -- "Clear from this device". Removes the chip + drops
+  // the item from the Lantern panel entirely. localStorage so it
+  // persists across reloads on this device only. Owner-side state
+  // (the bulletin itself) is untouched.
+  function clearFromDevice() {
+    if (previewMode || !critical) return
+    addClearedCriticalId(campgroundId, critical.id)
+    setCleared((prev) => {
+      const next = new Set(prev)
+      if (critical) next.add(critical.id)
+      return next
+    })
+  }
+
   if (isAcked) {
     // Collapsed chip -- stays pinned at the top so the camper
-    // remembers there's an active notice. Tap to re-expand.
+    // remembers there's an active notice. Tap the body to re-expand;
+    // tap the × to fully clear from this device.
     return (
-      <button
-        type="button"
-        onClick={() => setForceExpand(true)}
-        className="w-full rounded-2xl border border-red-500/40 bg-red-500/[0.08] px-4 py-2 flex items-center justify-between gap-3 text-left hover:bg-red-500/[0.12] transition-colors"
-        aria-label="Re-open weather and safety notice"
-      >
-        <span className="flex items-center gap-2 min-w-0">
-          <span aria-hidden className="text-base">
-            ⚠
+      <div className="w-full rounded-2xl border border-red-500/40 bg-red-500/[0.08] flex items-stretch overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setForceExpand(true)}
+          className="flex-1 min-w-0 px-4 py-2 flex items-center justify-between gap-3 text-left hover:bg-red-500/[0.12] transition-colors"
+          aria-label="Re-open weather and safety notice"
+        >
+          <span className="flex items-center gap-2 min-w-0">
+            <span aria-hidden className="text-base">
+              ⚠
+            </span>
+            <span className="text-xs font-semibold text-red-200">
+              Weather &amp; safety notice — tap to view
+            </span>
           </span>
-          <span className="text-xs font-semibold text-red-200">
-            Weather &amp; safety notice — tap to view
+          <span aria-hidden className="text-red-300 text-xs">
+            ›
           </span>
-        </span>
-        <span aria-hidden className="text-red-300 text-xs">
-          ›
-        </span>
-      </button>
+        </button>
+        <button
+          type="button"
+          onClick={clearFromDevice}
+          disabled={previewMode}
+          className="px-3 border-l border-red-500/30 text-red-300 hover:text-red-100 hover:bg-red-500/15 disabled:opacity-40 transition-colors"
+          aria-label="Clear this notice from this device"
+          title="Clear from this device"
+        >
+          <span aria-hidden className="text-sm font-semibold">
+            ×
+          </span>
+        </button>
+      </div>
     )
   }
 

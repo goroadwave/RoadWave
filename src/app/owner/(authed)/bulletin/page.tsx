@@ -4,6 +4,7 @@ import { PageHeading } from '@/components/ui/page-heading'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loadOwnerCampground } from '../_helpers'
 import { DeleteBulletinButton } from '@/components/owner/delete-bulletin-button'
+import { EndCriticalNoticeButton } from '@/components/owner/end-critical-notice-button'
 
 export default async function OwnerBulletinPage() {
   const { campground } = await loadOwnerCampground()
@@ -67,7 +68,18 @@ export default async function OwnerBulletinPage() {
                 </>
               )}
             </p>
-            <DeleteBulletinButton bulletinId={active.id} />
+            {/* Phase 3c -- "End critical notice" appears only when the
+                active bulletin is_critical. Stops the prominent
+                top-of-page red banner + Lantern badge for campers
+                while keeping the announcement available in the
+                normal bulletins list. "Delete bulletin" still
+                removes the whole row. */}
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              {active.is_critical && (
+                <EndCriticalNoticeButton bulletinId={active.id} />
+              )}
+              <DeleteBulletinButton bulletinId={active.id} />
+            </div>
           </div>
         </section>
       )}

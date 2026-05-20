@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { loadCamperMessages } from '@/components/campgrounds/camper-message-storage'
 import {
+  addClearedCriticalId,
   LANTERN_BULLETINS_EVENT,
+  LANTERN_CRITICAL_CLEARED_EVENT,
   LANTERN_CRITICAL_EVENT,
   LANTERN_MARK_SEEN_EVENT,
   LANTERN_MEETUPS_EVENT,
   LANTERN_OFFICE_REPLY_EVENT,
   loadAckedCriticalIds,
+  loadClearedCriticalIds,
   loadLanternSeen,
   saveLanternSeen,
 } from '@/components/campgrounds/lantern-storage'
@@ -152,6 +155,9 @@ export function Lantern({
   const [ackedCriticalIds, setAckedCriticalIds] = useState<Set<string>>(
     () => new Set(),
   )
+  const [clearedCriticalIds, setClearedCriticalIds] = useState<Set<string>>(
+    () => new Set(),
+  )
 
   const [panelOpen, setPanelOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement | null>(null)
@@ -173,6 +179,7 @@ export function Lantern({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSeen(loadLanternSeen(campgroundId))
     setAckedCriticalIds(loadAckedCriticalIds(campgroundId))
+    setClearedCriticalIds(loadClearedCriticalIds(campgroundId))
 
     async function loadDynamic() {
       try {
@@ -254,19 +261,28 @@ export function Lantern({
       if (ce.detail?.campgroundId !== campgroundId) return
       const next = ce.detail.critical ?? null
       setCritical(next)
-      // Refresh acked ids on every critical change in case the
-      // CriticalBanner just wrote a new one to localStorage.
+      // Refresh acked + cleared ids on every critical change in
+      // case the CriticalBanner just wrote new state to
+      // localStorage (same-tab writes don't fire storage).
       setAckedCriticalIds(loadAckedCriticalIds(campgroundId))
+      setClearedCriticalIds(loadClearedCriticalIds(campgroundId))
     }
 
-    // Refresh acked ids whenever the CriticalBanner writes one
-    // (same-tab writes don't fire the storage event, so the
-    // CriticalBanner's acknowledge() doesn't automatically tell us
-    // -- but onCritical above + the storage event below cover the
-    // common cases).
+    // Same-tab notification when the CriticalBanner (or the Lantern
+    // itself) marks a critical as cleared from device.
+    function onCleared(e: Event) {
+      const ce = e as CustomEvent<{ campgroundId?: string }>
+      if (ce.detail?.campgroundId !== campgroundId) return
+      setClearedCriticalIds(loadClearedCriticalIds(campgroundId))
+    }
+
+    // Cross-tab refresh -- the native storage event fires when
+    // another tab writes to the acked or cleared key.
     function onStorage(e: StorageEvent) {
       if (e.key === `roadwave:critical-ack:${campgroundId}`) {
         setAckedCriticalIds(loadAckedCriticalIds(campgroundId))
+      } else if (e.key === `roadwave:critical-cleared:${campgroundId}`) {
+        setClearedCriticalIds(loadClearedCriticalIds(campgroundId))
       }
     }
 
@@ -274,12 +290,14 @@ export function Lantern({
     window.addEventListener(LANTERN_MEETUPS_EVENT, onMeetups)
     window.addEventListener(LANTERN_OFFICE_REPLY_EVENT, onReply)
     window.addEventListener(LANTERN_CRITICAL_EVENT, onCritical)
+    window.addEventListener(LANTERN_CRITICAL_CLEARED_EVENT, onCleared)
     window.addEventListener('storage', onStorage)
     return () => {
       window.removeEventListener(LANTERN_BULLETINS_EVENT, onBulletins)
       window.removeEventListener(LANTERN_MEETUPS_EVENT, onMeetups)
       window.removeEventListener(LANTERN_OFFICE_REPLY_EVENT, onReply)
       window.removeEventListener(LANTERN_CRITICAL_EVENT, onCritical)
+      window.removeEventListener(LANTERN_CRITICAL_CLEARED_EVENT, onCleared)
       window.removeEventListener('storage', onStorage)
     }
   }, [mounted, previewMode, campgroundId])
@@ -295,10 +313,13 @@ export function Lantern({
     if (!mounted || previewMode) return []
     const out: LanternItem[] = []
 
-    // Critical bulletin pin -- always at the top of the panel
-    // while active, regardless of acked state. The badge derivation
-    // below decides whether it contributes to the count.
-    if (critical) {
+    // Critical bulletin pin -- at the top of the panel while active
+    // AND NOT cleared from this device. Acknowledged-but-not-cleared
+    // criticals still appear here (pinned, no badge contribution);
+    // cleared ones drop off entirely until a new critical (different
+    // id) arrives. The badge derivation below decides whether the
+    // pinned item contributes to the count.
+    if (critical && !clearedCriticalIds.has(critical.id)) {
       out.push({
         kind: 'critical',
         id: critical.id,
@@ -401,6 +422,7 @@ export function Lantern({
     seen,
     trackerVersion,
     critical,
+    clearedCriticalIds,
   ])
 
   // Badge count -- like items.length, but excludes critical items
@@ -574,11 +596,14 @@ export function Lantern({
           ) : (
             <ul className="divide-y divide-white/5 max-h-96 overflow-y-auto">
               {items.map((item) => (
-                <li key={`${item.kind}-${item.id}`}>
+                <li
+                  key={`${item.kind}-${item.id}`}
+                  className="flex items-stretch"
+                >
                   <button
                     type="button"
                     onClick={() => openItem(item)}
-                    className="w-full text-left px-4 py-3 hover:bg-white/[0.04] transition-colors flex items-start gap-3"
+                    className="flex-1 min-w-0 text-left px-4 py-3 hover:bg-white/[0.04] transition-colors flex items-start gap-3"
                   >
                     <span aria-hidden className="text-base leading-none mt-0.5">
                       {item.kind === 'reply'
@@ -621,6 +646,26 @@ export function Lantern({
                       </span>
                     </span>
                   </button>
+                  {item.kind === 'critical' && !previewMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        addClearedCriticalId(campgroundId, item.id)
+                        setClearedCriticalIds((prev) => {
+                          const next = new Set(prev)
+                          next.add(item.id)
+                          return next
+                        })
+                      }}
+                      className="px-3 border-l border-white/5 text-mist hover:text-cream hover:bg-white/[0.04] transition-colors"
+                      aria-label="Clear this notice from this device"
+                      title="Clear from this device"
+                    >
+                      <span aria-hidden className="text-sm">
+                        ×
+                      </span>
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
