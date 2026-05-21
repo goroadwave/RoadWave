@@ -145,6 +145,14 @@ export function CampgroundGuestHubBody({
   // no-signup form that provisions a throwaway camper account in
   // one click. For every other campground we keep the standard
   // /signup → email-confirm → /checkin flow.
+  //
+  // The ?intent=connections + ?slug=<slug> params drive the auth page
+  // header (renders the "Camper Connections at <name>" eyebrow and
+  // the Connections-specific helper card via QrAuthHeader). Slug is
+  // redundant for the signup path -- the resolver also infers
+  // campground from the token in `next` -- but adding it makes the
+  // intent + context explicit so a URL inspected later is still
+  // unambiguous.
   const useQuickCheckIn =
     isQuickCheckInSlug(campground.slug) && !!resolvedToken
   const checkInUrlSigned = resolvedToken
@@ -153,8 +161,18 @@ export function CampgroundGuestHubBody({
   const meetOtherCampersUrl = useQuickCheckIn
     ? `/quickcheckin?slug=${encodeURIComponent(campground.slug)}&token=${resolvedToken}`
     : resolvedToken
-      ? `/signup?next=${encodeURIComponent(checkInUrlSigned)}`
-      : '/signup'
+      ? `/signup?intent=connections&slug=${encodeURIComponent(campground.slug)}&next=${encodeURIComponent(checkInUrlSigned)}`
+      : `/signup?intent=connections&slug=${encodeURIComponent(campground.slug)}`
+
+  // Header "Sign in" target. Distinct from the Connections CTA above
+  // -- this is the profile-intent path. After auth the camper lands
+  // back on the campground page (NOT /checkin), since the QR landing
+  // already gives them every practical surface (map, Wi-Fi, rules,
+  // updates, office help) without an account. The proxy clears the
+  // pending_checkin_token cookie on this URL so the (app) layout's
+  // post-auth "resume pending check-in" hook doesn't hijack the
+  // camper into /checkin against their explicit profile intent.
+  const profileSignInHref = `/login?intent=profile&slug=${encodeURIComponent(campground.slug)}&next=${encodeURIComponent(`/campground/${campground.slug}`)}`
 
   const where = [campground.city, campground.region].filter(Boolean).join(', ')
 
@@ -285,11 +303,7 @@ export function CampgroundGuestHubBody({
             previewMode={previewMode}
           />
           <Link
-            href={
-              resolvedToken
-                ? `/login?next=${encodeURIComponent(checkInUrlSigned)}`
-                : '/login'
-            }
+            href={profileSignInHref}
             className="text-xs font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
           >
             Sign in

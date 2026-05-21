@@ -2,56 +2,46 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { LoginForm } from '@/components/auth/login-form'
 import { AuthDivider, GoogleAuthButton } from '@/components/auth/google-auth-button'
-import { PageHeading } from '@/components/ui/page-heading'
-import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { QrAuthHeader } from '@/components/auth/qr-auth-header'
+import { resolveQrAuthContext } from '@/lib/auth/qr-auth-context'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-// Same campground-aware shape as /signup: if the caller arrived with
-// ?next=/checkin?token=<uuid>, resolve the campground from the token
-// and surface a campground-specific header instead of the generic
-// "Welcome back / Sign in" copy.
-const CHECKIN_NEXT_RE = /^\/checkin\?token=([0-9a-f-]{36})$/i
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-async function resolveCheckInTarget(
-  next: string | undefined,
-): Promise<{ name: string; city: string | null; region: string | null } | null> {
-  if (!next) return null
-  const decoded = next.startsWith('%2F') ? decodeURIComponent(next) : next
-  const match = decoded.match(CHECKIN_NEXT_RE)
-  if (!match) return null
-  const token = match[1]
-  if (!UUID_RE.test(token)) return null
-  try {
-    const admin = createSupabaseAdminClient()
-    const { data: tokenRow } = await admin
-      .from('campground_qr_tokens')
-      .select('campground_id')
-      .eq('token', token)
-      .maybeSingle<{ campground_id: string }>()
-    if (!tokenRow?.campground_id) return null
-    const { data: cg } = await admin
-      .from('campgrounds')
-      .select('name, city, region, is_active')
-      .eq('id', tokenRow.campground_id)
-      .maybeSingle<{
-        name: string
-        city: string | null
-        region: string | null
-        is_active: boolean
-      }>()
-    if (!cg || !cg.is_active) return null
-    return { name: cg.name, city: cg.city, region: cg.region }
-  } catch {
-    return null
-  }
-}
+// Auth surface for visitors arriving from the public campground QR
+// landing page (or directly via /login with no context).
+//
+// Two QR entry points feed this page:
+//
+//   * Header "Sign in" tap → ?intent=profile&slug=<slug>&next=/campground/<slug>
+//     The camper wants to manage their RoadWave profile. They land
+//     back on the same campground page after auth -- no "check in"
+//     forcing, since the campground info is fully available without
+//     an account.
+//
+//   * "Join Camper Connections" CTA → ?intent=connections&next=/checkin?token=<uuid>
+//     The camper is opting into the social layer (visibility,
+//     interests, waves). Post-auth they land on /checkin where they
+//     pick visibility and interests for this campground.
+//
+// Both flows share the SAME card layout; only the header copy and
+// the post-auth `next` URL differ. Legacy QR links with
+// ?next=/checkin?token=… and no explicit intent still resolve as
+// connections via the resolver's inference rule, so old printed QRs
+// don't break.
+//
+// The Google OAuth button always honors the `next` query param, so
+// the post-auth round-trip preserves whichever destination was set
+// (the QR page for profile, /checkin for connections, "/" for the
+// no-context default).
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string | string[]; next?: string }>
+  searchParams: Promise<{
+    error?: string | string[]
+    next?: string
+    intent?: string
+    slug?: string
+  }>
 }) {
   const supabase = await createSupabaseServerClient()
   const {
@@ -62,34 +52,28 @@ export default async function LoginPage({
   const params = await searchParams
   const rawError = Array.isArray(params.error) ? params.error[0] : params.error
   const errorMessage = rawError ? friendlyError(rawError) : null
-  const target = await resolveCheckInTarget(params.next)
+
+  const ctx = await resolveQrAuthContext({
+    intent: params.intent,
+    slug: params.slug,
+    next: params.next,
+  })
+
+  // Default post-auth destination. Honors the explicit ?next= when set
+  // (the proxy + auth callback both forward it), otherwise falls back
+  // to a sensible default per intent: connections lacks a campground
+  // context if the legacy token path failed, so "/" is the safe
+  // landing; profile sends the camper back to their campground if
+  // resolvable, otherwise home.
+  const nextHref =
+    (typeof params.next === 'string' && params.next) ||
+    (ctx.intent === 'profile' && ctx.campground
+      ? `/campground/${ctx.campground.slug}`
+      : '/')
 
   return (
     <div className="space-y-6">
-      {target ? (
-        <>
-          <PageHeading
-            eyebrow={`Check in to ${target.name}`}
-            title="Sign in to finish checking in"
-            subtitle={
-              [target.city, target.region].filter(Boolean).join(', ') ||
-              target.name
-            }
-            compact
-          />
-          <p className="rounded-xl border border-leaf/30 bg-leaf/[0.06] px-4 py-3 text-sm text-cream/90 leading-relaxed">
-            Sign in below and you&apos;ll go straight to the check-in screen
-            for <strong className="text-cream">{target.name}</strong>.
-          </p>
-        </>
-      ) : (
-        <PageHeading
-          eyebrow="Welcome back"
-          title="Sign in"
-          subtitle="Pick up where you parked."
-          compact
-        />
-      )}
+      <QrAuthHeader ctx={ctx} mode="login" />
 
       {errorMessage && (
         <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200 space-y-1">
@@ -105,7 +89,7 @@ export default async function LoginPage({
         </div>
       )}
 
-      <GoogleAuthButton next="/" />
+      <GoogleAuthButton next={nextHref} />
       <AuthDivider />
       <LoginForm />
     </div>

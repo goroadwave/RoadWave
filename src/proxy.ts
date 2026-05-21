@@ -76,6 +76,22 @@ export async function proxy(request: NextRequest) {
     response.cookies.delete(PENDING_CHECKIN_COOKIE)
   }
 
+  // 4. Explicit profile-intent auth (?intent=profile on /login or
+  // /signup) means the camper tapped the QR header "Sign in" link, NOT
+  // the "Join Camper Connections" CTA. They're managing their RoadWave
+  // profile, not opting into the social layer for this campground, so
+  // the (app) layout's post-auth pending-check-in hijack would route
+  // them somewhere they didn't ask to go. Drop the cookie here so the
+  // post-auth redirect lands on the explicit `next` URL (the QR page).
+  // Connections intent (and the legacy "no intent" path) leave the
+  // cookie alone so the auto-checkin still works for that flow.
+  if (
+    (pathname === '/login' || pathname === '/signup') &&
+    request.nextUrl.searchParams.get('intent') === 'profile'
+  ) {
+    response.cookies.delete(PENDING_CHECKIN_COOKIE)
+  }
+
   return response
 }
 
