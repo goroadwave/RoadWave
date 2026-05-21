@@ -33,7 +33,7 @@ const DEMO_TOKEN = 'cc21f1d1-5ffa-4dcd-ba72-d475c847ac41'
 /**
  * Walk a fresh anonymous context through:
  *   /campground/<slug>?token=<uuid>
- *     → Check In CTA → /quickcheckin
+ *     → "Join Camper Connections" CTA → /quickcheckin
  *     → submit form (visibility=visible, 3 interests, accept_terms)
  *     → land on /home with "Checked in at" chip
  *
@@ -42,8 +42,13 @@ const DEMO_TOKEN = 'cc21f1d1-5ffa-4dcd-ba72-d475c847ac41'
 async function quickCheckIn(page) {
   await page.goto(`/campground/${DEMO_SLUG}?token=${DEMO_TOKEN}`)
 
+  // The Meet Other Campers section is always visible (no accordion);
+  // CTA was renamed from "Check In to This Campground" to the
+  // clearer "Join Camper Connections" so a camper knows what they're
+  // opting into. Same href -- still resolves to /quickcheckin with
+  // the slug + token preserved.
   const checkInLink = page
-    .getByRole('link', { name: /Check In to This Campground/i })
+    .getByRole('link', { name: /Join Camper Connections/i })
     .first()
   await expect(checkInLink).toBeVisible()
   await checkInLink.click()

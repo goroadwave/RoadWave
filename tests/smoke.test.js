@@ -510,16 +510,15 @@ test.describe('Unauthenticated first-time camper QR check-in', () => {
       '/campground/roadwave-demo-campground?token=cc21f1d1-5ffa-4dcd-ba72-d475c847ac41',
     )
 
-    // 2. The "Check In to This Campground" CTA lives inside the
-    //    "Meet other campers — optional" accordion (Phase 4b wrapped
-    //    the secondary sections in default-closed <details> for a
-    //    cleaner page). Click the accordion summary to expand it
-    //    before asserting the link is visible. The summary text is
-    //    the only "Meet other campers" string on the page until
-    //    expanded, so a plain text locator is unambiguous.
-    await page.getByText(/Meet other campers/i).first().click()
+    // 2. The "Join Camper Connections" CTA lives in the always-
+    //    visible "Meet other campers — optional" section near the
+    //    bottom of the camper QR page. Used to be wrapped in a
+    //    DisclosureSection (default-closed) but the section was
+    //    un-collapsed so RoadWave's core social differentiator is
+    //    visible on first scroll without an extra tap. No accordion
+    //    expand step needed -- the link should be directly visible.
     const checkInLink = page
-      .getByRole('link', { name: /Check In to This Campground/i })
+      .getByRole('link', { name: /Join Camper Connections/i })
       .first()
     await expect(checkInLink).toBeVisible()
 
