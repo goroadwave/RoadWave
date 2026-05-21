@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { BulletinsList } from '@/components/campgrounds/bulletins-list'
 import { CriticalBanner } from '@/components/campgrounds/critical-banner'
+import { HappeningSection } from '@/components/campgrounds/happening-section'
 import { Lantern } from '@/components/campgrounds/lantern'
-import { MeetupsList } from '@/components/campgrounds/meetups-list'
 import { TrackedLinkButton } from '@/components/campgrounds/tracked-link-button'
 import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
+import { WifiCopyButton } from '@/components/campgrounds/wifi-copy-button'
 import { Logo } from '@/components/ui/logo'
 import { splitAmenities } from '@/lib/campgrounds/amenities'
 import { isQuickCheckInSlug } from '@/lib/checkin/quick-checkin-slugs'
@@ -42,6 +42,11 @@ export type GuestHubCampground = {
   amenity_notes: Record<string, string> | null
   website: string | null
   phone: string | null
+  /** Phase 4a -- campground street address, shown directly under
+   *  the name on the welcome page as a tappable maps link so a
+   *  guest can confirm they're at the right place + open
+   *  navigation in one tap. NULL hides the line. */
+  address: string | null
   google_review_url: string | null
   booking_url: string | null
   booking_message: string | null
@@ -267,9 +272,24 @@ export function CampgroundGuestHubBody({
               <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream leading-[1.05]">
                 {campground.name}
               </h1>
-              {where && (
+              {/* Phase 4a -- address tappable, opens user's default
+                  maps app via the universal Google Maps URL (works
+                  on iOS Safari, Android Chrome, and desktop). When
+                  no address is set we still render the city/region
+                  line for context, just not as a link. */}
+              {campground.address ? (
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent(campground.address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-sm sm:text-base text-mist hover:text-cream underline-offset-2 hover:underline"
+                >
+                  <span aria-hidden>📍</span>
+                  <span>{campground.address}</span>
+                </a>
+              ) : where ? (
                 <p className="text-sm sm:text-base text-mist">{where}</p>
-              )}
+              ) : null}
             </div>
             <p className="text-cream/90 text-sm leading-relaxed max-w-md mx-auto pt-1">
               Quick access to the park map, Wi-Fi, campground rules,
@@ -398,6 +418,23 @@ export function CampgroundGuestHubBody({
               </div>
             </section>
           )}
+
+          {/* Phase 4a -- "Happening at <name>" consolidates the old
+              separate Bulletins + Meetups sections into one client
+              island near the top. Single /api/campground/[slug]/dynamic
+              poll, dispatches LANTERN_BULLETINS_EVENT /
+              LANTERN_MEETUPS_EVENT / LANTERN_CRITICAL_EVENT so the
+              Phase 3b Lantern + Phase 3c CriticalBanner keep working
+              unchanged. Returns null when both lists are empty so
+              the page doesn't waste vertical space on an empty
+              announcements card. */}
+          <HappeningSection
+            campgroundSlug={campground.slug}
+            campgroundId={campground.id}
+            campgroundName={campground.name}
+            initialBulletins={bulletins}
+            initialMeetups={meetups}
+          />
 
           {/* Park Map. URL fallback (mig 0048) + uploaded file (mig
               0051). Renders only when the owner has flipped
@@ -561,6 +598,12 @@ export function CampgroundGuestHubBody({
                         <p className="text-sm font-mono font-semibold text-cream break-all select-all">
                           {campground.wifi_password}
                         </p>
+                        {/* Phase 4a -- one-tap copy on mobile. The
+                            password text stays select-all'd above as
+                            a fallback for clipboard-API-disabled
+                            browsers (Safari private mode, http
+                            contexts). */}
+                        <WifiCopyButton password={campground.wifi_password} />
                       </div>
                     )}
                     {campground.wifi_notes && (
@@ -649,34 +692,12 @@ export function CampgroundGuestHubBody({
               </section>
             )}
 
-          {/* Campground announcements (bulletins). Phase 3a -- client
-              island polls every 60s. Phase 3b -- island also fires
-              LANTERN_BULLETINS_EVENT on poll-detected changes so the
-              header Lantern can recompute unread state. id="bulletins"
-              is the Lantern's anchor target. */}
-          <section id="bulletins" className="space-y-3 scroll-mt-4">
-            <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-              Campground announcements
-            </h2>
-            <BulletinsList
-              campgroundSlug={campground.slug}
-              campgroundId={campground.id}
-              initial={bulletins}
-            />
-          </section>
-
-          {/* Upcoming meetups. Same Phase 3a/3b treatment as bulletins
-              above. id="meetups" is the Lantern's anchor target. */}
-          <section id="meetups" className="space-y-3 scroll-mt-4">
-            <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-              Upcoming meetups
-            </h2>
-            <MeetupsList
-              campgroundSlug={campground.slug}
-              campgroundId={campground.id}
-              initial={meetups}
-            />
-          </section>
+          {/* Phase 4a -- old standalone Bulletins + Meetups sections
+              consolidated into <HappeningSection> mounted higher on
+              the page (right after Quick Actions). The bulletins
+              and meetups <ul>s inside the new section keep the
+              id="bulletins" / id="meetups" anchors so the Lantern's
+              scroll-to behavior still works. */}
 
           {/* Phase 2 -- Amenities moved up near the Wi-Fi section.
               See the moved version higher on the page. */}
