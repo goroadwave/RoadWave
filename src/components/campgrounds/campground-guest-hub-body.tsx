@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { CamperScrollRestore } from '@/components/campgrounds/camper-scroll-restore'
 import { CamperToastHost } from '@/components/campgrounds/camper-toast-host'
 import { CriticalBanner } from '@/components/campgrounds/critical-banner'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
@@ -203,6 +202,23 @@ export function CampgroundGuestHubBody({
 
   return (
     <main className="min-h-screen bg-night text-cream">
+      {/* Server-rendered inline script -- runs synchronously as the
+          browser parses this point in the HTML, BEFORE any auto
+          scroll restoration kicks in. Without this, setting
+          scrollRestoration='manual' from a useEffect was racing the
+          browser's auto-restore (which fires before React mounts) so
+          a reload occasionally landed mid-page. Setting the flag
+          here, plus an explicit scrollTo(0,0), guarantees a clean
+          start-at-top reload unless the URL has an explicit hash
+          (anchor click or shared deep link). */}
+      {!previewMode && (
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if('scrollRestoration' in history){history.scrollRestoration='manual'}if(!location.hash){window.scrollTo(0,0)}}catch(e){}",
+          }}
+        />
+      )}
       <header className="px-4 py-5 flex items-center justify-between gap-3">
         <Link href="/" className="inline-block">
           <Logo className="text-2xl" />
@@ -281,14 +297,17 @@ export function CampgroundGuestHubBody({
                   no address is set we still render the city/region
                   line for context, just not as a link. */}
               {campground.address ? (
+                // Text-only tappable address -- opens the user's
+                // default maps app on tap. No pin emoji / icon per
+                // design: keep the welcome header clean and let the
+                // hover underline carry the affordance.
                 <a
                   href={`https://maps.google.com/?q=${encodeURIComponent(campground.address)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm sm:text-base text-mist hover:text-cream underline-offset-2 hover:underline"
+                  className="inline-block text-sm sm:text-base text-mist hover:text-cream underline-offset-2 hover:underline"
                 >
-                  <span aria-hidden>📍</span>
-                  <span>{campground.address}</span>
+                  {campground.address}
                 </a>
               ) : where ? (
                 <p className="text-sm sm:text-base text-mist">{where}</p>
@@ -828,13 +847,6 @@ export function CampgroundGuestHubBody({
         campgroundId={campground.id}
         previewMode={previewMode}
       />
-
-      {/* Force a fresh reload to start at the top of the page (or
-          honor an explicit URL hash). Prevents the browser's
-          default scroll restoration from dropping the camper into
-          the middle of the page after a refresh or a polling
-          re-render. Renders nothing. */}
-      {!previewMode && <CamperScrollRestore />}
     </main>
   )
 }

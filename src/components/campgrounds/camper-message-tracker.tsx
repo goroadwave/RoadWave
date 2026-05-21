@@ -9,7 +9,6 @@ import {
   type StoredCamperMessage,
 } from '@/components/campgrounds/camper-message-storage'
 import {
-  LANTERN_MARK_SEEN_EVENT,
   LANTERN_OFFICE_REPLY_EVENT,
   LANTERN_OPEN_THREAD_EVENT,
 } from '@/components/campgrounds/lantern-storage'
@@ -193,28 +192,18 @@ export function CamperMessageTracker({
   // entries so refreshing localStorage doesn't blow away ongoing poll
   // results.
   const [liveById, setLiveById] = useState<Record<string, LiveSummary>>({})
-  const [bannerEntryId, setBannerEntryId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [threadById, setThreadById] = useState<Record<string, ExpandedState>>(
     {},
   )
 
-  // Phase 3b -- when the Lantern marks notifications seen, drop our
-  // in-page "Office replied" banner so the two surfaces stay
-  // coordinated. The per-card flame chip is derived from
-  // lastSeenReplyAt on each entry and clears naturally on the next
-  // openThread call.
-  useEffect(() => {
-    if (previewMode) return
-    function onLanternSeen(e: Event) {
-      const ce = e as CustomEvent<{ campgroundId?: string }>
-      if (ce.detail?.campgroundId !== campgroundId) return
-      setBannerEntryId(null)
-    }
-    window.addEventListener(LANTERN_MARK_SEEN_EVENT, onLanternSeen)
-    return () =>
-      window.removeEventListener(LANTERN_MARK_SEEN_EVENT, onLanternSeen)
-  }, [campgroundId, previewMode])
+  // We deliberately do NOT render an in-page "office replied" banner
+  // anymore: the floating toast (CamperToastHost) is the single
+  // temporary surface for new replies, and the persistent card below
+  // already shows a "New Reply" chip + the appropriate CTA button
+  // when latestOwnerReplyAt > lastSeenReplyAt. Showing both at the
+  // same time produced two visually-similar cards in the same
+  // section and read as a duplicate to campers.
 
   // Merge stored + live into the LiveEntry shape the UI renders.
   const entries: LiveEntry[] = stored.map((s) => {
@@ -275,13 +264,13 @@ export function CamperMessageTracker({
       )
       if (cancelled) return
 
-      let firedBannerFor: string | null = null
+      let firedReplyFor: string | null = null
       const updates: Record<string, LiveSummary> = {}
       for (const r of results) {
         const wasLatest = seenOwnerReplyRef.current.get(r.id)
         // First poll for an entry (`undefined`) just captures a
-        // baseline -- no banner. Every subsequent poll fires when
-        // latestOwnerReplyAt advances, INCLUDING null -> non-null
+        // baseline -- no notification. Every subsequent poll fires
+        // when latestOwnerReplyAt advances, INCLUDING null -> non-null
         // (camper sent a message during this session, office replied
         // while the page was still open).
         if (
@@ -290,7 +279,7 @@ export function CamperMessageTracker({
           r.latestOwnerReplyAt !== wasLatest &&
           (wasLatest === null || r.latestOwnerReplyAt > wasLatest)
         ) {
-          firedBannerFor = r.id
+          firedReplyFor = r.id
         }
         seenOwnerReplyRef.current.set(r.id, r.latestOwnerReplyAt)
         updates[r.id] = {
@@ -301,15 +290,17 @@ export function CamperMessageTracker({
         }
       }
       setLiveById((prev) => ({ ...prev, ...updates }))
-      if (firedBannerFor) {
-        setBannerEntryId(firedBannerFor)
-        // Nudge the Lantern + the in-page toast host that a new
+      if (firedReplyFor) {
+        // Nudge the Lantern + the floating toast host that a new
         // reply landed. Both subscribe to LANTERN_OFFICE_REPLY_EVENT
-        // and re-derive from the (existing) tracker storage.
+        // and re-derive from the (existing) tracker storage. The
+        // tracker itself does NOT render an in-page banner here
+        // anymore -- the persistent message card's "New Reply" chip
+        // is the only inline indicator inside the section.
         if (typeof window !== 'undefined') {
           window.dispatchEvent(
             new CustomEvent(LANTERN_OFFICE_REPLY_EVENT, {
-              detail: { campgroundId, threadId: firedBannerFor },
+              detail: { campgroundId, threadId: firedReplyFor },
             }),
           )
         }
@@ -383,13 +374,11 @@ export function CamperMessageTracker({
 
   const openInline = useCallback(
     (entry: LiveEntry) => {
-      // Mark the latest reply seen so the per-card "office replied"
-      // chip clears the next time we re-derive from storage.
+      // Mark the latest reply seen so the per-card "New Reply" chip
+      // clears the next time we re-derive from storage.
       if (entry.latestReplyAt) {
         markCamperMessageSeen(campgroundId, entry.id, entry.latestReplyAt)
       }
-      // Drop the in-page banner the moment the camper engages.
-      setBannerEntryId((prev) => (prev === entry.id ? null : prev))
       setLiveById((prev) => {
         const live = prev[entry.id]
         if (!live) return prev
@@ -439,10 +428,6 @@ export function CamperMessageTracker({
 
   if (previewMode || entries.length === 0) return null
 
-  const banner = bannerEntryId
-    ? entries.find((e) => e.id === bannerEntryId)
-    : null
-
   function clearEntry(entry: LiveEntry) {
     removeCamperMessage(campgroundId, entry.id)
     setLiveById((prev) => {
@@ -456,42 +441,11 @@ export function CamperMessageTracker({
       return next
     })
     seenOwnerReplyRef.current.delete(entry.id)
-    if (bannerEntryId === entry.id) setBannerEntryId(null)
     if (expandedId === entry.id) setExpandedId(null)
   }
 
   return (
     <div className="space-y-3">
-      {banner && (
-        <div className="rounded-2xl border border-flame/40 bg-flame/[0.08] p-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-cream">
-              The office replied
-            </p>
-            <p className="text-xs text-mist leading-snug">
-              The campground office replied to your message.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => openInline(banner)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-flame text-night px-3 py-1.5 text-xs font-semibold hover:bg-amber-400 transition-colors"
-            >
-              <span aria-hidden>📬</span>
-              View office reply
-            </button>
-            <button
-              type="button"
-              onClick={() => setBannerEntryId(null)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 text-cream px-3 py-1.5 text-xs font-semibold hover:bg-white/10 transition-colors"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
-
       <ul className="space-y-2">
         {entries.map((e) => (
           <CamperMessageCard
