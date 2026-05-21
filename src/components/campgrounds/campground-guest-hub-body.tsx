@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { CamperScrollToTop } from '@/components/campgrounds/camper-scroll-to-top'
 import { CamperToastHost } from '@/components/campgrounds/camper-toast-host'
 import { CriticalBanner } from '@/components/campgrounds/critical-banner'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
@@ -203,30 +202,37 @@ export function CampgroundGuestHubBody({
 
   return (
     <main className="min-h-screen bg-night text-cream">
-      {/* Server-rendered inline script -- runs synchronously as the
-          browser parses this point in the HTML, BEFORE any auto
-          scroll restoration kicks in. Without this, setting
-          scrollRestoration='manual' from a useEffect was racing the
-          browser's auto-restore (which fires before React mounts) so
-          a reload occasionally landed mid-page near the park map.
-          Three layers of defense, each cheap:
-            1. Set scrollRestoration='manual' so the browser
-               won't auto-restore the previous offset on this nav.
-            2. Synchronous scrollTo(0,0) so any pending restore
-               that already fired is overridden.
-            3. A load-event listener that re-pins to (0,0) after
-               every other resource has loaded. Catches the case
-               where a lazy image / font swap / layout-shifted
-               island bumps the scroll position post-paint.
-          All three are skipped when the URL has an explicit
-          hash so #park-map / #office-help / etc. anchor links
-          (and the toast/Lantern force-open paths) still scroll
-          where they intend. */}
+      {/* Server-rendered inline scroll-pin script -- runs
+          synchronously as the browser parses this point in the
+          HTML, BEFORE any auto scroll restoration kicks in.
+          Earlier single-shot versions of this script were
+          insufficient: Next.js Google Fonts swap (3 typefaces),
+          React hydration of late-mounting islands (CriticalBanner,
+          HappeningSection, OfficeHelpCard auto-opening when the
+          camper has a stored thread), and the park-map image load
+          all shifted layout AFTER the script's one scrollTo fired.
+          The browser's "preserve scroll relative to new height"
+          logic could then end up landing the camper mid-page.
+
+          The fix: pin scroll to (0,0) every 30ms for up to 3
+          seconds, stopping early on any user interaction. That
+          covers the entire layout-stabilization window without
+          fighting the user if they intentionally scroll within
+          the first 3 seconds. Also handles 'pageshow' (bfcache
+          restoration from back-forward navigation in modern
+          browsers) and 'load' (all resources fully loaded). All
+          guards are skipped when the URL has an explicit hash so
+          anchor links (#office-help, #park-map, etc.) still work.
+
+          pin() sets every available scroll surface -- window,
+          documentElement, body, and document.scrollingElement --
+          so a layout context that ignores one (Safari overscroll
+          on body vs html, etc.) still gets pinned by another. */}
       {!previewMode && (
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if('scrollRestoration' in history){history.scrollRestoration='manual'}if(!location.hash){window.scrollTo(0,0);window.addEventListener('load',function(){if(!location.hash)window.scrollTo(0,0)})}}catch(e){}",
+              "try{if('scrollRestoration' in history){history.scrollRestoration='manual'}if(location.hash.length<=1){var pin=function(){window.scrollTo(0,0);if(document.scrollingElement)document.scrollingElement.scrollTop=0;document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0)};pin();var stop=false;var halt=function(){stop=true};var ev=['touchstart','pointerdown','wheel','keydown'];for(var i=0;i<ev.length;i++)window.addEventListener(ev[i],halt,{once:true,passive:ev[i]!=='keydown'});var n=0;var id=setInterval(function(){n++;if(n>100||stop||location.hash.length>1){clearInterval(id);return}pin()},30);window.addEventListener('load',function(){if(!stop&&location.hash.length<=1)pin()});window.addEventListener('pageshow',function(e){if(e.persisted&&location.hash.length<=1)pin()})}}catch(e){}",
           }}
         />
       )}
@@ -954,19 +960,6 @@ export function CampgroundGuestHubBody({
         campgroundId={campground.id}
         previewMode={previewMode}
       />
-
-      {/* Belt-and-suspenders to the inline scroll-restoration
-          script at the top of <main>: this client island fires
-          AFTER React hydrates and re-pins to (0,0) across mount,
-          rAF, 50/250/600ms ticks so a slow-mobile layout shift
-          (CriticalBanner data, HappeningSection mount,
-          OfficeHelpCard opening when the camper has a stored
-          thread, lazy park-map image) can't leave the camper
-          mid-page after the inline script's single shot has
-          fired. Bails out entirely when location.hash is set so
-          anchor navigation (#office-help via Quick Action,
-          shared deep links) still works. */}
-      {!previewMode && <CamperScrollToTop />}
     </main>
   )
 }
