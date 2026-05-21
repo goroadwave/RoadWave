@@ -17,10 +17,13 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 //     forcing, since the campground info is fully available without
 //     an account.
 //
-//   * "Join Camper Connections" CTA → ?intent=connections&next=/checkin?token=<uuid>
+//   * "Join Camper Connections" CTA → ?intent=connections&slug=<slug>&next=/campground/<slug>?token=<uuid>
 //     The camper is opting into the social layer (visibility,
-//     interests, waves). Post-auth they land on /checkin where they
-//     pick visibility and interests for this campground.
+//     interests, waves). Post-auth they land back on the same
+//     campground hub URL; the hub server-side detects them as
+//     authed, upserts their presence via checkin_by_token, and
+//     renders the Camper Connections layer (visibility pills,
+//     Campers Here list, wave UI) in place of the anon CTA.
 //
 // Both flows share the SAME card layout; only the header copy and
 // the post-auth `next` URL differ. Legacy QR links with
@@ -30,8 +33,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 //
 // The Google OAuth button always honors the `next` query param, so
 // the post-auth round-trip preserves whichever destination was set
-// (the QR page for profile, /checkin for connections, "/" for the
-// no-context default).
+// (the QR page for either intent, "/" for the no-context default).
 
 export default async function LoginPage({
   searchParams,

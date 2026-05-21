@@ -95,3 +95,47 @@ export async function exitCampgroundUpdatesOnlyAction(): Promise<void> {
   revalidatePath('/nearby')
   revalidatePath('/meetups')
 }
+
+// Visibility-pill quick set used by the Camper Connections card on the
+// signed-in campground hub. Flips privacy_mode between the three
+// social modes without touching the campground-updates-only sub-toggles.
+// Slug is passed so the calling page (the campground hub at
+// /campground/<slug>) can be revalidated in-place and the camper
+// stays put with no navigation.
+const visibilitySchema = z.object({
+  mode: z.enum(['visible', 'quiet', 'invisible']),
+  slug: z.string().min(1).max(80).optional(),
+})
+
+export type VisibilityState = { error: string | null; ok: boolean }
+
+export async function setVisibilityModeAction(
+  _prev: VisibilityState,
+  formData: FormData,
+): Promise<VisibilityState> {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not signed in.', ok: false }
+
+  const parsed = visibilitySchema.safeParse({
+    mode: formData.get('mode'),
+    slug: formData.get('slug') ?? undefined,
+  })
+  if (!parsed.success) return { error: 'Invalid visibility mode.', ok: false }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ privacy_mode: parsed.data.mode })
+    .eq('id', user.id)
+  if (error) return { error: error.message, ok: false }
+
+  if (parsed.data.slug) {
+    revalidatePath(`/campground/${parsed.data.slug}`)
+  }
+  revalidatePath('/home')
+  revalidatePath('/nearby')
+
+  return { error: null, ok: true }
+}

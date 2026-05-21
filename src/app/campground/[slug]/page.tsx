@@ -1,43 +1,44 @@
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import {
   CampgroundGuestHubBody,
+  type GuestHubAuthedViewer,
   type GuestHubBulletin,
   type GuestHubCampground,
   type GuestHubMeetup,
 } from '@/components/campgrounds/campground-guest-hub-body'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import type { NearbyCamper, PrivacyMode } from '@/lib/types/db'
+import type { WaveState } from '@/components/waves/wave-button'
 
-// Public unified guest hub. Reached when a camper scans a campground
-// QR — the QR encodes /campground/<slug>?token=<uuid>. No login is
-// required for anything on this page.
+// Unified guest hub. Anonymous viewers see the campground info
+// surfaces (Park Map, Wi-Fi, Emergency Info, Rules, Local Recs,
+// announcements, meetups, amenities, helpful links, engagement hub)
+// plus the "Meet Other Campers — Optional" CTA. Signed-in campers
+// see the same hub with the Camper Connections layer (visibility
+// pills, nearby list, wave UI, edit-interests) rendered in place of
+// the CTA card.
 //
 // Phase D of the guest-hub pivot (2026-05-20) merged this page with
-// /campground/<slug>/updates so guests get the practical hub content
-// (Park Map, Wi-Fi, Emergency Info, Rules, Local Recs, announcements,
-// meetups, amenities, helpful links, engagement hub) directly on the
-// QR landing URL. The old /updates path now 307-redirects here, so
-// printed QRs and old links keep working.
+// /campground/<slug>/updates so guests get all the practical content
+// directly on the QR landing URL. The old /updates path now
+// 307-redirects here.
 //
-// As of 2026-05-20 the full page JSX lives in
+// Phase E (2026-05-21) made this page the post-auth landing for
+// signed-in campers too. Earlier the page redirected authed users
+// with a token to /checkin so they could do a "confirm your check-in"
+// step. That separate screen is gone: signing in from a campground
+// QR is already an opt-in to that campground's context, so we
+// auto-establish presence here (best-effort `checkin_by_token` RPC
+// call) and render the Camper Connections layer in place. The
+// camper can drop out via the visibility pills on the same surface.
+//
+// The page-level JSX lives in
 // src/components/campgrounds/campground-guest-hub-body.tsx so the
 // owner /owner/preview route can mount the same component with a
-// preview banner. This file keeps the page-level concerns: auth
-// branching, token resolution, event logging, data fetching.
-//
-// Auth-state branching:
-//   * Authed visitor WITH a valid token → redirect immediately to
-//     /checkin?token=… so they land on the check-in confirmation
-//     flow without seeing the hub they don't need.
-//   * Anonymous visitor → render the unified hub. The "Meet Other
-//     Campers — Optional" card near the bottom is the only surface
-//     that triggers signup/login.
-//
-// The pending_checkin_token cookie is set by middleware when the URL
-// matches /campground/<slug>?token=<uuid>; the (app) layout reads it
-// post-auth and redirects to /checkin?token=… so a camper arrives at
-// the right destination without needing to re-scan or re-paste the
-// link.
+// preview banner. This file keeps the page-level concerns:
+// token resolution, event logging, presence upsert, viewer-data
+// fetching for the Camper Connections layer.
 //
 // Service-role lookups for campground_qr_tokens (RLS service-only),
 // for bulletin/meetup reads (RLS limits public reads otherwise), and
@@ -124,16 +125,16 @@ export default async function CampgroundGuestHubPage({
     resolvedToken = tokenRow?.token ?? null
   }
 
-  // Authed visitor with a real token: skip the hub and go straight
-  // to the camper check-in flow. The (app) layout will run its own
-  // auth + consent gates from there.
+  // Authed-viewer branch. Replaces the pre-Phase-E redirect to
+  // /checkin?token=... with an in-place upgrade: the signed-in
+  // camper sees the same hub as the anon visitor, plus the Camper
+  // Connections layer. Presence (check_ins row) is established
+  // best-effort via the resolved token below; failures don't block
+  // the page render.
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (user && scannedToken) {
-    redirect(`/checkin?token=${scannedToken}`)
-  }
 
   // Event logging — fire-and-forget so renders never block on stats
   // writes. Three event types fire on different conditions:
@@ -183,7 +184,7 @@ export default async function CampgroundGuestHubPage({
   // welcome header on first paint, no flicker. Backed by the
   // bulletins_critical_idx partial index from mig 0058.
   const nowIso = new Date().toISOString()
-  const [{ data: bulletins }, { data: meetups }, { data: criticalRows }] =
+  const [{ data: bulletins }, { data: meetups }, { data: criticalRows }, auth] =
     await Promise.all([
       admin
         .from('bulletins')
@@ -217,6 +218,13 @@ export default async function CampgroundGuestHubPage({
             created_at: string
           }[]
         >(),
+      // Authed-viewer fetch. Returns null when the visitor is anon
+      // OR when they are signed in but their email is not yet
+      // verified (preserves the existing email-verification gate
+      // without throwing on the Camper Connections layer). All
+      // sub-queries are batched inside this helper so the auth
+      // branch adds at most one extra Promise.all wave.
+      resolveAuthedViewer(supabase, user, campground.id, resolvedToken),
     ])
 
   const critical =
@@ -231,6 +239,133 @@ export default async function CampgroundGuestHubPage({
       meetups={meetups ?? []}
       critical={critical}
       resolvedToken={resolvedToken}
+      auth={auth}
     />
   )
+}
+
+// Resolve the authed-viewer payload that drives the Camper
+// Connections card. Returns null when the visitor is anonymous OR
+// is signed in but their email is not yet verified (the
+// checkin_by_token RPC raises P0002 in that case; we swallow it and
+// fall back to the anon render so the hub still works for them).
+//
+// Steps:
+//   1. Best-effort upsert presence via checkin_by_token. The RPC
+//      renews an existing active row or inserts a new one with a
+//      24-hour expiry (mig 0002). No-op when resolvedToken is null
+//      (campground has no QR token configured).
+//   2. Read the viewer's profile (privacy_mode, saved interest
+//      filter) + their profile_interests rows in parallel with the
+//      nearby_campers RPC and the waves/crossed_paths shape for
+//      wave-state computation.
+//   3. Build the WaveState map the existing NearbyList component
+//      expects. crossed_paths.status takes precedence over
+//      waves.status when both exist (a matched connection should
+//      always render as "matched"/"connected" even if the
+//      originating wave row is still flagged "pending").
+async function resolveAuthedViewer(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  user: { id: string } | null,
+  campgroundId: string,
+  resolvedToken: string | null,
+): Promise<GuestHubAuthedViewer | null> {
+  if (!user) return null
+
+  if (resolvedToken) {
+    // Best-effort presence upsert. checkin_by_token is idempotent
+    // (renews an existing active row instead of duplicating); if
+    // it fails (P0001 invalid token, P0002 email not verified,
+    // RLS denial) we still render the hub and the email-verify
+    // gate below decides whether to surface the Connections layer
+    // or fall back to the anon render. Supabase RPC errors come
+    // back on the result object rather than throwing, so we
+    // inspect `error` directly; the outer try/catch is just for
+    // unexpected transport failures.
+    try {
+      const { error: presenceError } = await supabase.rpc(
+        'checkin_by_token',
+        { _token: resolvedToken },
+      )
+      if (presenceError && presenceError.code !== 'P0002') {
+        console.warn(
+          '[campground/hub] presence upsert failed:',
+          presenceError.message,
+        )
+      }
+    } catch (err) {
+      console.warn(
+        '[campground/hub] presence upsert threw:',
+        err instanceof Error ? err.message : String(err),
+      )
+    }
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('privacy_mode, nearby_filter_interests, email_verified_at')
+    .eq('id', user.id)
+    .maybeSingle<{
+      privacy_mode: PrivacyMode
+      nearby_filter_interests: string[] | null
+      email_verified_at: string | null
+    }>()
+
+  // Email-verify gate. The nearby_campers RPC + the wave actions
+  // all require a verified profiles row; without one we degrade to
+  // the anon render rather than surfacing a half-empty Connections
+  // card the camper can't actually use.
+  if (!profile || !profile.email_verified_at) return null
+
+  const [
+    { data: viewerInterestRows },
+    { data: campers },
+    { data: myWaves },
+    { data: matches },
+  ] = await Promise.all([
+    supabase
+      .from('profile_interests')
+      .select('interests(slug)')
+      .eq('profile_id', user.id),
+    supabase.rpc('nearby_campers', { _campground_id: campgroundId }),
+    supabase
+      .from('waves')
+      .select('to_profile_id, status')
+      .eq('from_profile_id', user.id),
+    supabase.from('crossed_paths').select('profile_a_id, profile_b_id, status'),
+  ])
+
+  const viewerInterests = (viewerInterestRows ?? [])
+    .map((row) => {
+      const i = row.interests as unknown as { slug: string } | null
+      return i?.slug ?? null
+    })
+    .filter((s): s is string => typeof s === 'string')
+
+  const waveStateByProfileId: Record<string, WaveState> = {}
+  for (const w of myWaves ?? []) {
+    const s = (w.status as string | null) ?? 'pending'
+    if (s === 'declined') waveStateByProfileId[w.to_profile_id] = 'declined'
+    else if (s === 'connected')
+      waveStateByProfileId[w.to_profile_id] = 'connected'
+    else if (s === 'matched') waveStateByProfileId[w.to_profile_id] = 'matched'
+    else waveStateByProfileId[w.to_profile_id] = 'waved'
+  }
+  for (const m of matches ?? []) {
+    const otherId =
+      m.profile_a_id === user.id ? m.profile_b_id : m.profile_a_id
+    const s = (m.status as string | null) ?? 'pending_consent'
+    if (s === 'connected') waveStateByProfileId[otherId] = 'connected'
+    else if (s === 'declined') waveStateByProfileId[otherId] = 'declined'
+    else waveStateByProfileId[otherId] = 'matched'
+  }
+
+  return {
+    userId: user.id,
+    campers: (campers ?? []) as NearbyCamper[],
+    waveStateByProfileId,
+    viewerInterests,
+    initialInterests: profile.nearby_filter_interests ?? [],
+    privacyMode: profile.privacy_mode,
+  }
 }

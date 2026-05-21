@@ -11,13 +11,15 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 //
 // Two QR entry points feed this page:
 //
-//   * "Join Camper Connections" CTA → ?intent=connections&next=/checkin?token=<uuid>
+//   * "Join Camper Connections" CTA → ?intent=connections&slug=<slug>&next=/campground/<slug>?token=<uuid>
 //     Camper is opting into the social layer (visibility, interests,
-//     waves). Post-account-creation + email-verify they land on
-//     /checkin where they pick visibility and interests for this
-//     campground. Legacy QR shape with just `next=/checkin?token=…`
-//     and no intent param resolves as connections via the
-//     resolver's inference rule, so old printed QRs don't break.
+//     waves). Post-account-creation + email-verify they land back on
+//     the same campground hub URL, which detects them as authed,
+//     upserts presence, and renders the Camper Connections layer
+//     in place of the anon CTA. Legacy QR shape with just
+//     `next=/checkin?token=…` and no intent param still resolves as
+//     connections via the resolver's inference rule, so old printed
+//     QRs don't break.
 //
 //   * Header "Sign in" tap → if they DON'T have an account yet, this
 //     funnels through /login, where the "Don't have an account?

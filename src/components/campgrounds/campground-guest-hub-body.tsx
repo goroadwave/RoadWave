@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { CamperConnectionsCard } from '@/components/campgrounds/camper-connections-card'
 import { CamperToastHost } from '@/components/campgrounds/camper-toast-host'
 import { CriticalBanner } from '@/components/campgrounds/critical-banner'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
@@ -11,6 +12,8 @@ import { WifiCopyButton } from '@/components/campgrounds/wifi-copy-button'
 import { Logo } from '@/components/ui/logo'
 import { splitAmenities } from '@/lib/campgrounds/amenities'
 import { isQuickCheckInSlug } from '@/lib/checkin/quick-checkin-slugs'
+import type { NearbyCamper, PrivacyMode } from '@/lib/types/db'
+import type { WaveState } from '@/components/waves/wave-button'
 
 // Shared body for the public guest QR landing page AND the owner-only
 // preview at /owner/preview. Both routes render identical content from
@@ -116,16 +119,39 @@ export type GuestHubCritical = {
   created_at: string
 }
 
+// Signed-in viewer context. Present when the camper is authed at
+// this campground; null when the page is rendered anonymously (the
+// public QR landing path). Drives the swap from the anonymous
+// "Meet Other Campers — Optional" CTA into the live Camper
+// Connections card (nearby list + visibility pills + wave UI).
+//
+// The page-level wrapper (/campground/[slug]/page.tsx) is responsible
+// for establishing presence (check_ins upsert) and fetching the
+// list / wave state / interests before passing this down.
+export type GuestHubAuthedViewer = {
+  userId: string
+  campers: NearbyCamper[]
+  waveStateByProfileId: Record<string, WaveState>
+  viewerInterests: string[]
+  initialInterests: string[]
+  privacyMode: PrivacyMode
+}
+
 type Props = {
   campground: GuestHubCampground
   bulletins: GuestHubBulletin[]
   meetups: GuestHubMeetup[]
   critical: GuestHubCritical | null
   /** Canonical QR token for this campground. Drives the URL of the
-   *  Meet Other Campers CTA — when present, the camper lands on the
-   *  check-in flow with the token preserved; when null, they land
-   *  on the generic /signup or /checkin route. */
+   *  Meet Other Campers CTA when the page is rendered anonymously.
+   *  Ignored when `auth` is present — signed-in campers go straight
+   *  into the Camper Connections layer with no extra auth handoff. */
   resolvedToken: string | null
+  /** Authed viewer context — present when the camper is signed in
+   *  at this campground. The hub renders the Camper Connections
+   *  layer in place of the anon "Meet Other Campers" CTA when
+   *  this is set. */
+  auth?: GuestHubAuthedViewer | null
   /** True when rendered inside /owner/preview. Disables stat-event
    *  logging and form submissions while keeping all visual surfaces
    *  identical to the live guest page. */
@@ -138,13 +164,22 @@ export function CampgroundGuestHubBody({
   meetups,
   critical,
   resolvedToken,
+  auth = null,
   previewMode = false,
 }: Props) {
-  // Meet-Other-Campers CTA target. For QUICK_CHECKIN_SLUGS (demo +
-  // test campgrounds), the CTA routes to /quickcheckin — a public
-  // no-signup form that provisions a throwaway camper account in
-  // one click. For every other campground we keep the standard
-  // /signup → email-confirm → /checkin flow.
+  const isAuthed = !!auth
+  // Meet-Other-Campers CTA target -- only used in the anonymous
+  // render path. When the viewer is signed in we render the Camper
+  // Connections card below instead of pointing them at an auth flow
+  // they've already completed.
+  //
+  // For QUICK_CHECKIN_SLUGS (demo + test campgrounds), the anon CTA
+  // routes to /quickcheckin -- a public no-signup form that
+  // provisions a throwaway camper account in one click. For every
+  // other campground we keep the standard /signup -> email-confirm
+  // flow but with `next=/campground/<slug>` so the camper lands back
+  // on this hub (now with the Connections layer unlocked) instead of
+  // a separate check-in screen.
   //
   // The ?intent=connections + ?slug=<slug> params drive the auth page
   // header (renders the "Camper Connections at <name>" eyebrow and
@@ -155,23 +190,18 @@ export function CampgroundGuestHubBody({
   // unambiguous.
   const useQuickCheckIn =
     isQuickCheckInSlug(campground.slug) && !!resolvedToken
-  const checkInUrlSigned = resolvedToken
-    ? `/checkin?token=${resolvedToken}`
-    : '/checkin'
+  const hubReturnUrl = resolvedToken
+    ? `/campground/${campground.slug}?token=${resolvedToken}`
+    : `/campground/${campground.slug}`
   const meetOtherCampersUrl = useQuickCheckIn
     ? `/quickcheckin?slug=${encodeURIComponent(campground.slug)}&token=${resolvedToken}`
-    : resolvedToken
-      ? `/signup?intent=connections&slug=${encodeURIComponent(campground.slug)}&next=${encodeURIComponent(checkInUrlSigned)}`
-      : `/signup?intent=connections&slug=${encodeURIComponent(campground.slug)}`
+    : `/signup?intent=connections&slug=${encodeURIComponent(campground.slug)}&next=${encodeURIComponent(hubReturnUrl)}`
 
-  // Header "Sign in" target. Distinct from the Connections CTA above
-  // -- this is the profile-intent path. After auth the camper lands
-  // back on the campground page (NOT /checkin), since the QR landing
-  // already gives them every practical surface (map, Wi-Fi, rules,
-  // updates, office help) without an account. The proxy clears the
-  // pending_checkin_token cookie on this URL so the (app) layout's
-  // post-auth "resume pending check-in" hook doesn't hijack the
-  // camper into /checkin against their explicit profile intent.
+  // Header "Sign in" target -- only used in the anonymous render
+  // path. After auth the camper lands back on the campground page
+  // (NOT /checkin), since the QR landing already gives them every
+  // practical surface (map, Wi-Fi, rules, updates, office help)
+  // without an account.
   const profileSignInHref = `/login?intent=profile&slug=${encodeURIComponent(campground.slug)}&next=${encodeURIComponent(`/campground/${campground.slug}`)}`
 
   const where = [campground.city, campground.region].filter(Boolean).join(', ')
@@ -302,12 +332,41 @@ export function CampgroundGuestHubBody({
             campgroundSlug={campground.slug}
             previewMode={previewMode}
           />
-          <Link
-            href={profileSignInHref}
-            className="text-xs font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
-          >
-            Sign in
-          </Link>
+          {isAuthed ? (
+            // Authed view: home/profile shortcut + sign-out. We don't
+            // render the "Sign in" link because the camper is already
+            // signed in -- showing it would be confusing. Sign-out
+            // posts to the same endpoint the (app) layout header uses
+            // so the session ends the same way from either surface.
+            <>
+              <Link
+                href="/home"
+                className="text-xs font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
+              >
+                My RoadWave
+              </Link>
+              {!previewMode && (
+                <form
+                  action={`/auth/sign-out?next=${encodeURIComponent(`/campground/${campground.slug}`)}`}
+                  method="post"
+                >
+                  <button
+                    type="submit"
+                    className="text-xs font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
+                  >
+                    Sign out
+                  </button>
+                </form>
+              )}
+            </>
+          ) : (
+            <Link
+              href={profileSignInHref}
+              className="text-xs font-semibold text-mist hover:text-cream underline-offset-2 hover:underline"
+            >
+              Sign in
+            </Link>
+          )}
         </div>
       </header>
 
@@ -840,17 +899,35 @@ export function CampgroundGuestHubBody({
             previewMode={previewMode}
           />
 
-          {/* ----- Meet Other Campers — Optional ----- */}
-          {/* Always-visible static card (the previous DisclosureSection
-              wrapper hid this behind a tap, which buried RoadWave's
-              core differentiator on first scroll). Position stays
-              below all the practical campground info so the optional
-              social layer doesn't crowd Wi-Fi / map / office help, but
-              the section itself is now visible without an extra
-              interaction. The ONLY surface on this page that triggers
-              a signup/login -- the meetOtherCampersUrl handoff
-              preserves the campground context through /signup or
-              /quickcheckin so the new account lands back here. */}
+          {/* ----- Camper Connections (authed) / Meet Other Campers (anon) ----- */}
+          {/* Two render variants share this slot at the bottom of the hub:
+                * Anon -- "Meet Other Campers — Optional" CTA card,
+                  preserved below. Drives signup via meetOtherCampersUrl;
+                  next= now points back to /campground/<slug> (this
+                  page) so the camper lands on the live Connections
+                  layer post-auth instead of a separate check-in screen.
+                * Authed -- <CamperConnectionsCard>: visibility pills,
+                  Campers Here list, wave UI, edit-interests link,
+                  privacy reassurance. Renders the social layer in
+                  place; no further auth handoff. */}
+          {auth ? (
+            <CamperConnectionsCard
+              campgroundId={campground.id}
+              campgroundSlug={campground.slug}
+              campers={auth.campers}
+              waveStateByProfileId={auth.waveStateByProfileId}
+              viewerInterests={auth.viewerInterests}
+              initialInterests={auth.initialInterests}
+              currentVisibility={
+                auth.privacyMode === 'campground_updates_only'
+                  ? 'invisible'
+                  : auth.privacyMode
+              }
+              updatesOnlyMode={
+                auth.privacyMode === 'campground_updates_only'
+              }
+            />
+          ) : (
           <section className="space-y-3">
             <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
               Meet other campers — optional
@@ -990,6 +1067,7 @@ export function CampgroundGuestHubBody({
               </p>
             </div>
           </section>
+          )}
         </div>
       </article>
 
