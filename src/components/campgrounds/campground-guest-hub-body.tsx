@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { CamperScrollToTop } from '@/components/campgrounds/camper-scroll-to-top'
 import { CamperToastHost } from '@/components/campgrounds/camper-toast-host'
 import { CriticalBanner } from '@/components/campgrounds/critical-banner'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
@@ -939,6 +940,19 @@ export function CampgroundGuestHubBody({
         campgroundId={campground.id}
         previewMode={previewMode}
       />
+
+      {/* Belt-and-suspenders to the inline scroll-restoration
+          script at the top of <main>: this client island fires
+          AFTER React hydrates and re-pins to (0,0) across mount,
+          rAF, 50/250/600ms ticks so a slow-mobile layout shift
+          (CriticalBanner data, HappeningSection mount,
+          OfficeHelpCard opening when the camper has a stored
+          thread, lazy park-map image) can't leave the camper
+          mid-page after the inline script's single shot has
+          fired. Bails out entirely when location.hash is set so
+          anchor navigation (#office-help via Quick Action,
+          shared deep links) still works. */}
+      {!previewMode && <CamperScrollToTop />}
     </main>
   )
 }
