@@ -4,6 +4,7 @@ import { CriticalBanner } from '@/components/campgrounds/critical-banner'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
 import { HappeningSection } from '@/components/campgrounds/happening-section'
 import { Lantern } from '@/components/campgrounds/lantern'
+import { QrScrollTopGuard } from '@/components/campgrounds/qr-scroll-top-guard'
 import { TrackedLinkButton } from '@/components/campgrounds/tracked-link-button'
 import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
 import { WifiCopyButton } from '@/components/campgrounds/wifi-copy-button'
@@ -202,40 +203,71 @@ export function CampgroundGuestHubBody({
 
   return (
     <main className="min-h-screen bg-night text-cream">
-      {/* Server-rendered inline scroll-pin script -- runs
-          synchronously as the browser parses this point in the
-          HTML, BEFORE any auto scroll restoration kicks in.
-          Earlier single-shot versions of this script were
-          insufficient: Next.js Google Fonts swap (3 typefaces),
-          React hydration of late-mounting islands (CriticalBanner,
-          HappeningSection, OfficeHelpCard auto-opening when the
-          camper has a stored thread), and the park-map image load
-          all shifted layout AFTER the script's one scrollTo fired.
-          The browser's "preserve scroll relative to new height"
-          logic could then end up landing the camper mid-page.
+      {/* Top sentinel. Lives at the literal top of <main> so the
+          scroll-pin script + the QrScrollTopGuard backup both have a
+          guaranteed-stable element to anchor on, and so QA / Playwright
+          can assert "the camper is at the top" by checking this is in
+          view. Visually hidden -- it never affects layout. */}
+      <div id="qr-page-top" aria-hidden className="h-0 w-0 overflow-hidden" />
+      {/* Server-rendered inline scroll-pin script -- runs synchronously
+          as the browser parses this point in the HTML, BEFORE any
+          browser auto scroll-restoration kicks in.
 
-          The fix: pin scroll to (0,0) every 30ms for up to 3
-          seconds, stopping early on any user interaction. That
-          covers the entire layout-stabilization window without
-          fighting the user if they intentionally scroll within
-          the first 3 seconds. Also handles 'pageshow' (bfcache
-          restoration from back-forward navigation in modern
-          browsers) and 'load' (all resources fully loaded). All
-          guards are skipped when the URL has an explicit hash so
-          anchor links (#office-help, #park-map, etc.) still work.
+          What broke before: the previous version of this script gated
+          its entire pin loop on `location.hash.length <= 1`. The Quick
+          Action buttons below (Open map / View Wi-Fi / Contact office)
+          are <a href="#section"> anchor links, so the moment a camper
+          tapped one the URL grew a `#wifi` / `#office-help` / `#park-map`
+          fragment. That fragment then survived reload, bfcache
+          restore, and "scan the QR again from a bookmark" -- on the
+          next load the inline script saw a hash, skipped the entire
+          pin block, and the browser anchor-jumped the camper into
+          the middle of the page (Wi-Fi, Office Help, etc.).
+
+          The current script:
+            1. Always sets history.scrollRestoration='manual' so the
+               browser stops trying to restore prior scroll position.
+            2. If the URL fragment matches a known in-page section
+               anchor (the Quick Action set + the Lantern targets),
+               strips it via history.replaceState BEFORE the browser
+               anchor-jumps. Fresh open / reload / bookmark / bfcache
+               all converge on a hash-less URL.
+            3. Pins scroll to (0,0) every 30ms for up to 3 seconds --
+               no hash guard. Layout shifts from Google Font swaps
+               (3 typefaces), CriticalBanner hydration, HappeningSection
+               poll, OfficeHelpCard auto-opening when the camper has a
+               stored thread, and park-map image load all happen
+               within this window, so a single scrollTo isn't enough.
+            4. Stops early on any user interaction (touch / pointer /
+               wheel / key) so an intentional first-3-seconds scroll
+               by the camper isn't fought.
+            5. Also pins on 'load' (all resources done) and 'pageshow'
+               (bfcache restoration) so the back-button + tab-switch
+               paths also land at the top.
 
           pin() sets every available scroll surface -- window,
-          documentElement, body, and document.scrollingElement --
-          so a layout context that ignores one (Safari overscroll
-          on body vs html, etc.) still gets pinned by another. */}
+          documentElement, body, and document.scrollingElement -- so a
+          layout context that ignores one (Safari overscroll on body vs
+          html, etc.) still gets pinned by another. */}
       {!previewMode && (
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if('scrollRestoration' in history){history.scrollRestoration='manual'}if(location.hash.length<=1){var pin=function(){window.scrollTo(0,0);if(document.scrollingElement)document.scrollingElement.scrollTop=0;document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0)};pin();var stop=false;var halt=function(){stop=true};var ev=['touchstart','pointerdown','wheel','keydown'];for(var i=0;i<ev.length;i++)window.addEventListener(ev[i],halt,{once:true,passive:ev[i]!=='keydown'});var n=0;var id=setInterval(function(){n++;if(n>100||stop||location.hash.length>1){clearInterval(id);return}pin()},30);window.addEventListener('load',function(){if(!stop&&location.hash.length<=1)pin()});window.addEventListener('pageshow',function(e){if(e.persisted&&location.hash.length<=1)pin()})}}catch(e){}",
+              "try{var KNOWN={'#park-map':1,'#wifi':1,'#office-help':1,'#bulletins':1,'#meetups':1,'#critical-notice':1};if('scrollRestoration' in history){history.scrollRestoration='manual'}var h=location.hash;if(h&&KNOWN[h]){try{history.replaceState(null,'',location.pathname+location.search)}catch(_){}}var pin=function(){window.scrollTo(0,0);if(document.scrollingElement)document.scrollingElement.scrollTop=0;document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0)};pin();var stop=false;var halt=function(){stop=true};var ev=['touchstart','pointerdown','wheel','keydown'];for(var i=0;i<ev.length;i++)window.addEventListener(ev[i],halt,{once:true,passive:ev[i]!=='keydown'});var n=0;var id=setInterval(function(){n++;if(n>100||stop){clearInterval(id);return}pin()},30);window.addEventListener('load',function(){if(!stop)pin()});window.addEventListener('pageshow',function(e){if(e.persisted&&!stop)pin()})}catch(e){}",
           }}
         />
       )}
+      {/* Backup client-side guard. The inline script above runs at
+          HTML parse time and handles the common case. This component
+          runs a useLayoutEffect after React hydrates -- belt + braces
+          for the small set of edge cases where the inline script
+          doesn't fire (CSP nonces mismatched, JS executor delays on
+          slow mobile Safari, etc.) and also wires a one-shot
+          `pageshow` listener with React lifecycle bound to the
+          component lifetime. Renders nothing. Skipped in previewMode
+          so /owner/preview keeps the owner's scroll position when
+          they're navigating between preview and the editor. */}
+      {!previewMode && <QrScrollTopGuard />}
       <header className="px-4 py-5 flex items-center justify-between gap-3">
         <Link href="/" className="inline-block">
           <Logo className="text-2xl" />
