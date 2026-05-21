@@ -53,6 +53,27 @@ export default async function SignupPage({
     next: sp.next,
   })
 
+  // Post-OAuth destination. Same logic shape as the /login page so
+  // the email + OAuth signup paths land at identical places:
+  //   1. Honor an explicit ?next= if present (forwarded by the
+  //      /campground/<slug> hub CTA).
+  //   2. Otherwise, when we resolved a campground context, send
+  //      the camper back to that campground's hub. The hub is
+  //      auth-aware and renders the Camper Connections layer
+  //      automatically -- no separate "finish checking in" screen.
+  //      The ?connections=1 marker isn't load-bearing for the hub
+  //      (auto-presence already triggers for any authed visitor),
+  //      but it makes the URL self-describing for analytics + the
+  //      eventual "Camper Connections unlocked" surface.
+  //   3. No campground context at all: plain "/".
+  const hubReturnTo = ctx.campground
+    ? ctx.intent === 'connections'
+      ? `/campground/${ctx.campground.slug}?connections=1`
+      : `/campground/${ctx.campground.slug}`
+    : null
+  const nextHref =
+    (typeof sp.next === 'string' && sp.next) || hubReturnTo || '/'
+
   // Forward QR context to the bottom "Sign in" link so a returning
   // camper who already has an account keeps the same intent/slug/next
   // when they bounce to /login. Each param is only included when
@@ -68,7 +89,11 @@ export default async function SignupPage({
   return (
     <div className="space-y-6">
       <QrAuthHeader ctx={ctx} mode="signup" />
-      <SignupCard />
+      <SignupCard
+        next={nextHref}
+        campgroundSlug={ctx.campground?.slug ?? null}
+        returnTo={hubReturnTo}
+      />
       <p className="text-center text-[11px] text-mist/80 leading-snug">
         Already have an account?{' '}
         <a

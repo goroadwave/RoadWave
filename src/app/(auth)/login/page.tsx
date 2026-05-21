@@ -61,17 +61,20 @@ export default async function LoginPage({
     next: params.next,
   })
 
-  // Default post-auth destination. Honors the explicit ?next= when set
-  // (the proxy + auth callback both forward it), otherwise falls back
-  // to a sensible default per intent: connections lacks a campground
-  // context if the legacy token path failed, so "/" is the safe
-  // landing; profile sends the camper back to their campground if
-  // resolvable, otherwise home.
+  // Post-OAuth destination. Honors the explicit ?next= when set (the
+  // proxy + auth callback both forward it), otherwise builds a
+  // campground-aware fallback per intent: both connections and
+  // profile intent send the camper back to the hub they came from
+  // (the hub is auth-aware and renders the Camper Connections layer
+  // automatically). Bare "/" is only used when we have no campground
+  // context at all.
+  const hubReturnTo = ctx.campground
+    ? ctx.intent === 'connections'
+      ? `/campground/${ctx.campground.slug}?connections=1`
+      : `/campground/${ctx.campground.slug}`
+    : null
   const nextHref =
-    (typeof params.next === 'string' && params.next) ||
-    (ctx.intent === 'profile' && ctx.campground
-      ? `/campground/${ctx.campground.slug}`
-      : '/')
+    (typeof params.next === 'string' && params.next) || hubReturnTo || '/'
 
   return (
     <div className="space-y-6">
@@ -91,7 +94,11 @@ export default async function LoginPage({
         </div>
       )}
 
-      <GoogleAuthButton next={nextHref} />
+      <GoogleAuthButton
+        next={nextHref}
+        campgroundSlug={ctx.campground?.slug ?? null}
+        returnTo={hubReturnTo}
+      />
       <AuthDivider />
       <LoginForm />
     </div>

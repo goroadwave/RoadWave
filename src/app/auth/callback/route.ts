@@ -1,6 +1,12 @@
 import { type EmailOtpType } from '@supabase/supabase-js'
 import { type NextRequest, NextResponse } from 'next/server'
+import {
+  clearOAuthCampgroundContext,
+  isGenericNext,
+  readOAuthCampgroundContext,
+} from '@/lib/auth/oauth-context-cookie'
 import { postAuthRedirectResponse } from '@/lib/auth/post-auth-redirect'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 // Auth callback. Two link formats supported:
@@ -16,7 +22,15 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 // it rejects the link before it ever hits us (most often: the redirect URL
 // isn't on the allow-list, or the link expired).
 //
-// On success → redirect to the next destination (default /).
+// Phase E (2026-05-21) added defense-in-depth for the QR-from-campground
+// OAuth handoff. After a successful exchange we re-resolve the
+// destination through resolveCampgroundNext below: if `next` is missing
+// or generic, we consult an HttpOnly cookie persisted before OAuth
+// (oauth-context-cookie) AND a check_ins fallback so the camper still
+// lands on the campground hub they came from even if Supabase strips
+// the query string somewhere in the Google round-trip.
+//
+// On success → redirect to the resolved destination.
 // On any failure → redirect to /login with the actual error surfaced as a
 // query param so the user sees what's wrong.
 export async function GET(request: NextRequest) {
@@ -24,7 +38,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const tokenHash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
-  const next = searchParams.get('next') ?? '/'
+  const rawNext = searchParams.get('next')
 
   // Supabase rejected the link upstream and bounced back with error info.
   const upstreamError = searchParams.get('error_description')
@@ -39,7 +53,10 @@ export async function GET(request: NextRequest) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return await postAuthRedirectResponse(request, supabase, origin, next)
+      const next = await resolveCampgroundNext(supabase, rawNext)
+      return finalize(
+        await postAuthRedirectResponse(request, supabase, origin, next),
+      )
     }
     return NextResponse.redirect(
       new URL(`/login?error=${encodeURIComponent(error.message)}`, origin),
@@ -52,7 +69,10 @@ export async function GET(request: NextRequest) {
       type,
     })
     if (!error) {
-      return await postAuthRedirectResponse(request, supabase, origin, next)
+      const next = await resolveCampgroundNext(supabase, rawNext)
+      return finalize(
+        await postAuthRedirectResponse(request, supabase, origin, next),
+      )
     }
     return NextResponse.redirect(
       new URL(`/login?error=${encodeURIComponent(error.message)}`, origin),
@@ -67,7 +87,10 @@ export async function GET(request: NextRequest) {
       type: 'signup' as EmailOtpType,
     })
     if (!error) {
-      return await postAuthRedirectResponse(request, supabase, origin, next)
+      const next = await resolveCampgroundNext(supabase, rawNext)
+      return finalize(
+        await postAuthRedirectResponse(request, supabase, origin, next),
+      )
     }
     return NextResponse.redirect(
       new URL(`/login?error=${encodeURIComponent(error.message)}`, origin),
@@ -77,4 +100,78 @@ export async function GET(request: NextRequest) {
   return NextResponse.redirect(
     new URL('/login?error=Missing+verification+token', origin),
   )
+}
+
+// Two-layer recovery for a Google OAuth round-trip that dropped the
+// campground context:
+//
+//   Layer 1 (cookie): set by GoogleAuthButton via the
+//     recordOAuthCampgroundContextAction server action just before
+//     navigating to Google. HttpOnly + SameSite=Lax so it survives
+//     the Google -> Supabase -> us chain. Carries {slug, returnTo}.
+//
+//   Layer 2 (check_ins): if the cookie is gone too, check whether
+//     the freshly-authed user already has an active check_ins row.
+//     If so, send them to that campground's hub -- the most likely
+//     intended destination for a returning camper.
+//
+// If both layers miss, we fall back to whatever `next` the caller
+// supplied (or "/" -- the marketing home).
+//
+// We only override `next` when it's *generic* (missing, "/", "/home").
+// An explicit hub URL ("/campground/foo?...") in `next` is trusted
+// and used as-is.
+async function resolveCampgroundNext(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  rawNext: string | null,
+): Promise<string> {
+  const next = rawNext ?? '/'
+  if (!isGenericNext(next)) return next
+
+  // Layer 1: cookie.
+  const ctx = await readOAuthCampgroundContext()
+  if (ctx) {
+    // Validate the slug still resolves to an active campground -- a
+    // stale cookie for a deactivated/deleted campground shouldn't 404
+    // the camper.
+    const admin = createSupabaseAdminClient()
+    const { data: cg } = await admin
+      .from('campgrounds')
+      .select('slug, is_active')
+      .eq('slug', ctx.slug)
+      .maybeSingle<{ slug: string; is_active: boolean }>()
+    if (cg?.is_active) return ctx.returnTo
+  }
+
+  // Layer 2: active check-in for the freshly-authed user.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (user) {
+    const { data: latest } = await supabase
+      .from('check_ins')
+      .select('campgrounds(slug, is_active)')
+      .eq('profile_id', user.id)
+      .eq('status', 'active')
+      .gt('expires_at', new Date().toISOString())
+      .order('checked_in_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<{
+        campgrounds: { slug: string; is_active: boolean } | null
+      }>()
+    if (latest?.campgrounds?.slug && latest.campgrounds.is_active) {
+      return `/campground/${latest.campgrounds.slug}?connections=1`
+    }
+  }
+
+  return next
+}
+
+// Always clear the OAuth-context cookie on the outgoing response.
+// The cookie is single-use bridge state; leaving it around would let a
+// later sign-in (e.g. the same browser signing into a different
+// account) inherit a stale destination.
+function finalize(response: NextResponse): NextResponse {
+  clearOAuthCampgroundContext(response)
+  return response
 }

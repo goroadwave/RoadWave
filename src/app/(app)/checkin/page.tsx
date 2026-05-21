@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { CheckInControls } from '@/components/checkin/check-in-controls'
+import { CheckinLocalStorageRecovery } from '@/components/checkin/checkin-localstorage-recovery'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
 import { AgeGate } from '@/components/ui/age-gate'
 import { PageHeading } from '@/components/ui/page-heading'
@@ -94,11 +95,17 @@ export default async function CheckinPage({
     redirect(`/campground/${activeCheckIn.campgrounds.slug}`)
   }
 
-  // 3. No campground context: render the fallback.
+  // 3. No campground context: render the fallback. Wrapped in the
+  //    localStorage recovery component so a freshly-completed Google
+  //    OAuth round-trip that dropped both `next` AND the server-side
+  //    cookie can still bounce the camper back to the campground hub
+  //    they came from (the third defense-in-depth layer; see
+  //    src/lib/auth/oauth-context-cookie.ts for the other two).
   const showBadTokenNote = !!(token && isUuid(token))
 
   return (
     <AgeGate>
+      <CheckinLocalStorageRecovery>
       <div className="space-y-6">
         <PageHeading
           eyebrow="Find a campground"
@@ -154,6 +161,7 @@ export default async function CheckinPage({
           .
         </p>
       </div>
+      </CheckinLocalStorageRecovery>
     </AgeGate>
   )
 }

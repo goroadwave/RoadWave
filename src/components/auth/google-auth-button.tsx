@@ -3,6 +3,16 @@
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import { recordOAuthConsentIntentAction } from '@/app/(auth)/signup/consent-intent-action'
+import { recordOAuthCampgroundContextAction } from '@/app/(auth)/oauth-context-action'
+
+// localStorage key used as a last-ditch recovery if BOTH the `next`
+// query param and the server-side cookie are lost during the OAuth
+// round-trip. Read by the /checkin fallback page when the camper
+// somehow lands there with no campground context. Kept in sync with
+// LOCAL_STORAGE_KEY in src/app/(app)/checkin/page.tsx — DO NOT rename
+// without updating that consumer.
+const OAUTH_CONTEXT_LOCAL_STORAGE_KEY = 'roadwave:oauth-campground-context'
+const OAUTH_CONTEXT_TTL_MS = 15 * 60 * 1000
 
 type Props = {
   /** Where to send the user after the OAuth round-trip (default "/"). */
@@ -24,6 +34,23 @@ type Props = {
    * gate the button) sets this. The plain login page does not.
    */
   recordConsentBeforeOAuth?: boolean
+  /**
+   * Campground slug the camper came from (resolved by the auth page
+   * via QrAuthContext). When present, the click handler writes a
+   * short-TTL HttpOnly cookie AND a localStorage entry encoding the
+   * slug + returnTo so /auth/callback (and the /checkin fallback)
+   * can restore the destination even if the `next` query param is
+   * dropped during the OAuth round-trip. See
+   * src/lib/auth/oauth-context-cookie.ts for the why.
+   */
+  campgroundSlug?: string | null
+  /**
+   * Concrete returnTo URL to persist alongside campgroundSlug. Should
+   * always start with /campground/<slug> — the cookie helper
+   * validates this server-side too. When null/omitted, no campground
+   * context is persisted (the plain `next` flow still applies).
+   */
+  returnTo?: string | null
 }
 
 export function GoogleAuthButton({
@@ -31,6 +58,8 @@ export function GoogleAuthButton({
   label = 'Continue with Google',
   disabled = false,
   recordConsentBeforeOAuth = false,
+  campgroundSlug = null,
+  returnTo = null,
 }: Props) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,6 +83,43 @@ export function GoogleAuthButton({
         // Swallow — fallback path is /consent.
       }
     }
+
+    // Defense-in-depth for the campground OAuth handoff. Two writes:
+    //   1. HttpOnly cookie via server action -- the /auth/callback
+    //      route reads this server-side if `next` is missing or
+    //      generic ("/", "/home"). Cookie is SameSite=Lax so it
+    //      survives the Google -> Supabase -> us redirect chain.
+    //   2. localStorage -- last-ditch recovery for the /checkin
+    //      fallback page when the camper somehow lands there with
+    //      no other context (e.g. the cookie got dropped). The
+    //      fallback's mount-time effect redirects to the saved hub.
+    // Both are intentionally non-blocking: if either write fails,
+    // the plain `next` flow still works for the happy path.
+    if (campgroundSlug && returnTo) {
+      try {
+        await recordOAuthCampgroundContextAction({
+          slug: campgroundSlug,
+          returnTo,
+        })
+      } catch {
+        // Swallow -- the localStorage write + `next` query param
+        // still cover the recovery paths.
+      }
+      try {
+        window.localStorage.setItem(
+          OAUTH_CONTEXT_LOCAL_STORAGE_KEY,
+          JSON.stringify({
+            slug: campgroundSlug,
+            returnTo,
+            ts: Date.now(),
+            ttlMs: OAUTH_CONTEXT_TTL_MS,
+          }),
+        )
+      } catch {
+        // Safari private mode / storage quota; nothing we can do here.
+      }
+    }
+
     const supabase = createSupabaseBrowserClient()
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
