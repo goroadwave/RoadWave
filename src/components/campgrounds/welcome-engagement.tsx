@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { appendCamperMessage } from '@/components/campgrounds/camper-message-storage'
 import { CamperMessageTracker } from '@/components/campgrounds/camper-message-tracker'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
@@ -519,6 +519,27 @@ function ContactOffice({
   // confirmation line and let the tracker (which received the same
   // entry via appendCamperMessage) be the single source of truth
   // for the camper's office threads on this device.
+
+  // After a successful submit, the Contact Office form collapses
+  // from ~700px tall to a small "+ Send another message" link.
+  // Without an explicit scroll, the browser preserves the same
+  // scroll-Y offset, which now points well below the form -- the
+  // camper ends up looking at the footer / camper-connections
+  // accordion instead of their new message card. Scroll to the
+  // tracker's #office-messages anchor so they land on the new
+  // card. The 80ms timeout lets the form collapse + the tracker
+  // re-render with the new entry settle before we measure the
+  // anchor position.
+  useEffect(() => {
+    if (!sent) return
+    if (typeof window === 'undefined') return
+    const id = window.setTimeout(() => {
+      document
+        .getElementById('office-messages')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+    return () => window.clearTimeout(id)
+  }, [sent])
 
   // Fires once per ContactOffice mount the first time the camper
   // interacts with any field. Distinct from the contact_message

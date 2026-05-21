@@ -447,7 +447,14 @@ export function CamperMessageTracker({
   }
 
   return (
-    <section className="space-y-3">
+    // id="office-messages" is the anchor target for the post-submit
+    // scroll in welcome-engagement.tsx -- when a camper sends a
+    // Contact Office message the form collapses by ~700px, which
+    // would otherwise drop the camper's scroll position into the
+    // footer area. Scrolling to this id keeps them oriented on the
+    // new message card. scroll-mt-4 leaves a small visual margin
+    // above the heading.
+    <section id="office-messages" className="space-y-3 scroll-mt-4">
       <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
         Your messages with the office
       </h2>
