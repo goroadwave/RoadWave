@@ -157,9 +157,14 @@ export function HappeningSection({
 
   return (
     <section className="space-y-3">
-      <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-        Happening at {campgroundName}
-      </h2>
+      <div className="space-y-1">
+        <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+          Happening at {campgroundName}
+        </h2>
+        <p className="text-xs text-mist leading-snug">
+          Updates, activities, and timely campground info.
+        </p>
+      </div>
 
       {hasBulletins && (
         <ul id="bulletins" className="space-y-3 scroll-mt-4">
@@ -168,14 +173,18 @@ export function HappeningSection({
               key={b.id}
               className="rounded-2xl border border-white/5 bg-card p-4 sm:p-5 space-y-2"
             >
+              {/* "Office update" chip identifies the card type without
+                  relying on the bulletin's internal category enum.
+                  Critical / severe-weather bulletins are handled by
+                  the prominent CriticalBanner at the top of the page
+                  (Phase 3c), so regular bulletins here all share the
+                  same calm office-update treatment. */}
               <div className="flex items-center justify-between gap-3">
-                <span
-                  className={`text-[10px] uppercase tracking-[0.18em] font-semibold ${categoryColor(b.category)}`}
-                >
-                  {categoryLabel(b.category)}
+                <span className="rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-flame">
+                  Office update
                 </span>
-                <span className="text-[11px] text-mist/70">
-                  {formatPostedAt(b.created_at)}
+                <span className="text-[11px] text-mist/70 tabular-nums">
+                  Posted {formatPostedAt(b.created_at)}
                 </span>
               </div>
               <p className="text-sm sm:text-base text-cream leading-relaxed whitespace-pre-wrap">
@@ -193,21 +202,29 @@ export function HappeningSection({
               key={m.id}
               className="rounded-2xl border border-white/5 bg-card p-4 sm:p-5 space-y-2"
             >
-              <p className="text-[11px] uppercase tracking-[0.18em] text-flame font-semibold">
-                {formatMeetupTime(m.start_at, m.end_at)}
-              </p>
+              {/* Meetup chip in leaf-green to distinguish from
+                  Office updates above. Title leads (per spec) --
+                  campers want to know WHAT before WHEN. */}
+              <div>
+                <span className="inline-block rounded-full border border-leaf/40 bg-leaf/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-leaf">
+                  Meetup
+                </span>
+              </div>
               <h3 className="font-display text-lg font-extrabold text-cream leading-tight">
                 {m.title}
               </h3>
+              <p className="text-sm text-mist tabular-nums">
+                {formatMeetupTime(m.start_at, m.end_at)}
+              </p>
+              {m.description && (
+                <p className="text-sm text-cream/90 leading-relaxed whitespace-pre-wrap">
+                  {m.description}
+                </p>
+              )}
               {m.location && (
                 <p className="text-sm text-mist">
                   <span aria-hidden>📍 </span>
                   {m.location}
-                </p>
-              )}
-              {m.description && (
-                <p className="text-sm text-cream/90 leading-relaxed whitespace-pre-wrap">
-                  {m.description}
                 </p>
               )}
             </li>
@@ -218,27 +235,13 @@ export function HappeningSection({
   )
 }
 
-// Helpers below mirror the strings + classes the old SSR + island
-// renders produced so first-paint output matches exactly (no
-// hydration mismatch).
-
-function categoryLabel(c: GuestHubBulletin['category']): string {
-  switch (c) {
-    case 'event':
-      return 'Event'
-    case 'special':
-      return 'Special'
-    case 'alert':
-      return 'Alert'
-    case 'general':
-    default:
-      return 'Update'
-  }
-}
-
-function categoryColor(c: GuestHubBulletin['category']): string {
-  return c === 'alert' ? 'text-red-300' : 'text-flame'
-}
+// Helpers below mirror the strings + classes used by the old
+// separate Bulletin / Meetup islands so first-paint output matches
+// the SSR (no hydration mismatch). The categoryLabel / categoryColor
+// helpers from earlier phases were removed -- all bulletins now
+// share the same calm "Office update" chip, and severe-weather
+// bulletins are elevated to the prominent CriticalBanner above the
+// welcome header instead.
 
 function formatPostedAt(iso: string): string {
   const then = new Date(iso).getTime()
@@ -270,15 +273,20 @@ function formatMeetupTime(startIso: string, endIso: string | null): string {
   const tomorrow = new Date(today)
   tomorrow.setDate(today.getDate() + 1)
 
+  // Day part. For other dates we build the string manually so we
+  // get "Sat, May 23" (with the comma) instead of the locale default
+  // "Sat May 23".
   let dayPart: string
   if (isSameDay(start, today)) dayPart = 'Today'
   else if (isSameDay(start, tomorrow)) dayPart = 'Tomorrow'
-  else
-    dayPart = start.toLocaleDateString(undefined, {
-      weekday: 'short',
+  else {
+    const weekday = start.toLocaleDateString(undefined, { weekday: 'short' })
+    const monthDay = start.toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
     })
+    dayPart = `${weekday}, ${monthDay}`
+  }
 
   const timeOpts: Intl.DateTimeFormatOptions = {
     hour: 'numeric',
@@ -286,12 +294,22 @@ function formatMeetupTime(startIso: string, endIso: string | null): string {
   }
   const startTime = start.toLocaleTimeString(undefined, timeOpts)
 
-  if (!endIso) return `${dayPart}, ${startTime}`
-
+  // Single time when no end OR end equals start. Comparing the ISO
+  // strings (or the underlying ms timestamps) avoids the broken
+  // "4:51 PM – 4:51 PM" render when the owner left end_at empty
+  // and it defaulted to start_at, or when both were saved the same.
+  if (!endIso || endIso === startIso) {
+    return `${dayPart} at ${startTime}`
+  }
   const end = new Date(endIso)
-  if (Number.isNaN(end.getTime())) return `${dayPart}, ${startTime}`
+  if (Number.isNaN(end.getTime())) {
+    return `${dayPart} at ${startTime}`
+  }
+  if (end.getTime() === start.getTime()) {
+    return `${dayPart} at ${startTime}`
+  }
   const endTime = end.toLocaleTimeString(undefined, timeOpts)
-  return `${dayPart}, ${startTime} – ${endTime}`
+  return `${dayPart} at ${startTime} – ${endTime}`
 }
 
 function sameBulletins(a: GuestHubBulletin[], b: GuestHubBulletin[]): boolean {
