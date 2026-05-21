@@ -7,7 +7,10 @@ import {
 } from '@/components/campgrounds/camper-message-storage'
 import { CamperMessageTracker } from '@/components/campgrounds/camper-message-tracker'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
-import { LANTERN_OPEN_THREAD_EVENT } from '@/components/campgrounds/lantern-storage'
+import {
+  LANTERN_OFFICE_REPLY_EVENT,
+  LANTERN_OPEN_THREAD_EVENT,
+} from '@/components/campgrounds/lantern-storage'
 
 // Guest Engagement Hub on the public campground welcome page. Four
 // independently-toggleable surfaces — each rendered only when both the
@@ -632,10 +635,28 @@ function OfficeHelpCard({
 }) {
   const ref = useRef<HTMLDetailsElement>(null)
 
-  // Open on hashchange (Quick Action link + any anchor that lands
-  // here mid-session) + on LANTERN_OPEN_THREAD_EVENT (toast and
-  // Lantern reply item). Also opens once on mount if the page
-  // loaded with #office-help already in the URL.
+  // Force-open paths -- the disclosure auto-opens on any of these
+  // so the persistent thread card is visible the moment something
+  // relevant happens, even if the camper had manually collapsed
+  // the section earlier:
+  //   * URL hash on mount + hashchange -- Quick Action "Contact
+  //     office" link and any other deep link that targets
+  //     #office-help.
+  //   * LANTERN_OPEN_THREAD_EVENT -- toast/Lantern "View Reply"
+  //     tap. Caller wants to see the thread RIGHT NOW.
+  //   * LANTERN_OFFICE_REPLY_EVENT -- a fresh office reply was
+  //     just detected by the tracker poll. The toast pops over
+  //     the page, but if the camper dismisses (or auto-dismiss
+  //     fires) before they look, the persistent card needs to be
+  //     visible underneath. Without this listener, a camper who
+  //     dismissed the toast would have to manually expand the
+  //     disclosure to find their thread again.
+  //
+  // The disclosure stays closable -- if the camper intentionally
+  // collapses the section AFTER seeing the reply, they're choosing
+  // that. We only force-open in response to events. The persistent
+  // card stays in the DOM whether the disclosure is open or closed,
+  // so toast dismiss never affects card existence.
   useEffect(() => {
     function forceOpen() {
       const el = ref.current
@@ -649,12 +670,19 @@ function OfficeHelpCard({
       if (ce.detail?.campgroundId !== campgroundId) return
       forceOpen()
     }
+    function onOfficeReply(e: Event) {
+      const ce = e as CustomEvent<{ campgroundId?: string }>
+      if (ce.detail?.campgroundId !== campgroundId) return
+      forceOpen()
+    }
     if (window.location.hash === '#office-help') forceOpen()
     window.addEventListener('hashchange', onHashChange)
     window.addEventListener(LANTERN_OPEN_THREAD_EVENT, onOpenThread)
+    window.addEventListener(LANTERN_OFFICE_REPLY_EVENT, onOfficeReply)
     return () => {
       window.removeEventListener('hashchange', onHashChange)
       window.removeEventListener(LANTERN_OPEN_THREAD_EVENT, onOpenThread)
+      window.removeEventListener(LANTERN_OFFICE_REPLY_EVENT, onOfficeReply)
     }
   }, [campgroundId])
 

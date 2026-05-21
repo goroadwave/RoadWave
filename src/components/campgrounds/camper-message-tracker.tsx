@@ -34,7 +34,7 @@ import {
 //     and the Lantern dispatch LANTERN_OPEN_THREAD_EVENT; the tracker
 //     listens, scrolls #office-help into view, and auto-expands the
 //     matching card.
-//   * Hide from this page action -- soft-hides the card via a
+//   * Hide from this device action -- soft-hides the card via a
 //     dismissedAt timestamp on the localStorage entry. The poll loop
 //     keeps watching the thread, so if the office replies after the
 //     camper hid the card the dismiss is auto-cleared and the card
@@ -532,13 +532,12 @@ function CamperMessageCard({
 
   const sentAt = formatRelative(entry.submittedAt)
 
-  // Distinct copy for "office replied" vs "still waiting for reply" so
-  // a returning camper sees at a glance whether there's something new.
-  const title = hasUnreadReply
-    ? 'The office replied'
-    : entry.ownerReplyCount > 0
-      ? 'Your message thread'
-      : 'Message sent to the office'
+  // One stable title per card -- the spec wants the persistent
+  // thread container to read the same way regardless of state. The
+  // "what changed since you last looked" signal lives in the badge
+  // (red/amber chip) and the body line below the title, not in
+  // the heading.
+  const title = 'Your message with the office'
   const body =
     entry.status === 'missing'
       ? 'This thread is no longer available. The link may have expired.'
@@ -547,13 +546,11 @@ function CamperMessageCard({
         : entry.ownerReplyCount > 0
           ? 'View or send another reply in this thread.'
           : 'You can check for replies from the campground office here.'
-  const openLabel = expanded
-    ? 'Hide thread'
-    : hasUnreadReply
-      ? 'View office reply'
-      : entry.ownerReplyCount > 0
-        ? 'View thread'
-        : 'Check replies'
+  // Single primary CTA label -- always "Open message" when collapsed,
+  // toggles to "Hide thread" once the inline thread panel is
+  // expanded. Distinct from "Hide from this device" (the secondary
+  // soft-hide action below).
+  const openLabel = expanded ? 'Hide thread' : 'Open message'
 
   return (
     <li
@@ -570,7 +567,7 @@ function CamperMessageCard({
           </span>
           {hasUnreadReply && (
             <span className="rounded-full bg-flame/20 text-flame px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] border border-flame/40">
-              New reply
+              New reply from the office
             </span>
           )}
         </div>
@@ -601,11 +598,11 @@ function CamperMessageCard({
         <button
           type="button"
           onClick={onClear}
-          title="Hide the card from this device. If the office replies later, it will come back automatically."
+          title="Hide this card from this device. If the office replies later, it will come back automatically."
           className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 text-mist px-3 py-1.5 text-xs font-semibold hover:bg-white/10 hover:text-cream transition-colors"
         >
           <span aria-hidden>👁️‍🗨️</span>
-          Hide from this page
+          Hide from this device
         </button>
       </div>
 
