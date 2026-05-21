@@ -49,5 +49,14 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    // Mobile Safari (WebKit) emulation. RoadWave's camper QR landing
+    // page is overwhelmingly opened on iPhone Safari, and bfcache /
+    // scroll-restoration / anchor-jump behavior in WebKit differs
+    // from Chromium. Tests that opt in by name (e.g. the QR scroll
+    // regression suite) get an extra signal from this project.
+    {
+      name: 'mobile-safari',
+      use: { ...devices['iPhone 14 Pro'] },
+    },
   ],
 })
