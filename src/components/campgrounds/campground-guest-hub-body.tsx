@@ -768,31 +768,33 @@ export function CampgroundGuestHubBody({
           />
 
           {/* ----- Meet Other Campers — Optional ----- */}
-          {/* Phase 4b -- wrapped in a DisclosureSection (default
-              closed) because it's the lowest-priority surface on the
-              page per the guest-hub pivot: optional, requires
-              signup/login, social-second. Inner card chrome retained
-              -- the orange-bordered card with the checkmark list
-              and CTA is the recognizable "Meet other campers" block,
-              we just hide it behind a tap on mobile.
-              The ONLY surface on this page that triggers a signup/login. */}
-          <DisclosureSection
-            title="Meet other campers — optional"
-            description="Optional camper connection. Requires a free RoadWave profile."
-          >
+          {/* Always-visible static card (the previous DisclosureSection
+              wrapper hid this behind a tap, which buried RoadWave's
+              core differentiator on first scroll). Position stays
+              below all the practical campground info so the optional
+              social layer doesn't crowd Wi-Fi / map / office help, but
+              the section itself is now visible without an extra
+              interaction. The ONLY surface on this page that triggers
+              a signup/login -- the meetOtherCampersUrl handoff
+              preserves the campground context through /signup or
+              /quickcheckin so the new account lands back here. */}
+          <section className="space-y-3">
+            <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+              Meet other campers — optional
+            </h2>
             <div className="rounded-2xl border border-flame/30 bg-flame/[0.05] p-5 space-y-4">
               <div className="space-y-2">
-                <p className="text-base font-semibold text-cream leading-snug">
-                  Want to meet nearby campers?
+                <p className="font-display text-xl sm:text-2xl font-extrabold text-cream leading-[1.15]">
+                  Find your campground people without making it weird.
                 </p>
                 <p className="text-sm text-cream/90 leading-relaxed">
-                  Create a free RoadWave profile to wave at campers with
-                  shared interests. You control whether you are
-                  visible, quiet, or invisible. Exact site numbers are
-                  never shown.
+                  Create a free RoadWave profile to wave at nearby
+                  campers who share your interests. You choose whether
+                  you are visible, quiet, or invisible. Exact site
+                  numbers are never shown.
                 </p>
               </div>
-              <ul className="space-y-1 text-xs text-mist leading-snug">
+              <ul className="space-y-1.5 text-xs text-mist leading-snug">
                 <li className="flex items-start gap-2">
                   <span className="text-flame mt-0.5" aria-hidden>
                     ✓
@@ -804,8 +806,9 @@ export function CampgroundGuestHubBody({
                     ✓
                   </span>
                   <span>
-                    Switch to Updates Only any time to disappear from
-                    other campers.
+                    Connect around shared interests like campfires,
+                    coffee, dog walks, hiking, fishing, games, or
+                    local exploring.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
@@ -822,15 +825,29 @@ export function CampgroundGuestHubBody({
                 href={meetOtherCampersUrl}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
               >
-                Check In to This Campground <span aria-hidden>👋</span>
+                Join Camper Connections <span aria-hidden>👋</span>
               </Link>
+              {/* Demo link -- points at the existing public /demo page
+                  in the Pages router (the "what would this look like
+                  on a real campground" walkthrough). Kept as a small
+                  muted text link so it sits below the primary CTA
+                  without competing with it. */}
+              <p className="text-center text-[12px] text-mist leading-snug">
+                Curious how this works?{' '}
+                <Link
+                  href="/demo"
+                  className="text-flame underline-offset-2 hover:underline"
+                >
+                  Try the quick demo.
+                </Link>
+              </p>
               <p className="text-[11px] text-mist/70 leading-snug text-center">
                 RoadWave is an optional 18+ guest amenity. Not an
                 emergency service — call 911 first, then notify
                 campground staff.
               </p>
             </div>
-          </DisclosureSection>
+          </section>
         </div>
       </article>
 
