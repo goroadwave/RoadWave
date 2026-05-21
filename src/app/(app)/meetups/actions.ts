@@ -36,21 +36,6 @@ export async function createMeetupAction(
   const startISO = new Date(start_at).toISOString()
   const endISO = end_at ? new Date(end_at).toISOString() : null
 
-  // TEMP DEBUG -- remove after meetup-visibility regression
-  // resolved. Logs the resolved start/end and any insert error so
-  // we can see in Vercel logs whether the save succeeds AND what
-  // start_at timestamp lands in the DB.
-  console.log('[debug-meetup-save]', {
-    campground_id,
-    title,
-    location,
-    start_at_form: start_at,
-    end_at_form: end_at,
-    startISO,
-    endISO,
-    user_id: user.id,
-  })
-
   const { error } = await supabase.from('meetups').insert({
     campground_id,
     posted_by: user.id,
@@ -61,17 +46,11 @@ export async function createMeetupAction(
     end_at: endISO,
   })
   if (error) {
-    console.log('[debug-meetup-save] insert failed:', {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-    })
     if (error.code === '42501' || error.message.includes('row-level')) {
       return { error: 'Only campground hosts can post meetups here.', ok: false }
     }
     return { error: error.message, ok: false }
   }
-  console.log('[debug-meetup-save] insert ok')
 
   revalidatePath('/meetups')
   return { error: null, ok: true }
