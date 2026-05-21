@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { CamperToastHost } from '@/components/campgrounds/camper-toast-host'
 import { CriticalBanner } from '@/components/campgrounds/critical-banner'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
 import { HappeningSection } from '@/components/campgrounds/happening-section'
@@ -808,6 +809,20 @@ export function CampgroundGuestHubBody({
           </DisclosureSection>
         </div>
       </article>
+
+      {/* Phase 4c -- small in-page toasts for activity the camper
+          would care about (office reply, new bulletin, new meetup).
+          Subscribes to the Lantern events already fired by the
+          existing pollers (CamperMessageTracker, HappeningSection),
+          so this adds no new network calls. Only fires on activity
+          that arrives AFTER mount. previewMode = true skips
+          dispatch entirely so an owner previewing their own page
+          doesn't see fake notifications driven by their own
+          localStorage state. */}
+      <CamperToastHost
+        campgroundId={campground.id}
+        previewMode={previewMode}
+      />
     </main>
   )
 }

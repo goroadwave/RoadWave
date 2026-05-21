@@ -1,0 +1,272 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { loadCamperMessages } from '@/components/campgrounds/camper-message-storage'
+import {
+  LANTERN_BULLETINS_EVENT,
+  LANTERN_MEETUPS_EVENT,
+  LANTERN_OFFICE_REPLY_EVENT,
+} from '@/components/campgrounds/lantern-storage'
+
+// Phase 4c -- small, non-intrusive toasts on the camper QR page.
+// Subscribes to the existing Lantern events fired by the existing
+// pollers (CamperMessageTracker, HappeningSection), so this
+// component does NOT add any new network calls. Toasts only fire
+// for events that arrive AFTER mount -- the upstream pollers
+// already capture an initial baseline on first poll and only
+// dispatch on subsequent strictly-newer payloads, so a fresh page
+// load with pre-existing unread content won't pop a toast (the
+// Lantern badge already handles that initial state).
+//
+// Visual design:
+//   * Bottom-center on mobile (above iOS safe-area), bottom-right
+//     on >= sm. Matches the owner-side OwnerMessageToaster pattern
+//     so the two sides feel consistent.
+//   * Subtle slide-up animation, disabled when
+//     prefers-reduced-motion is set.
+//   * Auto-dismiss after 6s; manual dismiss via the × button.
+//   * Queue cap of 3 -- if a fourth event arrives, the oldest
+//     toast drops off so the screen never stacks more than three
+//     at once.
+//   * Each toast has a primary action ("View" / "View Reply") and
+//     a Dismiss button.
+//
+// Tap actions:
+//   * Office reply: opens /m/<id>?t=<token>&from=<slug> in a new
+//     tab, reusing the same secure thread URL the tracker card +
+//     Lantern panel use. The threadId is in the event detail; the
+//     token + slug are looked up from the camper-message-storage
+//     entry that the tracker maintains on this device.
+//   * Bulletin / Meetup: smooth-scroll to the matching anchor
+//     (#bulletins / #meetups) inside the Happening section.
+//
+// previewMode = true (owner /owner/preview) keeps the host mounted
+// but never fires a toast, so a previewing owner doesn't see fake
+// notifications driven by their own localStorage state.
+
+type ToastKind = 'reply' | 'bulletin' | 'meetup'
+
+type Toast = {
+  // Unique id per toast for React keys + auto-dismiss cancel.
+  key: number
+  kind: ToastKind
+  // Only set for replies -- the message thread id, used to
+  // resolve the localStorage entry on click.
+  threadId?: string
+}
+
+const TOAST_DURATION_MS = 6_000
+const MAX_TOASTS = 3
+
+export function CamperToastHost({
+  campgroundId,
+  previewMode = false,
+}: {
+  campgroundId: string
+  previewMode?: boolean
+}) {
+  const [toasts, setToasts] = useState<Toast[]>([])
+  const [mounted, setMounted] = useState(false)
+
+  // Mount gate -- the host is rendered server-side as nothing
+  // (no toasts in initial state), then hydrates without any
+  // hydration mismatch. Subsequent state changes are all
+  // client-driven from events.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted || previewMode) return
+
+    function push(t: Omit<Toast, 'key'>) {
+      const next: Toast = { ...t, key: Date.now() + Math.random() }
+      setToasts((prev) => {
+        // Drop the oldest if we're already at capacity, then
+        // append. Newest at the bottom of the queue so the stack
+        // visually grows upward from the bottom of the screen.
+        const trimmed = prev.length >= MAX_TOASTS ? prev.slice(1) : prev
+        return [...trimmed, next]
+      })
+    }
+
+    function onReply(e: Event) {
+      const ce = e as CustomEvent<{
+        campgroundId?: string
+        threadId?: string
+      }>
+      if (ce.detail?.campgroundId !== campgroundId) return
+      push({ kind: 'reply', threadId: ce.detail.threadId })
+    }
+    function onBulletins(e: Event) {
+      const ce = e as CustomEvent<{ campgroundId?: string }>
+      if (ce.detail?.campgroundId !== campgroundId) return
+      push({ kind: 'bulletin' })
+    }
+    function onMeetups(e: Event) {
+      const ce = e as CustomEvent<{ campgroundId?: string }>
+      if (ce.detail?.campgroundId !== campgroundId) return
+      push({ kind: 'meetup' })
+    }
+
+    window.addEventListener(LANTERN_OFFICE_REPLY_EVENT, onReply)
+    window.addEventListener(LANTERN_BULLETINS_EVENT, onBulletins)
+    window.addEventListener(LANTERN_MEETUPS_EVENT, onMeetups)
+    return () => {
+      window.removeEventListener(LANTERN_OFFICE_REPLY_EVENT, onReply)
+      window.removeEventListener(LANTERN_BULLETINS_EVENT, onBulletins)
+      window.removeEventListener(LANTERN_MEETUPS_EVENT, onMeetups)
+    }
+  }, [mounted, previewMode, campgroundId])
+
+  // Per-toast auto-dismiss. One timer per toast so a manual
+  // dismiss of one doesn't reset the others' timers.
+  useEffect(() => {
+    if (toasts.length === 0) return
+    const timers = toasts.map((t) =>
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((x) => x.key !== t.key))
+      }, TOAST_DURATION_MS),
+    )
+    return () => {
+      for (const id of timers) clearTimeout(id)
+    }
+    // toasts as a dep is fine -- we re-arm every time the list
+    // changes, and the cleanup clears every prior timer.
+  }, [toasts])
+
+  if (!mounted || toasts.length === 0) return null
+
+  function dismiss(key: number) {
+    setToasts((prev) => prev.filter((t) => t.key !== key))
+  }
+
+  function action(t: Toast) {
+    if (t.kind === 'reply' && t.threadId) {
+      // Look up the stored entry for this thread to get the token
+      // + slug needed for the secure /m/<id> URL. If the entry
+      // isn't on this device (rare -- means a reply arrived for a
+      // thread the tracker doesn't know about, e.g. a different
+      // browser submitted it), fall back to scrolling to the
+      // tracker card area instead of opening a useless URL.
+      const entry = loadCamperMessages(campgroundId).find(
+        (e) => e.id === t.threadId,
+      )
+      if (entry) {
+        const fromParam = entry.campgroundSlug
+          ? `&from=${encodeURIComponent(entry.campgroundSlug)}`
+          : ''
+        window.open(
+          `/m/${encodeURIComponent(entry.id)}?t=${encodeURIComponent(entry.token)}${fromParam}`,
+          '_blank',
+          'noopener,noreferrer',
+        )
+        dismiss(t.key)
+        return
+      }
+      // Fallback: just dismiss the toast. The Lantern + persistent
+      // tracker card on the page still indicate the unread reply.
+      dismiss(t.key)
+      return
+    }
+    if (t.kind === 'bulletin') {
+      document
+        .getElementById('bulletins')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else if (t.kind === 'meetup') {
+      document
+        .getElementById('meetups')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    dismiss(t.key)
+  }
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      // Bottom-center on mobile (with safe-area inset for iOS),
+      // bottom-right on >= sm. z-40 sits above page content but
+      // below the CriticalBanner (which is in document flow at
+      // the top, so z-index doesn't matter for it).
+      className="fixed z-40 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 w-[calc(100%-2rem)] max-w-sm sm:max-w-sm flex flex-col gap-2"
+      style={{
+        bottom: `calc(env(safe-area-inset-bottom, 0px) + 1rem)`,
+      }}
+    >
+      {toasts.map((t) => (
+        <CamperToast
+          key={t.key}
+          toast={t}
+          onAction={() => action(t)}
+          onDismiss={() => dismiss(t.key)}
+        />
+      ))}
+    </div>
+  )
+}
+
+const COPY: Record<
+  ToastKind,
+  { icon: string; title: string; body?: string; cta: string }
+> = {
+  reply: {
+    icon: '📬',
+    title: 'New reply from the office',
+    body: 'Tap to view your message.',
+    cta: 'View reply',
+  },
+  bulletin: {
+    icon: '📣',
+    title: 'New campground update',
+    cta: 'View',
+  },
+  meetup: {
+    icon: '📅',
+    title: 'New meetup posted',
+    cta: 'View',
+  },
+}
+
+function CamperToast({
+  toast,
+  onAction,
+  onDismiss,
+}: {
+  toast: Toast
+  onAction: () => void
+  onDismiss: () => void
+}) {
+  const copy = COPY[toast.kind]
+  return (
+    <div className="camper-toast rounded-2xl border border-flame/40 bg-night/95 shadow-2xl shadow-black/40 backdrop-blur px-4 py-3 space-y-2">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-semibold text-cream leading-snug min-w-0">
+          <span aria-hidden className="mr-1.5">
+            {copy.icon}
+          </span>
+          {copy.title}
+        </p>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss notification"
+          className="shrink-0 text-mist hover:text-cream text-xs leading-none rounded p-1"
+        >
+          ✕
+        </button>
+      </div>
+      {copy.body && (
+        <p className="text-xs text-mist leading-snug">{copy.body}</p>
+      )}
+      <button
+        type="button"
+        onClick={onAction}
+        className="inline-flex items-center gap-1 rounded-lg bg-flame/15 text-flame border border-flame/40 px-3 py-1.5 text-xs font-semibold hover:bg-flame/25 transition-colors"
+      >
+        {copy.cta} →
+      </button>
+    </div>
+  )
+}

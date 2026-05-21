@@ -158,6 +158,28 @@ body {
   }
 }
 
+/* Phase 4c -- Camper toast slide-up. Subtle fade + 8px rise on
+   mount; respects prefers-reduced-motion. The toast container in
+   CamperToastHost adds the .camper-toast class to each card. */
+.camper-toast {
+  animation: camperToastIn 220ms ease-out;
+}
+@keyframes camperToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .camper-toast {
+    animation: none;
+  }
+}
+
 /* Phase 3b -- Lantern pulse. Subtle flame-tinted glow while there's
    at least one unread notification. The animation is intentionally
    gentle (no scale, no shake) so it doesn't compete with content.
