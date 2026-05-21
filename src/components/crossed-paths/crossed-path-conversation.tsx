@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { useRouter } from 'next/navigation'
 import { sendCrossedPathMessageAction } from '@/app/(app)/crossed-paths/actions'
+import { StaticResponsePicker } from '@/components/crossed-paths/static-response-picker'
 
 type Message = {
   id: string
@@ -123,6 +124,12 @@ export function CrossedPathConversation({
           ))
         )}
       </div>
+
+      {/* Static-response templates — the primary tap-to-send
+          affordance for the matched dialogue. Templates ride the same
+          server action as free-form messages; receiving camper sees
+          them as regular messages on their side. */}
+      <StaticResponsePicker crossedPathId={crossedPathId} />
 
       {/* Composer */}
       <form

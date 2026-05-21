@@ -29,6 +29,11 @@ type Props = {
   campgroundSlug: string
   campers: NearbyCamper[]
   waveStateByProfileId: Record<string, WaveState>
+  /** crossed_paths.id keyed by other-camper profile_id. Threaded
+   *  through NearbyList → CamperCard → WaveButton so matched +
+   *  connected campers get the Say Hi → / Open chat → deep-link
+   *  directly on the card. */
+  crossedPathByProfileId?: Record<string, string>
   viewerInterests: string[]
   initialInterests?: string[]
   currentVisibility: Visibility
@@ -73,6 +78,7 @@ export function CamperConnectionsCard({
   campgroundSlug,
   campers,
   waveStateByProfileId,
+  crossedPathByProfileId = {},
   viewerInterests,
   initialInterests = [],
   currentVisibility,
@@ -164,6 +170,7 @@ export function CamperConnectionsCard({
               campers={campers}
               campgroundId={campgroundId}
               waveStateByProfileId={waveStateByProfileId}
+              crossedPathByProfileId={crossedPathByProfileId}
               viewerInterests={viewerInterests}
               initialInterests={initialInterests}
             />

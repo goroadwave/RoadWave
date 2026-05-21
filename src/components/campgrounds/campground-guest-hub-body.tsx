@@ -142,6 +142,11 @@ export type GuestHubAuthedViewer = {
   userId: string
   campers: NearbyCamper[]
   waveStateByProfileId: Record<string, WaveState>
+  /** crossed_paths.id keyed by other-camper profile_id. Lets each
+   *  CamperCard's WaveButton render the Say Hi → / Open chat →
+   *  deep-link directly when a matched / connected camper is
+   *  visible. Empty map when the viewer has no mutual matches. */
+  crossedPathByProfileId: Record<string, string>
   viewerInterests: string[]
   initialInterests: string[]
   privacyMode: PrivacyMode
@@ -966,6 +971,7 @@ export function CampgroundGuestHubBody({
               campgroundSlug={campground.slug}
               campers={auth.campers}
               waveStateByProfileId={auth.waveStateByProfileId}
+              crossedPathByProfileId={auth.crossedPathByProfileId}
               viewerInterests={auth.viewerInterests}
               initialInterests={auth.initialInterests}
               currentVisibility={

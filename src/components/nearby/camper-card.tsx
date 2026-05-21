@@ -11,6 +11,10 @@ type Props = {
   // Viewer's own interest slugs — used to compute the shared overlap
   // surfaced on the card. Names are deliberately not part of this view.
   viewerInterests: string[]
+  /** crossed_paths.id when the viewer and this camper are on a mutual
+   *  row. Drives the "Say Hi →" deep-link the WaveButton renders for
+   *  matched + connected states. Null otherwise. */
+  crossedPathId?: string | null
 }
 
 export function CamperCard({
@@ -18,6 +22,7 @@ export function CamperCard({
   campgroundId,
   waveState,
   viewerInterests,
+  crossedPathId = null,
 }: Props) {
   const viewerSet = new Set(viewerInterests)
   const shared = (camper.interests ?? []).filter((slug) => viewerSet.has(slug))
@@ -62,6 +67,7 @@ export function CamperCard({
           targetId={camper.profile_id}
           campgroundId={campgroundId}
           initialState={waveState}
+          crossedPathId={crossedPathId}
         />
         <p className="text-[11px] text-mist/70 leading-snug">
           Suggest meeting in a public campground area.

@@ -89,9 +89,10 @@ export function IncomingWaveCard({
           type="button"
           onClick={waveBack}
           disabled={pending}
+          data-testid="wave-back-detail-button"
           className="rounded-lg bg-flame px-4 py-2.5 text-sm font-semibold text-night shadow-md shadow-flame/20 hover:bg-amber-400 disabled:opacity-50 transition-colors"
         >
-          {pending ? 'Working…' : 'Wave Back 👋'}
+          {pending ? 'Working…' : 'Wave back 👋'}
         </button>
         <button
           type="button"

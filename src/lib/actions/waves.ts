@@ -4,7 +4,14 @@ import { revalidatePath } from 'next/cache'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { isUuid } from '@/lib/validators/checkin'
 
-export type WaveResult = { error: string | null; matched: boolean }
+export type WaveResult = {
+  error: string | null
+  matched: boolean
+  /** The newly-created crossed_paths.id when the wave produced a
+   *  mutual match. Lets the camper-card WaveButton render the
+   *  "Say Hi →" deep-link without waiting for a server refresh. */
+  crossedPathId?: string | null
+}
 
 export async function sendWaveAction(
   targetId: string,
@@ -56,10 +63,15 @@ export async function sendWaveAction(
     .select('id')
     .eq('profile_a_id', a)
     .eq('profile_b_id', b)
-    .maybeSingle()
+    .maybeSingle<{ id: string }>()
 
   revalidatePath('/nearby')
   revalidatePath('/crossed-paths')
+  revalidatePath('/waves')
 
-  return { error: null, matched: !!cp }
+  return {
+    error: null,
+    matched: !!cp,
+    crossedPathId: cp?.id ?? null,
+  }
 }

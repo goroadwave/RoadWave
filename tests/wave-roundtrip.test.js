@@ -97,14 +97,17 @@ async function waveAtFirstCamper(page) {
     )
   }
 
-  // Wave-button textContent is "Wave 👋" — "Wave", a space, then the
-  // emoji (its span is aria-hidden but the glyph is still in
-  // textContent). Match buttons whose text contains "Wave" followed
-  // by whitespace; that matches "Wave 👋" and "Wave " but NOT
-  // "Waving…" (the pending-state label has no 'e' after 'Wav').
-  // The "Waved · waiting" / "Mutual wave" pill is a <div>, not a
-  // <button>, so the button-scoped locator already excludes it.
-  const waveButtons = page.locator('button').filter({ hasText: /Wave\s/ })
+  // Wave button labels (after the Camper Connections v2 polish):
+  //   * "Send a Wave 👋"  -- no prior wave activity
+  //   * "Wave back 👋"     -- the other camper waved first
+  // Both contain the literal "Wave" followed by a space + emoji.
+  // The post-click state pill is a <div>, not a <button>, so the
+  // button-scoped locator already excludes it. The pending-state
+  // labels are "Waving…" / "Waving back…" -- both lack a 'Wave '
+  // sequence so they don't match.
+  const waveButtons = page
+    .locator('button')
+    .filter({ hasText: /(Send a Wave|Wave back)\s/ })
   const count = await waveButtons.count()
   if (count === 0) {
     // No other campers visible — could be stale-data drift or the
@@ -131,10 +134,13 @@ async function waveAtFirstCamper(page) {
     await btn.click()
 
     // Either the state pill renders OR an error message appears
-    // under the button. Race them with a short timeout.
+    // under the button. Race them with a short timeout. v2 pill
+    // labels: "Wave sent 👋" (one-sided, awaiting reciprocation),
+    // "Matched 🎉" (mutual wave -- consent prompt pending or
+    // already connected).
     const statePill = page
       .locator('div[aria-disabled]')
-      .filter({ hasText: /Waved · waiting|Mutual wave|Connected/i })
+      .filter({ hasText: /Wave sent|Matched/i })
       .first()
     const errorMsg = page
       .locator('p.text-red-300')
@@ -200,9 +206,9 @@ test.describe('Two-camper wave round-trip', () => {
 
       // Soft assertion on mutual match — only when both campers waved
       // at each other (vs. at a stale check-in). If neither side flips
-      // to "Mutual wave", we still pass the test (the pipeline is fine)
+      // to "Matched", we still pass the test (the pipeline is fine)
       // but the annotation records what happened for a human to skim.
-      const mutual = /Mutual wave/i.test(aState ?? '') || /Mutual wave/i.test(bState ?? '')
+      const mutual = /Matched/i.test(aState ?? '') || /Matched/i.test(bState ?? '')
       testInfo.annotations.push({
         type: 'mutual-match-observed',
         description: String(mutual),

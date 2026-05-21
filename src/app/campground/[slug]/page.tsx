@@ -347,6 +347,7 @@ async function resolveAuthedViewer(
     { data: viewerInterestRows },
     { data: campers },
     { data: myWaves },
+    { data: incomingWaves },
     { data: matches },
     { data: activeCheckInRow },
   ] = await Promise.all([
@@ -359,7 +360,17 @@ async function resolveAuthedViewer(
       .from('waves')
       .select('to_profile_id, status')
       .eq('from_profile_id', user.id),
-    supabase.from('crossed_paths').select('profile_a_id, profile_b_id, status'),
+    // Phase Camper-Connections-v2: also fetch waves where the viewer is
+    // the recipient. Used to flip the camper card to the "Wave back 👋"
+    // state when somebody waved at them first -- previously this was
+    // only surfaced via the Lantern + /waves/incoming/[id] detail page.
+    supabase
+      .from('waves')
+      .select('from_profile_id, status')
+      .eq('to_profile_id', user.id),
+    supabase
+      .from('crossed_paths')
+      .select('id, profile_a_id, profile_b_id, status'),
     // hasActiveCheckIn drives the AppNav's "Updates Only" 8th-slot
     // action button. Even when checkin_by_token above didn't pop a
     // new row (failed token, RLS edge case), the camper may still
@@ -383,7 +394,22 @@ async function resolveAuthedViewer(
     })
     .filter((s): s is string => typeof s === 'string')
 
+  // Wave-state precedence (most → least specific):
+  //   1. crossed_paths.status (connected / pending_consent / declined)
+  //   2. outgoing waves row (waved → "waved", matched, etc.)
+  //   3. incoming waves row with status='pending' → "wave_back"
+  // Connected/matched ALWAYS win over a bare outgoing-only wave
+  // because they reflect the latest mutual state.
   const waveStateByProfileId: Record<string, WaveState> = {}
+  const crossedPathByProfileId: Record<string, string> = {}
+
+  for (const w of incomingWaves ?? []) {
+    const s = (w.status as string | null) ?? 'pending'
+    // Only mark wave_back for currently-pending incoming waves. If the
+    // status is matched/connected/declined the crossed_paths loop
+    // below will overwrite this entry with the right state.
+    if (s === 'pending') waveStateByProfileId[w.from_profile_id] = 'wave_back'
+  }
   for (const w of myWaves ?? []) {
     const s = (w.status as string | null) ?? 'pending'
     if (s === 'declined') waveStateByProfileId[w.to_profile_id] = 'declined'
@@ -399,12 +425,16 @@ async function resolveAuthedViewer(
     if (s === 'connected') waveStateByProfileId[otherId] = 'connected'
     else if (s === 'declined') waveStateByProfileId[otherId] = 'declined'
     else waveStateByProfileId[otherId] = 'matched'
+    // Save the crossed_paths.id so the WaveButton can render
+    // "Say Hi →" / "Open chat →" deep-links without an extra fetch.
+    if (m.id) crossedPathByProfileId[otherId] = m.id
   }
 
   return {
     userId: user.id,
     campers: (campers ?? []) as NearbyCamper[],
     waveStateByProfileId,
+    crossedPathByProfileId,
     viewerInterests,
     initialInterests: profile.nearby_filter_interests ?? [],
     privacyMode: profile.privacy_mode,
