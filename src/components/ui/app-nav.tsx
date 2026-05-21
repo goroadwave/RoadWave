@@ -14,14 +14,40 @@ import { enterCampgroundUpdatesOnlyAction } from '@/app/(app)/settings/privacy/a
 // rendered for guests who are currently checked in to a campground;
 // the layout passes `showUpdatesOnly` based on that gate.
 //
+// Phase 3 of the signed-in hub pivot (2026-05-21) renamed the
+// camper-flow tabs:
+//   * "Check in" → "Campground". /checkin is now a smart redirect
+//     that lands the camper on their active campground hub
+//     (/campground/<slug>) when they have a check-in, or a
+//     no-context fallback page otherwise. The label reframes the
+//     tab around the place, not the action.
+//   * "Campers Here" → "Camper Connections". /nearby is also a
+//     redirect (to the same hub, which renders the Camper
+//     Connections card with the list, wave UI, and visibility
+//     pills). Same destination, but the label signals "the social
+//     layer" instead of the literal page that used to live here.
+//
 // Note: an earlier iteration had an 8th "Help" tab here. Riley
 // (the floating mascot in the bottom-right corner) is now the single
 // entry point for both the in-page tour and the chat panel, so the
 // Help tab was removed. The 8th slot is now this CUO shortcut.
-const TABS: { href: string; label: string; matchPrefix?: string }[] = [
+const TABS: {
+  href: string
+  label: string
+  matchPrefix?: string
+  // Extra paths that should count as a hit for this tab's active
+  // highlight. Used so the "Campground" tab lights up while the
+  // camper is actually on /campground/<slug> (the destination it
+  // redirects to), not just on /checkin during the redirect flash.
+  alsoActiveOn?: (string | RegExp)[]
+}[] = [
   { href: '/home', label: 'Home' },
-  { href: '/checkin', label: 'Check in' },
-  { href: '/nearby', label: 'Campers Here' },
+  {
+    href: '/checkin',
+    label: 'Campground',
+    alsoActiveOn: [/^\/campground\//],
+  },
+  { href: '/nearby', label: 'Camper Connections' },
   { href: '/meetups', label: 'Meetups' },
   { href: '/waves', label: 'Waves' },
   { href: '/settings/privacy', label: 'Privacy', matchPrefix: '/settings/privacy' },
@@ -92,9 +118,19 @@ export function AppNav({ showUpdatesOnly = false, currentPrivacyMode }: Props) {
 
 function isActive(
   pathname: string | null,
-  tab: { href: string; matchPrefix?: string },
+  tab: {
+    href: string
+    matchPrefix?: string
+    alsoActiveOn?: (string | RegExp)[]
+  },
 ): boolean {
   if (!pathname) return false
-  if (tab.matchPrefix) return pathname.startsWith(tab.matchPrefix)
-  return pathname === tab.href
+  if (tab.matchPrefix && pathname.startsWith(tab.matchPrefix)) return true
+  if (pathname === tab.href) return true
+  if (tab.alsoActiveOn) {
+    for (const m of tab.alsoActiveOn) {
+      if (typeof m === 'string' ? pathname === m : m.test(pathname)) return true
+    }
+  }
+  return false
 }
