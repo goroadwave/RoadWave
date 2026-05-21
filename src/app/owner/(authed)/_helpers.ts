@@ -81,6 +81,14 @@ export type OwnerCampground = {
   emergency_other_notes: string | null
   show_local_recommendations: boolean
   local_recommendations_text: string | null
+  // Arrival & Departure (mig 0060). All-text fields the owner edits
+  // on /owner/profile and the camper-facing ArrivalDepartureCard
+  // renders near the top of the hub.
+  check_in_time: string | null
+  check_out_time: string | null
+  early_check_in_note: string | null
+  late_check_out_note: string | null
+  arrival_departure_note: string | null
 }
 
 export async function loadOwnerCampground() {
@@ -107,7 +115,7 @@ export async function loadOwnerCampground() {
   const { data: cg } = await supabase
     .from('campgrounds')
     .select(
-      'id, name, slug, city, region, address, phone, website, logo_url, amenities, amenity_notes, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url, booking_message, booking_promo_code, feature_facebook_enabled, facebook_review_url, facebook_button_label, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, email_notifications_enabled, show_park_map, park_map_url, park_map_notes, park_map_path, park_map_file_type, park_map_file_name, park_map_updated_at, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text',
+      'id, name, slug, city, region, address, phone, website, logo_url, amenities, amenity_notes, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url, booking_message, booking_promo_code, feature_facebook_enabled, facebook_review_url, facebook_button_label, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, email_notifications_enabled, show_park_map, park_map_url, park_map_notes, park_map_path, park_map_file_type, park_map_file_name, park_map_updated_at, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text, check_in_time, check_out_time, early_check_in_note, late_check_out_note, arrival_departure_note',
     )
     .eq('id', link.campground_id)
     .single()

@@ -206,6 +206,16 @@ const schema = z.object({
     .optional()
     .transform((v) => v === 'on' || v === 'true'),
   local_recommendations_text: blankToNull(5000),
+  // Arrival & Departure (mig 0060). All-text fields so owners can
+  // write "2:00 PM", "After 1pm", or "Flexible -- call ahead"
+  // without losing nuance to a strict time type. Empty values
+  // collapse to null via blankToNull so the camper-facing card
+  // can hide blank rows cleanly.
+  check_in_time: blankToNull(60),
+  check_out_time: blankToNull(60),
+  early_check_in_note: blankToNull(300),
+  late_check_out_note: blankToNull(300),
+  arrival_departure_note: blankToNull(500),
 })
 
 export async function saveOwnerProfileAction(
@@ -244,6 +254,11 @@ export async function saveOwnerProfileAction(
     emergency_other_notes: formData.get('emergency_other_notes') ?? '',
     show_local_recommendations: formData.get('show_local_recommendations') ?? '',
     local_recommendations_text: formData.get('local_recommendations_text') ?? '',
+    check_in_time: formData.get('check_in_time') ?? '',
+    check_out_time: formData.get('check_out_time') ?? '',
+    early_check_in_note: formData.get('early_check_in_note') ?? '',
+    late_check_out_note: formData.get('late_check_out_note') ?? '',
+    arrival_departure_note: formData.get('arrival_departure_note') ?? '',
   })
   if (!parsed.success) {
     const flat = parsed.error.flatten()
@@ -295,6 +310,11 @@ export async function saveOwnerProfileAction(
       emergency_other_notes: parsed.data.emergency_other_notes ?? null,
       show_local_recommendations: parsed.data.show_local_recommendations,
       local_recommendations_text: parsed.data.local_recommendations_text ?? null,
+      check_in_time: parsed.data.check_in_time ?? null,
+      check_out_time: parsed.data.check_out_time ?? null,
+      early_check_in_note: parsed.data.early_check_in_note ?? null,
+      late_check_out_note: parsed.data.late_check_out_note ?? null,
+      arrival_departure_note: parsed.data.arrival_departure_note ?? null,
     })
     .eq('id', parsed.data.campground_id)
   if (error) return { error: error.message, ok: false }

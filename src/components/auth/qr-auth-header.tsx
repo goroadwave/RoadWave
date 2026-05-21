@@ -81,11 +81,11 @@ function ConnectionsHeader({ ctx, mode }: Props) {
         compact
       />
       <p className={HELPER_CLS}>
-        Create or access your free RoadWave profile to find nearby
-        campers with shared interests, control your visibility, and
-        wave privately.{' '}
+        Use your RoadWave profile to find campers here who share your
+        interests. Wave when you want to connect; nothing opens
+        unless it&apos;s mutual.{' '}
         <strong className="text-cream">
-          Campground info stays available without signing in.
+          Campground info stays available either way.
         </strong>
       </p>
       {name && (

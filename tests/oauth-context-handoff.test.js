@@ -81,13 +81,20 @@ test.describe('OAuth handoff: campground context survives the Google round-trip'
     //   3. writes localStorage["roadwave:oauth-campground-context"]
     //   4. calls supabase.auth.signInWithOAuth → navigates to Google
     // Step 4 is blocked by our route handler above, so steps 1-3
-    // settle before we inspect.
+    // settle before we inspect. We poll for the localStorage write
+    // (the last sync write in the chain) instead of using a fixed
+    // timeout -- the server actions can take varying amounts of
+    // time on a cold dev server, and a fixed 1500ms was racy enough
+    // to fail once per ~5 runs on slower hardware.
     await googleBtn.click()
 
-    // Wait for the click handler to finish all server-action awaits.
-    // The button shows "Redirecting to Google…" while pending; we
-    // give it a moment to settle.
-    await page.waitForTimeout(1500)
+    await page.waitForFunction(
+      () =>
+        window.localStorage.getItem('roadwave:oauth-campground-context') !==
+        null,
+      null,
+      { timeout: 8000 },
+    )
 
     // 1. Server-side cookie: pending_oauth_campground present, with
     //    a returnTo that points at this campground.
@@ -143,7 +150,17 @@ test.describe('OAuth handoff: campground context survives the Google round-trip'
     const googleBtn = page.getByRole('button', { name: /Continue with Google/i })
     await expect(googleBtn).toBeEnabled()
     await googleBtn.click()
-    await page.waitForTimeout(1500)
+
+    // Poll for the localStorage write (last sync step in the click
+    // handler) instead of a fixed-duration sleep. See the comment
+    // on the signup test above for why.
+    await page.waitForFunction(
+      () =>
+        window.localStorage.getItem('roadwave:oauth-campground-context') !==
+        null,
+      null,
+      { timeout: 8000 },
+    )
 
     const cookies = await context.cookies()
     const oauthCookie = cookies.find(

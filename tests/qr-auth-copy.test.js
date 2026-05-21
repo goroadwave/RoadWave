@@ -136,7 +136,7 @@ test.describe('Login page copy', () => {
       }),
     ).toBeVisible()
     await expect(
-      page.getByText(/campground info stays available without signing in/i),
+      page.getByText(/campground info stays available either way/i),
     ).toBeVisible()
 
     await assertNoDeprecatedCopy(page)
@@ -171,7 +171,7 @@ test.describe('Signup page copy', () => {
       page.getByRole('heading', { name: /create your roadwave profile/i }),
     ).toBeVisible()
     await expect(
-      page.getByText(/campground info stays available without signing in/i),
+      page.getByText(/campground info stays available either way/i),
     ).toBeVisible()
 
     // "Already have an account? Sign in" must preserve the QR

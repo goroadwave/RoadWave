@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { AuthCampgroundContextStrip } from '@/components/auth/auth-campground-context-strip'
 import { LoginForm } from '@/components/auth/login-form'
 import { AuthDivider, GoogleAuthButton } from '@/components/auth/google-auth-button'
 import { QrAuthHeader } from '@/components/auth/qr-auth-header'
+import { loadAuthCampgroundContext } from '@/lib/auth/auth-campground-context'
 import { resolveQrAuthContext } from '@/lib/auth/qr-auth-context'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -76,8 +78,19 @@ export default async function LoginPage({
   const nextHref =
     (typeof params.next === 'string' && params.next) || hubReturnTo || '/'
 
+  // Pull the campground info the AuthCampgroundContextStrip needs
+  // (logo, address, arrival/departure times, active bulletins +
+  // meetups, active critical bulletin). Service-role read because
+  // the camper is anonymous on the auth page. Returns null when
+  // the slug doesn't resolve to an active campground; we fall back
+  // to the plain (no-strip) auth page in that case.
+  const authStrip = ctx.campground
+    ? await loadAuthCampgroundContext(ctx.campground.slug)
+    : null
+
   return (
     <div className="space-y-6">
+      {authStrip && <AuthCampgroundContextStrip ctx={authStrip} />}
       <QrAuthHeader ctx={ctx} mode="login" />
 
       {errorMessage && (
@@ -101,6 +114,12 @@ export default async function LoginPage({
       />
       <AuthDivider />
       <LoginForm />
+      {ctx.intent === 'connections' && ctx.campground && (
+        <p className="text-center text-[11px] text-mist/80 leading-snug pt-1">
+          No exact site number. No always-on GPS. Camper Connections
+          only open when it&apos;s mutual.
+        </p>
+      )}
     </div>
   )
 }

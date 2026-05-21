@@ -417,6 +417,86 @@ export function OwnerProfileForm({ campground }: { campground: OwnerCampground }
         </Field>
       </div>
 
+      {/* Arrival & Departure (mig 0060). Free-form text fields so
+          owners can write "2:00 PM", "After 1pm", or "Flexible --
+          call ahead" without losing nuance. The camper-side card
+          hides itself when every field is empty. */}
+      <div className="rounded-2xl border border-leaf/20 bg-leaf/[0.04] p-4 space-y-3">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-leaf font-semibold">
+          Arrival &amp; Departure (optional)
+        </p>
+        <p className="text-xs text-mist leading-snug">
+          Check-in and checkout times. Shown near the top of your
+          guest hub right after Quick Actions. Each field is optional
+          — leave blank to hide it.
+        </p>
+        <Field
+          label="Check-in time"
+          hint='Free text — "2:00 PM", "After 1pm", "Flexible". Hidden if blank.'
+        >
+          <input
+            name="check_in_time"
+            type="text"
+            defaultValue={campground.check_in_time ?? ''}
+            maxLength={60}
+            placeholder="2:00 PM"
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Early check-in note (optional)"
+          hint="One line about early arrivals. Only shows when a check-in time is set."
+        >
+          <input
+            name="early_check_in_note"
+            type="text"
+            defaultValue={campground.early_check_in_note ?? ''}
+            maxLength={300}
+            placeholder="Early check-in may be available by calling the office."
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Checkout time"
+          hint='Free text — "11:00 AM", "Before noon", etc. Hidden if blank.'
+        >
+          <input
+            name="check_out_time"
+            type="text"
+            defaultValue={campground.check_out_time ?? ''}
+            maxLength={60}
+            placeholder="11:00 AM"
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Late checkout note (optional)"
+          hint="One line about late departures. Only shows when a checkout time is set."
+        >
+          <input
+            name="late_check_out_note"
+            type="text"
+            defaultValue={campground.late_check_out_note ?? ''}
+            maxLength={300}
+            placeholder="Late checkout up to 1 PM — ask at the office."
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="General arrival/departure note (optional)"
+          hint="Anything else campers should know — office hours, after-hours envelope, gate code policy, etc."
+        >
+          <textarea
+            name="arrival_departure_note"
+            defaultValue={campground.arrival_departure_note ?? ''}
+            maxLength={500}
+            rows={2}
+            placeholder="Office closes at 9 PM — use the after-hours envelope by the gate for late arrivals."
+            className={inputCls + ' resize-none'}
+          />
+        </Field>
+      </div>
+
       {/* Rules & Policies (mig 0049). Free-form text. Owner can
           use line breaks; the guest hub preserves them. */}
       <div className="rounded-2xl border border-leaf/20 bg-leaf/[0.04] p-4 space-y-3">

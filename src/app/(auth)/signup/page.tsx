@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
+import { AuthCampgroundContextStrip } from '@/components/auth/auth-campground-context-strip'
 import { SignupCard } from '@/components/auth/signup-card'
 import { QrAuthHeader } from '@/components/auth/qr-auth-header'
+import { loadAuthCampgroundContext } from '@/lib/auth/auth-campground-context'
 import { resolveQrAuthContext } from '@/lib/auth/qr-auth-context'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -86,14 +88,28 @@ export default async function SignupPage({
     ? `/login?${loginHrefParams.toString()}`
     : '/login'
 
+  // Pull the campground info the AuthCampgroundContextStrip needs
+  // (logo, address, arrival/departure times, active bulletins +
+  // meetups, active critical bulletin). Same shape /login uses.
+  const authStrip = ctx.campground
+    ? await loadAuthCampgroundContext(ctx.campground.slug)
+    : null
+
   return (
     <div className="space-y-6">
+      {authStrip && <AuthCampgroundContextStrip ctx={authStrip} />}
       <QrAuthHeader ctx={ctx} mode="signup" />
       <SignupCard
         next={nextHref}
         campgroundSlug={ctx.campground?.slug ?? null}
         returnTo={hubReturnTo}
       />
+      {ctx.intent === 'connections' && ctx.campground && (
+        <p className="text-center text-[11px] text-mist/80 leading-snug">
+          No exact site number. No always-on GPS. Camper Connections
+          only open when it&apos;s mutual.
+        </p>
+      )}
       <p className="text-center text-[11px] text-mist/80 leading-snug">
         Already have an account?{' '}
         <a

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ArrivalDepartureCard } from '@/components/campgrounds/arrival-departure-card'
 import { CamperConnectionsCard } from '@/components/campgrounds/camper-connections-card'
 import { CamperToastHost } from '@/components/campgrounds/camper-toast-host'
 import { CriticalBanner } from '@/components/campgrounds/critical-banner'
@@ -89,6 +90,14 @@ export type GuestHubCampground = {
   emergency_other_notes: string | null
   show_local_recommendations: boolean
   local_recommendations_text: string | null
+  // Arrival & Departure (mig 0060). All optional text fields. The
+  // card hides itself when every value is null/empty -- nothing
+  // here needs to be present for the rest of the hub to render.
+  check_in_time: string | null
+  check_out_time: string | null
+  early_check_in_note: string | null
+  late_check_out_note: string | null
+  arrival_departure_note: string | null
 }
 
 export type GuestHubBulletin = {
@@ -562,6 +571,22 @@ export function CampgroundGuestHubBody({
               </div>
             </section>
           )}
+
+          {/* Arrival & Departure (mig 0060). Positioned between
+              Quick Actions and Wi-Fi -- right where a camper
+              arriving at the gate looks for "what time can I check
+              in?". Card hides itself entirely when no times are
+              set; previewMode flips to a soft owner reminder so
+              an owner who hasn't filled the fields still sees
+              they exist. */}
+          <ArrivalDepartureCard
+            checkInTime={campground.check_in_time}
+            checkOutTime={campground.check_out_time}
+            earlyCheckInNote={campground.early_check_in_note}
+            lateCheckOutNote={campground.late_check_out_note}
+            arrivalDepartureNote={campground.arrival_departure_note}
+            previewMode={previewMode}
+          />
 
           {/* Phase 4a -- "Happening at <name>" consolidates the old
               separate Bulletins + Meetups sections into one client

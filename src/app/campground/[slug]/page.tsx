@@ -103,7 +103,7 @@ export default async function CampgroundGuestHubPage({
   const { data: campground } = await admin
     .from('campgrounds')
     .select(
-      'id, slug, name, city, region, address, logo_url, is_active, amenities, amenity_notes, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, feature_facebook_enabled, facebook_review_url, facebook_button_label, show_park_map, park_map_url, park_map_notes, park_map_path, park_map_file_type, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text',
+      'id, slug, name, city, region, address, logo_url, is_active, amenities, amenity_notes, website, phone, google_review_url, booking_url, booking_message, booking_promo_code, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, feature_facebook_enabled, facebook_review_url, facebook_button_label, show_park_map, park_map_url, park_map_notes, park_map_path, park_map_file_type, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text, check_in_time, check_out_time, early_check_in_note, late_check_out_note, arrival_departure_note',
     )
     .eq('slug', slug)
     .maybeSingle<CampgroundRow>()
@@ -299,6 +299,32 @@ async function resolveAuthedViewer(
         err instanceof Error ? err.message : String(err),
       )
     }
+  }
+
+  // Private RoadWave Stops -- the camper's own history of which
+  // campgrounds they've joined. Idempotent, has its own 12h
+  // dedupe so a reload doesn't inflate visit_count, and runs
+  // even when resolvedToken is null (a camper who navigates
+  // straight to /campground/<slug> from /home should still get
+  // their history recorded). NOT a presence signal -- the row
+  // never makes the camper appear in "Campers Here" anywhere;
+  // see migration 0059 for the why.
+  try {
+    const { error: stopError } = await supabase.rpc(
+      'record_roadwave_stop',
+      { _campground_id: campgroundId },
+    )
+    if (stopError) {
+      console.warn(
+        '[campground/hub] RoadWave Stop upsert failed:',
+        stopError.message,
+      )
+    }
+  } catch (err) {
+    console.warn(
+      '[campground/hub] RoadWave Stop upsert threw:',
+      err instanceof Error ? err.message : String(err),
+    )
   }
 
   const { data: profile } = await supabase

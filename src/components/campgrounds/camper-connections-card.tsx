@@ -104,7 +104,7 @@ export function CamperConnectionsCard({
 
         <div className="flex flex-wrap gap-2">
           <Link
-            href="/profile"
+            href="/profile/setup"
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-4 py-2.5 text-xs sm:text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
           >
             Edit interests
