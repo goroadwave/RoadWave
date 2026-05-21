@@ -23,6 +23,15 @@ type Props = {
   onAcceptTermsChange: (v: boolean) => void
   acceptRules: boolean
   onAcceptRulesChange: (v: boolean) => void
+  /** Intended post-auth destination forwarded by the /signup page from
+   *  its `?next=` query param. Embedded as a hidden form input so the
+   *  signupAction can bake it into the email confirmation link (the
+   *  /auth/confirm route honors ?next=). */
+  next?: string | null
+  /** Path to navigate to when the camper taps "Sign in" (already has
+   *  an account). Carries the same QR context forward so the round
+   *  trip doesn't drop intent/slug/next. */
+  loginHref?: string
 }
 
 export function SignupForm({
@@ -32,6 +41,8 @@ export function SignupForm({
   onAcceptTermsChange,
   acceptRules,
   onAcceptRulesChange,
+  next = null,
+  loginHref = '/login',
 }: Props) {
   const [state, formAction, pending] = useActionState(signupAction, initialState)
   const [username, setUsername] = useState('')
@@ -72,6 +83,7 @@ export function SignupForm({
 
   return (
     <form action={formAction} className="space-y-4">
+      {next && <input type="hidden" name="next" value={next} />}
       <Field label="Username" hint={<UsernameHint status={status} />}>
         <input
           name="username"
@@ -189,7 +201,7 @@ export function SignupForm({
 
       <p className="text-center text-sm text-mist">
         Already have an account?{' '}
-        <Link href="/login" className="font-semibold text-flame underline-offset-2 hover:underline">
+        <Link href={loginHref} className="font-semibold text-flame underline-offset-2 hover:underline">
           Sign in
         </Link>
       </p>

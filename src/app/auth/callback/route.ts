@@ -126,6 +126,10 @@ async function resolveCampgroundNext(
   rawNext: string | null,
 ): Promise<string> {
   const next = rawNext ?? '/'
+  // Explicit destination wins. A camper bouncing through /login?next=/waves
+  // (because the (app) layout caught them signed-out on /waves) MUST end
+  // up on /waves -- the check-in recovery below applies only when the
+  // OAuth round-trip clearly lost the destination.
   if (!isGenericNext(next)) return next
 
   // Layer 1: cookie.

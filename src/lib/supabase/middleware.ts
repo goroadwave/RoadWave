@@ -17,7 +17,17 @@ function isAdminPath(pathname: string): boolean {
 }
 
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request })
+  // Forward the request URL to server components so layouts and pages can
+  // build accurate ?next= redirects without manually threading the
+  // pathname through every level. Read in RSC via headers().get('x-pathname')
+  // and headers().get('x-search'). Set on every NextResponse.next() below
+  // so the upstream renderer always sees them, including after the cookie
+  // rebuild in the supabase auth refresher.
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-pathname', request.nextUrl.pathname)
+  requestHeaders.set('x-search', request.nextUrl.search)
+
+  let response = NextResponse.next({ request: { headers: requestHeaders } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,7 +41,9 @@ export async function updateSession(request: NextRequest) {
           for (const { name, value } of cookiesToSet) {
             request.cookies.set(name, value)
           }
-          response = NextResponse.next({ request })
+          response = NextResponse.next({
+            request: { headers: requestHeaders },
+          })
           for (const { name, value, options } of cookiesToSet) {
             response.cookies.set(name, value, options)
           }

@@ -35,12 +35,17 @@ type Props = {
   /** Concrete returnTo URL the OAuth callback should redirect to —
    *  same shape the cookie/localStorage recovery paths expect. */
   returnTo?: string | null
+  /** Path to the /login page that preserves the same QR/next context.
+   *  Forwarded to the "Already have an account?" link inside SignupForm
+   *  so a returning camper keeps their intended destination. */
+  loginHref?: string
 }
 
 export function SignupCard({
   next = '/',
   campgroundSlug = null,
   returnTo = null,
+  loginHref = '/login',
 }: Props = {}) {
   const [confirm18, setConfirm18] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
@@ -71,6 +76,8 @@ export function SignupCard({
         onAcceptTermsChange={setAcceptTerms}
         acceptRules={acceptRules}
         onAcceptRulesChange={setAcceptRules}
+        next={next !== '/' ? next : null}
+        loginHref={loginHref}
       />
     </>
   )

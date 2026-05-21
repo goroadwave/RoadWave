@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { safeRedirectNext } from '@/lib/auth/intended-next'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { signupSchema } from '@/lib/validators/auth'
@@ -30,6 +31,17 @@ export type SignupState = { error: string | null }
 // On success the user is redirected to /verify with their email; the
 // confirmation link in the email lands on /auth/confirm, which marks
 // email_confirmed_at and routes them onward.
+// Compose the /verify destination so the "Check your email" page can
+// surface the resend form pre-filled with the same email AND keep the
+// intended ?next so resends (which re-trigger signUp with the same
+// emailRedirectTo) preserve the destination too.
+function buildVerifyHref(email: string, next: string | null): string {
+  const qs = new URLSearchParams()
+  qs.set('email', email)
+  if (next) qs.set('next', next)
+  return `/verify?${qs.toString()}`
+}
+
 export async function signupAction(
   _prev: SignupState,
   formData: FormData,
@@ -54,6 +66,15 @@ export async function signupAction(
 
   console.log(`[guest-signup] action invoked for ${email}`)
 
+  // Carry the intended post-auth destination into the email confirmation
+  // link. The /auth/confirm route reads ?next= and routes the
+  // freshly-verified camper there instead of dropping them on the
+  // marketing home. Without this, a camper who signed up from a
+  // /signup?next=/waves URL (because they followed a shared /waves link
+  // while signed out) would lose the destination through the email
+  // round trip.
+  const explicitNext = safeRedirectNext(formData.get('next'))
+
   const headerList = await headers()
   const origin = getSiteOrigin(headerList)
   const supabase = await createSupabaseServerClient()
@@ -61,12 +82,14 @@ export async function signupAction(
 
   // 1. signUp() — creates the auth.users row + Supabase sends the
   //    confirmation email via Custom SMTP (Resend).
+  const confirmUrl = new URL('/auth/confirm', origin)
+  if (explicitNext) confirmUrl.searchParams.set('next', explicitNext)
   const { data, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { username },
-      emailRedirectTo: `${origin}/auth/confirm`,
+      emailRedirectTo: confirmUrl.toString(),
     },
   })
   if (signUpError) {
@@ -85,7 +108,7 @@ export async function signupAction(
     console.warn(
       `[guest-signup] signUp returned no user for ${email} (likely already-confirmed account)`,
     )
-    redirect(`/verify?email=${encodeURIComponent(email)}`)
+    redirect(buildVerifyHref(email, explicitNext))
   }
   console.log(`[guest-signup] signUp ok for ${email} (user=${userId})`)
 

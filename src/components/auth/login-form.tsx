@@ -6,11 +6,23 @@ import { loginAction, type LoginState } from '@/app/(auth)/login/actions'
 
 const initialState: LoginState = { error: null }
 
-export function LoginForm() {
+type Props = {
+  /** Intended post-auth destination forwarded by the /login page from
+   *  its `?next=` query param. Embedded as a hidden form input so the
+   *  loginAction can honor it after a successful sign-in. Null falls
+   *  through to the role-based default in getPostAuthDestination. */
+  next?: string | null
+  /** Path to navigate to when the camper taps "Create an account".
+   *  Falls back to /signup when no QR context needs forwarding. */
+  signupHref?: string
+}
+
+export function LoginForm({ next = null, signupHref = '/signup' }: Props) {
   const [state, formAction, pending] = useActionState(loginAction, initialState)
 
   return (
     <form action={formAction} className="space-y-4">
+      {next && <input type="hidden" name="next" value={next} />}
       <div>
         <label className="mb-1 block text-sm font-medium text-cream">Email</label>
         <input
@@ -53,7 +65,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-mist">
         New here?{' '}
-        <Link href="/signup" className="font-medium text-flame underline-offset-2 hover:underline">
+        <Link href={signupHref} className="font-medium text-flame underline-offset-2 hover:underline">
           Create an account
         </Link>
       </p>

@@ -5,11 +5,21 @@ import { resendAction, type ResendState } from '@/app/(auth)/verify/actions'
 
 const initialState: ResendState = { error: null, ok: false }
 
-export function ResendForm({ defaultEmail }: { defaultEmail?: string }) {
+export function ResendForm({
+  defaultEmail,
+  next = null,
+}: {
+  defaultEmail?: string
+  /** Intended post-auth destination forwarded by the /verify page so
+   *  a resent confirmation email still routes the camper to the page
+   *  they originally asked for. */
+  next?: string | null
+}) {
   const [state, formAction, pending] = useActionState(resendAction, initialState)
 
   return (
     <form action={formAction} className="flex flex-col sm:flex-row gap-2">
+      {next && <input type="hidden" name="next" value={next} />}
       <input
         name="email"
         type="email"

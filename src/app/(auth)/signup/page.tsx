@@ -103,6 +103,7 @@ export default async function SignupPage({
         next={nextHref}
         campgroundSlug={ctx.campground?.slug ?? null}
         returnTo={hubReturnTo}
+        loginHref={loginHref}
       />
       {ctx.intent === 'connections' && ctx.campground && (
         <p className="text-center text-[11px] text-mist/80 leading-snug">

@@ -118,11 +118,19 @@ export function clearOAuthCampgroundContext(response: NextResponse): void {
 
 // Treat these `next` values as "generic" — they came from a default
 // or a missing param, not from a deliberate destination, and the
-// cookie should win if it has a campground context.
+// cookie / check-in recovery should win if it has a campground context.
+//
+// /home used to be on this list, but a signed-out camper bouncing
+// through /login?next=/home (because they hit a (app) route while
+// signed out) actually does mean "/home" -- treating it as generic
+// caused the post-auth check-in recovery to override an explicit
+// destination and route them to the campground hub instead. Limit
+// "generic" to the truly-empty cases now: missing, "/", or "/?"
+// from Supabase's URL-builder leaving a trailing "?".
 export function isGenericNext(next: string | null | undefined): boolean {
   if (!next) return true
   const trimmed = next.trim()
   if (!trimmed) return true
-  if (trimmed === '/' || trimmed === '/home' || trimmed === '/?') return true
+  if (trimmed === '/' || trimmed === '/?') return true
   return false
 }

@@ -45,9 +45,7 @@ export default async function NearbyPage() {
     // hub's inline scroll script honors #camper-connections by
     // skipping the pin loop, so the browser anchor-jumps cleanly
     // to the card instead of fighting the scroll-to-top pin.
-    redirect(
-      `/campground/${latest.campgrounds.slug}#camper-connections`,
-    )
+    redirect(`/campground/${latest.campgrounds.slug}#camper-connections`)
   }
 
   redirect('/checkin')

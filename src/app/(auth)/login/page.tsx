@@ -113,7 +113,14 @@ export default async function LoginPage({
         returnTo={hubReturnTo}
       />
       <AuthDivider />
-      <LoginForm />
+      <LoginForm
+        next={nextHref !== '/' ? nextHref : null}
+        signupHref={buildSignupHref({
+          next: typeof params.next === 'string' ? params.next : undefined,
+          intent: typeof params.intent === 'string' ? params.intent : undefined,
+          slug: typeof params.slug === 'string' ? params.slug : undefined,
+        })}
+      />
       {ctx.intent === 'connections' && ctx.campground && (
         <p className="text-center text-[11px] text-mist/80 leading-snug pt-1">
           No exact site number. No always-on GPS. Camper Connections
@@ -122,6 +129,23 @@ export default async function LoginPage({
       )}
     </div>
   )
+}
+
+// Carry the same intent/slug/next QR-context params forward from /login
+// onto the "Create an account" link so a camper who lands on /login from
+// a /waves bounce, decides to sign up instead, keeps their intended
+// destination on the other side of email verification.
+function buildSignupHref(params: {
+  next?: string
+  intent?: string
+  slug?: string
+}): string {
+  const qs = new URLSearchParams()
+  if (params.intent) qs.set('intent', params.intent)
+  if (params.slug) qs.set('slug', params.slug)
+  if (params.next) qs.set('next', params.next)
+  const query = qs.toString()
+  return query ? `/signup?${query}` : '/signup'
 }
 
 // Map raw error codes/messages from Supabase or our callback into something

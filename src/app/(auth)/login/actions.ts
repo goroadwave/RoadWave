@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { safeRedirectNext } from '@/lib/auth/intended-next'
 import { getPostAuthDestination } from '@/lib/auth/post-auth-destination'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loginSchema } from '@/lib/validators/auth'
@@ -26,10 +27,18 @@ export async function loginAction(
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data)
   if (error || !data.user) return { error: error?.message ?? 'Could not sign in.' }
 
-  // Route by role + admin membership — owners go straight to the
-  // dashboard, guests to /home. Same helper is used by /owner/login
-  // and the OAuth callback so the destination is consistent across
-  // every entry point.
-  const dest = await getPostAuthDestination(supabase, data.user.id, '/home')
+  // Honor an explicit ?next= the (app) layout (or the login page itself)
+  // threaded through. A signed-out camper who tapped a shared /waves
+  // link, got bounced to /login?next=/waves, then signed in below must
+  // land back on /waves -- not on /home or the campground hub. The
+  // role-based override below still wins for owners/admins because they
+  // never belong on a guest route; the explicit-next path applies only
+  // to the guest fallback.
+  const explicitNext = safeRedirectNext(formData.get('next'))
+  const dest = await getPostAuthDestination(
+    supabase,
+    data.user.id,
+    explicitNext ?? '/home',
+  )
   redirect(dest)
 }

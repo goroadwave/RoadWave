@@ -1,14 +1,18 @@
 import Link from 'next/link'
 import { ResendForm } from '@/components/auth/resend-form'
 import { PageHeading } from '@/components/ui/page-heading'
+import { safeRedirectNext } from '@/lib/auth/intended-next'
 
 export default async function VerifyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string }>
+  searchParams: Promise<{ email?: string; next?: string }>
 }) {
   const params = await searchParams
   const email = typeof params.email === 'string' ? params.email : undefined
+  const next = safeRedirectNext(params.next)
+
+  const loginHref = next ? `/login?next=${encodeURIComponent(next)}` : '/login'
 
   return (
     <div className="space-y-5">
@@ -31,11 +35,11 @@ export default async function VerifyPage({
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
         <p className="mb-2 text-xs text-mist">Didn&apos;t get it? Resend below.</p>
-        <ResendForm defaultEmail={email} />
+        <ResendForm defaultEmail={email} next={next} />
       </div>
 
       <p className="text-sm text-mist">
-        <Link href="/login" className="font-semibold text-flame underline-offset-2 hover:underline">
+        <Link href={loginHref} className="font-semibold text-flame underline-offset-2 hover:underline">
           Back to sign in
         </Link>
       </p>

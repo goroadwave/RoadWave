@@ -5,6 +5,7 @@ import { GuestSupportChat } from '@/components/support/guest-support-chat'
 import { TourOverlay } from '@/components/support/tour-overlay'
 import { AppNav } from '@/components/ui/app-nav'
 import { Logo } from '@/components/ui/logo'
+import { resolveIntendedNext } from '@/lib/auth/intended-next'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 // Phase E (2026-05-21): the pending_checkin_token cookie bridge that
@@ -18,13 +19,41 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 // page they just asked for.
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  // Capture the path the camper actually asked for so we can hand it to
+  // /login (and /consent) as ?next= rather than dropping it on the
+  // floor. Without this, a signed-out camper visiting /waves or
+  // /crossed-paths via a shared link or refreshed tab gets bounced to
+  // /login with no return address, signs in, and ends up wherever the
+  // post-auth fallback decides -- which until today was the campground
+  // hub instead of the page they actually came from. The pathname is
+  // surfaced by the proxy via `x-pathname` / `x-search`; see
+  // src/lib/supabase/middleware.ts for the upstream write.
+  const intendedNext = await resolveIntendedNext()
+
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) redirect('/login')
-  if (!user.email_confirmed_at) redirect('/verify')
+  if (!user) {
+    redirect(
+      intendedNext
+        ? `/login?next=${encodeURIComponent(intendedNext)}`
+        : '/login',
+    )
+  }
+  if (!user.email_confirmed_at) {
+    // The freshly-confirmed user lands on /auth/confirm which honors the
+    // email link's next= param. The /verify page itself can't carry the
+    // param into Supabase's templated confirmation link, so we route
+    // through /login -- the resend form there will resend a fresh
+    // confirmation email that already includes the right destination.
+    redirect(
+      intendedNext
+        ? `/verify?next=${encodeURIComponent(intendedNext)}`
+        : '/verify',
+    )
+  }
 
   // Suspension gate: if profiles.suspended_at is set, the account can't use
   // the app. Send them to /suspended where they can sign out or appeal.
@@ -69,7 +98,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq('user_id', user.id)
     .limit(1)
     .maybeSingle()
-  if (!ackRow) redirect('/consent?next=/home')
+  if (!ackRow) {
+    const consentNext = intendedNext ?? '/home'
+    redirect(`/consent?next=${encodeURIComponent(consentNext)}`)
+  }
 
   // Riley is the single entry point for both the in-page tour and the
   // chat panel. Both UI components mount here in (app); the providers
