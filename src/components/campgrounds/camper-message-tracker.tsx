@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import {
+  dismissCamperMessage,
   markCamperMessageSeen,
-  removeCamperMessage,
+  undismissCamperMessage,
   useCamperMessages,
   type StoredCamperMessage,
 } from '@/components/campgrounds/camper-message-storage'
@@ -33,10 +34,14 @@ import {
 //     and the Lantern dispatch LANTERN_OPEN_THREAD_EVENT; the tracker
 //     listens, scrolls #office-help into view, and auto-expands the
 //     matching card.
-//   * Clear from this device action -- removes the entry from
-//     localStorage (handy on a shared family/RV tablet) AND restores
-//     the site+last-name verification gate on /m/<id> if the camper
-//     later opens an email reply link from the same device.
+//   * Hide from this page action -- soft-hides the card via a
+//     dismissedAt timestamp on the localStorage entry. The poll loop
+//     keeps watching the thread, so if the office replies after the
+//     camper hid the card the dismiss is auto-cleared and the card
+//     resurfaces with the New Reply chip + toast. Replaces the older
+//     hard-delete behavior, which silently broke the reply chain on
+//     the camper side. (Server-side message + token are never
+//     touched by either path.)
 //
 // Privacy guardrails:
 //   * Scoped per campgroundId; entries for other campgrounds are never
@@ -205,7 +210,12 @@ export function CamperMessageTracker({
   // same time produced two visually-similar cards in the same
   // section and read as a duplicate to campers.
 
-  // Merge stored + live into the LiveEntry shape the UI renders.
+  // Merge stored + live into the LiveEntry shape. `entries` is the
+  // SUPERSET (includes dismissed threads) -- the polling loop reads
+  // from this so a soft-hidden thread still gets polled. The visible
+  // card list below filters out dismissed entries; the floating toast
+  // event + un-dismiss path is how a soft-hidden thread resurfaces
+  // when the office replies.
   const entries: LiveEntry[] = stored.map((s) => {
     const live = liveById[s.id]
     return {
@@ -216,6 +226,7 @@ export function CamperMessageTracker({
       latestOwnerReplyAt: live?.latestOwnerReplyAt ?? null,
     }
   })
+  const visibleEntries = entries.filter((e) => e.dismissedAt === null)
 
   // Tracks the last seen latestOwnerReplyAt for each entry so we can
   // detect a transition (no banner on the *initial* poll -- we don't
@@ -280,6 +291,28 @@ export function CamperMessageTracker({
           (wasLatest === null || r.latestOwnerReplyAt > wasLatest)
         ) {
           firedReplyFor = r.id
+        }
+        // Soft-hide recovery: if this entry was dismissed and the
+        // newly-fetched owner reply landed AFTER the dismiss, clear
+        // the dismiss so the card resurfaces. Works whether the
+        // dismiss happened in this session or a previous one
+        // (dismissedAt persists in localStorage). Re-mounting on
+        // page load triggers this same code path -- a returning
+        // camper with a dismissed thread and a fresh reply will see
+        // the card on the first poll.
+        const stillStored = entries.find((e) => e.id === r.id)
+        if (
+          stillStored &&
+          stillStored.dismissedAt !== null &&
+          r.latestOwnerReplyAt !== null &&
+          r.latestOwnerReplyAt > stillStored.dismissedAt
+        ) {
+          undismissCamperMessage(campgroundId, r.id)
+          // Force the toast event too so the camper notices the
+          // re-surfaced card without needing to glance at the
+          // section. firedReplyFor takes precedence so we don't
+          // double-fire if the reply was also a fresh advance.
+          if (!firedReplyFor) firedReplyFor = r.id
         }
         seenOwnerReplyRef.current.set(r.id, r.latestOwnerReplyAt)
         updates[r.id] = {
@@ -432,28 +465,29 @@ export function CamperMessageTracker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campgroundId, previewMode, entryIdsKey, openInline])
 
-  if (previewMode || entries.length === 0) return null
+  // Render only when there's at least one VISIBLE (non-dismissed)
+  // entry. Dismissed entries stay in storage so the poll keeps
+  // watching them, but the camper sees nothing until a fresh
+  // owner reply re-surfaces the card via undismissCamperMessage.
+  if (previewMode || visibleEntries.length === 0) return null
 
-  function clearEntry(entry: LiveEntry) {
-    removeCamperMessage(campgroundId, entry.id)
-    setLiveById((prev) => {
-      const next = { ...prev }
-      delete next[entry.id]
-      return next
-    })
+  function hideEntry(entry: LiveEntry) {
+    // Soft-hide: stamp dismissedAt + collapse any inline expansion.
+    // The poll keeps watching the thread so a fresh owner reply
+    // re-surfaces the card automatically.
+    dismissCamperMessage(campgroundId, entry.id)
     setThreadById((prev) => {
       const next = { ...prev }
       delete next[entry.id]
       return next
     })
-    seenOwnerReplyRef.current.delete(entry.id)
     if (expandedId === entry.id) setExpandedId(null)
   }
 
   return (
     <div className="space-y-3">
       <ul className="space-y-2">
-        {entries.map((e) => (
+        {visibleEntries.map((e) => (
           <CamperMessageCard
             key={e.id}
             entry={e}
@@ -461,7 +495,7 @@ export function CamperMessageTracker({
             expandedState={threadById[e.id] ?? null}
             onOpen={() => openInline(e)}
             onCollapse={() => setExpandedId(null)}
-            onClear={() => clearEntry(e)}
+            onClear={() => hideEntry(e)}
             onReplySent={() => void loadFullThread(e)}
           />
         ))}
@@ -567,10 +601,11 @@ function CamperMessageCard({
         <button
           type="button"
           onClick={onClear}
+          title="Hide the card from this device. If the office replies later, it will come back automatically."
           className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 text-mist px-3 py-1.5 text-xs font-semibold hover:bg-white/10 hover:text-cream transition-colors"
         >
-          <span aria-hidden>🗑️</span>
-          Clear from this device
+          <span aria-hidden>👁️‍🗨️</span>
+          Hide from this page
         </button>
       </div>
 

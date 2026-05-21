@@ -15,6 +15,18 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 //       category:         string | null
 //       submittedAt:      string  // ISO from server
 //       lastSeenReplyAt:  string | null  // updated when camper opens the thread
+//       dismissedAt:      string | null  // ISO. Soft-hide marker -- the
+//                                        // card is filtered out of the visible
+//                                        // tracker list while non-null, but
+//                                        // the poller keeps polling. When the
+//                                        // next poll sees an owner reply with
+//                                        // created_at > dismissedAt, the
+//                                        // tracker un-dismisses (sets back to
+//                                        // null) and the card reappears with
+//                                        // the New Reply chip + toast. This
+//                                        // replaces the old hard-delete
+//                                        // behavior, which silently broke the
+//                                        // reply chain on the camper side.
 //     },
 //     ...
 //   ]
@@ -38,6 +50,15 @@ export type StoredCamperMessage = {
    *  for entries written before this field existed (legacy rows
    *  pre-2026-05-21); the thread page falls back to "/" in that case. */
   campgroundSlug: string | null
+  /** Soft-hide timestamp. When non-null the tracker filters this
+   *  entry out of the visible card list, but the polling loop keeps
+   *  polling it. The first poll that returns an owner reply with
+   *  created_at > dismissedAt clears this field, the card reappears
+   *  with the "New Reply" chip, and the floating toast fires. NULL
+   *  on entries the camper hasn't dismissed (the default state for
+   *  any newly submitted message). Legacy entries written before
+   *  this field existed parse as null too. */
+  dismissedAt: string | null
 }
 
 // Custom event the tracker subscribes to so it can re-read localStorage
@@ -83,6 +104,9 @@ export function loadCamperMessages(
         // and the thread page falls back to a safe default.
         campgroundSlug:
           typeof r.campgroundSlug === 'string' ? r.campgroundSlug : null,
+        // Legacy entries (pre-soft-hide) parse as not-dismissed.
+        dismissedAt:
+          typeof r.dismissedAt === 'string' ? r.dismissedAt : null,
       }))
 
     // Dedupe by message id. Legacy localStorage states from earlier
@@ -181,6 +205,47 @@ export function markCamperMessageSeen(
   const existing = loadCamperMessages(campgroundId)
   const next = existing.map((e) =>
     e.id === messageId ? { ...e, lastSeenReplyAt } : e,
+  )
+  saveCamperMessages(campgroundId, next)
+}
+
+// Soft-hide: stamp dismissedAt with the current time. The entry
+// stays in localStorage so the tracker keeps polling it; the UI
+// just filters it out of the visible card list while dismissedAt
+// is non-null. A subsequent owner reply with created_at >
+// dismissedAt automatically clears the dismiss via
+// undismissCamperMessage, which surfaces the card again with the
+// New Reply chip.
+//
+// This replaces the previous "Clear from this device" hard-delete
+// behavior, which silently broke the reply chain on the camper
+// side: the office could still reply (server-side message + token
+// untouched), but the camper's device no longer knew the thread
+// existed, so polling never noticed the reply and the camper
+// missed it entirely.
+export function dismissCamperMessage(
+  campgroundId: string,
+  messageId: string,
+): void {
+  const existing = loadCamperMessages(campgroundId)
+  const stamp = new Date().toISOString()
+  const next = existing.map((e) =>
+    e.id === messageId ? { ...e, dismissedAt: stamp } : e,
+  )
+  saveCamperMessages(campgroundId, next)
+}
+
+// Counterpart to dismissCamperMessage. Called by the tracker poll
+// loop when a fresh owner reply lands on a previously-dismissed
+// thread, so the card resurfaces without the camper having to do
+// anything.
+export function undismissCamperMessage(
+  campgroundId: string,
+  messageId: string,
+): void {
+  const existing = loadCamperMessages(campgroundId)
+  const next = existing.map((e) =>
+    e.id === messageId ? { ...e, dismissedAt: null } : e,
   )
   saveCamperMessages(campgroundId, next)
 }

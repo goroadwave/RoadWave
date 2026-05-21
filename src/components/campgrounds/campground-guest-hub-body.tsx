@@ -207,15 +207,25 @@ export function CampgroundGuestHubBody({
           scroll restoration kicks in. Without this, setting
           scrollRestoration='manual' from a useEffect was racing the
           browser's auto-restore (which fires before React mounts) so
-          a reload occasionally landed mid-page. Setting the flag
-          here, plus an explicit scrollTo(0,0), guarantees a clean
-          start-at-top reload unless the URL has an explicit hash
-          (anchor click or shared deep link). */}
+          a reload occasionally landed mid-page near the park map.
+          Three layers of defense, each cheap:
+            1. Set scrollRestoration='manual' so the browser
+               won't auto-restore the previous offset on this nav.
+            2. Synchronous scrollTo(0,0) so any pending restore
+               that already fired is overridden.
+            3. A load-event listener that re-pins to (0,0) after
+               every other resource has loaded. Catches the case
+               where a lazy image / font swap / layout-shifted
+               island bumps the scroll position post-paint.
+          All three are skipped when the URL has an explicit
+          hash so #park-map / #office-help / etc. anchor links
+          (and the toast/Lantern force-open paths) still scroll
+          where they intend. */}
       {!previewMode && (
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if('scrollRestoration' in history){history.scrollRestoration='manual'}if(!location.hash){window.scrollTo(0,0)}}catch(e){}",
+              "try{if('scrollRestoration' in history){history.scrollRestoration='manual'}if(!location.hash){window.scrollTo(0,0);window.addEventListener('load',function(){if(!location.hash)window.scrollTo(0,0)})}}catch(e){}",
           }}
         />
       )}
@@ -319,20 +329,6 @@ export function CampgroundGuestHubBody({
             </p>
           </section>
 
-          {/* No-login confirmation strip — quietly tells the visitor
-              this whole page works without an account. The "Meet Other
-              Campers — Optional" card near the bottom is the only
-              surface that asks for one. */}
-          <section
-            role="status"
-            className="rounded-2xl border border-leaf/30 bg-leaf/[0.06] px-4 py-3 text-center"
-          >
-            <p className="text-xs text-mist leading-snug">
-              No login needed for campground info. Camper connections
-              are optional.
-            </p>
-          </section>
-
           {/* Phase 2 -- Emergency / critical notice moved up so any
               storm shelter, after-hours, or "primary contact" info is
               visible without scrolling. Same content as the original
@@ -358,8 +354,18 @@ export function CampgroundGuestHubBody({
                         <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-semibold">
                           Primary contact
                         </p>
+                        {/* Tappable phone -- digit-only href so the
+                            dialer doesn't choke on spaces / parens /
+                            dashes, but the human-readable form stays
+                            visible to the camper. Mobile opens the
+                            dialer; desktop just selects/copies. */}
                         <p className="text-sm font-semibold text-cream break-all">
-                          {campground.emergency_contact_number}
+                          <a
+                            href={`tel:${campground.emergency_contact_number.replace(/[^0-9+]/g, '')}`}
+                            className="text-cream hover:text-amber-200 underline-offset-2 hover:underline"
+                          >
+                            {campground.emergency_contact_number}
+                          </a>
                         </p>
                       </div>
                     )}

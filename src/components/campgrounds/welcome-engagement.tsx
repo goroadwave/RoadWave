@@ -916,6 +916,10 @@ function ContactOfficeForm({
           submittedAt: new Date().toISOString(),
           lastSeenReplyAt: null,
           campgroundSlug,
+          // Fresh entries are never dismissed -- the camper just
+          // submitted this thread, so it goes straight onto the
+          // visible card list.
+          dismissedAt: null,
         })
       }
       // Reset all form fields so re-opening the form starts fresh.
