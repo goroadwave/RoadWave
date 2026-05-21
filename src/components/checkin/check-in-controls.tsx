@@ -38,7 +38,7 @@ export function CheckInControls() {
     e.preventDefault()
     const token = extractToken(pasteValue.trim())
     if (!token) {
-      setScanError('Paste a full check-in link or just the token.')
+      setScanError("Paste a campground link or RoadWave token to continue.")
       return
     }
     setScanError(null)
@@ -48,7 +48,6 @@ export function CheckInControls() {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-white/5 bg-card p-4 space-y-3">
-        <h2 className="font-semibold text-cream">Scan a campground QR</h2>
         <QrScanner onResult={handleScanResult} onError={handleScannerError} />
         {scanError && (
           <p className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-300">
@@ -58,7 +57,7 @@ export function CheckInControls() {
       </div>
 
       <div className="rounded-2xl border border-white/5 bg-card p-4">
-        <h2 className="mb-2 font-semibold text-cream">Or paste a check-in link</h2>
+        <h2 className="mb-2 font-semibold text-cream">Or paste a campground link</h2>
         <form onSubmit={handlePasteSubmit} className="flex flex-col sm:flex-row gap-2">
           <input
             value={pasteValue}
