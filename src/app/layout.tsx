@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Bricolage_Grotesque, DM_Sans, Instrument_Serif } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { GuestSupportProvider } from '@/components/support/guest-support-context'
 import { OwnerSupportProvider } from '@/components/support/owner-support-context'
 import { OwnerTourProvider } from '@/components/support/owner-tour-context'
@@ -74,6 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </TourProvider>
         </GuestSupportProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
