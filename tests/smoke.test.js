@@ -510,7 +510,14 @@ test.describe('Unauthenticated first-time camper QR check-in', () => {
       '/campground/roadwave-demo-campground?token=cc21f1d1-5ffa-4dcd-ba72-d475c847ac41',
     )
 
-    // 2. The welcome page should show the primary CTA.
+    // 2. The "Check In to This Campground" CTA lives inside the
+    //    "Meet other campers — optional" accordion (Phase 4b wrapped
+    //    the secondary sections in default-closed <details> for a
+    //    cleaner page). Click the accordion summary to expand it
+    //    before asserting the link is visible. The summary text is
+    //    the only "Meet other campers" string on the page until
+    //    expanded, so a plain text locator is unambiguous.
+    await page.getByText(/Meet other campers/i).first().click()
     const checkInLink = page
       .getByRole('link', { name: /Check In to This Campground/i })
       .first()
