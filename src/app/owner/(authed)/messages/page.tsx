@@ -5,6 +5,7 @@ import { OwnerMessageCopyNumber } from '@/components/owner/owner-message-copy-nu
 import { OwnerMessageReplyForm } from '@/components/owner/owner-message-reply-form'
 import { OwnerMessageSoundToggle } from '@/components/owner/owner-message-sound-toggle'
 import { OwnerMessageStatusButtons } from '@/components/owner/owner-message-status-buttons'
+import { OwnerMessagesAutoRefresh } from '@/components/owner/owner-messages-auto-refresh'
 import { PageHeading } from '@/components/ui/page-heading'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loadOwnerCampground } from '../_helpers'
@@ -175,6 +176,12 @@ export default async function OwnerMessagesPage({
 
   return (
     <div className="space-y-6">
+      {/* Server-rendered inbox auto-refresh. The page fetches
+          messages + per-message reply threads on every render, so
+          a periodic router.refresh() is enough to surface new
+          camper replies without realtime. Visibility-gated; no
+          network calls while the tab is hidden. Renders nothing. */}
+      <OwnerMessagesAutoRefresh />
       <PageHeading
         eyebrow="Guest messages"
         title="Inbox"

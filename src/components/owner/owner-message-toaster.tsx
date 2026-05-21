@@ -4,13 +4,22 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
 // Toast notifier for new guest messages. Polls
-// /api/owner/message-counts every 60s; fires a toast when the count
-// increases since the last poll. Two flavors:
-//   * "New Safety Concern received" -- shown when unread_safety
-//     increases. Red border + bell. Wins over a same-tick normal
-//     increase (safety is the louder signal).
+// /api/owner/message-counts every 60s; fires a toast when one of
+// three signals advances since the last poll. Priority order
+// (safety > new message > reply) so a same-tick storm only fires
+// one toast:
+//   * "Safety Concern received" -- shown when unread_safety
+//     increases. Stronger red treatment + bolder copy. Wins over
+//     any same-tick normal or reply advance (safety is the
+//     loudest signal).
 //   * "New guest message received" -- shown when unread_total
 //     increases without a safety increase. Amber border.
+//   * "New camper reply" -- shown when latest_guest_reply_at
+//     advances. Catches the case where a camper replies to an
+//     existing thread (parent message status doesn't change, so
+//     unread_total wouldn't catch it). Same amber styling as the
+//     new-message toast; different copy + icon so the owner can
+//     tell them apart at a glance.
 //
 // Optional sound: gated on localStorage flag set by the
 // OwnerMessageSoundToggle component (defaults off). Uses Web Audio
@@ -26,8 +35,12 @@ const POLL_INTERVAL_MS = 60_000
 const SOUND_PREF_KEY = 'roadwave:owner:msg:sound'
 const TOAST_DURATION_MS = 8_000
 
-type Counts = { unread_total: number; unread_safety: number }
-type ToastKind = 'normal' | 'safety'
+type Counts = {
+  unread_total: number
+  unread_safety: number
+  latest_guest_reply_at: string | null
+}
+type ToastKind = 'normal' | 'safety' | 'reply'
 
 async function fetchCounts(): Promise<Counts | null> {
   try {
@@ -41,6 +54,10 @@ async function fetchCounts(): Promise<Counts | null> {
     return {
       unread_total: Number(j.unread_total ?? 0),
       unread_safety: Number(j.unread_safety ?? 0),
+      latest_guest_reply_at:
+        typeof j.latest_guest_reply_at === 'string'
+          ? j.latest_guest_reply_at
+          : null,
     }
   } catch {
     return null
@@ -123,12 +140,29 @@ export function OwnerMessageToaster() {
       if (cancelled || !next) return
       const prev = lastCounts.current
       // First poll just captures a baseline so we don't toast on
-      // initial page load when there are already unread messages.
+      // initial page load when there are already unread messages
+      // / pre-existing replies sitting in the inbox.
       if (prev) {
         const safetyUp = next.unread_safety > prev.unread_safety
         const totalUp = next.unread_total > prev.unread_total
+        // Reply advance: null -> non-null (first reply ever to the
+        // tracked campground) OR strictly newer timestamp. We
+        // compare strings because ISO-8601 strings sort
+        // lexicographically the same as their underlying instants
+        // and never round-trip through Date math.
+        const replyUp =
+          next.latest_guest_reply_at !== null &&
+          next.latest_guest_reply_at !== prev.latest_guest_reply_at &&
+          (prev.latest_guest_reply_at === null ||
+            next.latest_guest_reply_at > prev.latest_guest_reply_at)
+        // Priority: safety > new message > reply. Only one toast
+        // per poll tick -- if multiple signals advanced
+        // simultaneously, the loudest one wins. The other signals
+        // are still recorded in lastCounts below so they don't
+        // re-fire on the next tick.
         if (safetyUp) fire('safety')
         else if (totalUp) fire('normal')
+        else if (replyUp) fire('reply')
       }
       lastCounts.current = next
     }
@@ -174,12 +208,23 @@ export function OwnerMessageToaster() {
   if (!toast) return null
 
   const isSafety = toast.kind === 'safety'
+  const isReply = toast.kind === 'reply'
   const title = isSafety
     ? 'Safety Concern received'
-    : 'New guest message received'
+    : isReply
+      ? 'New camper reply'
+      : 'New guest message received'
   const body = isSafety
     ? 'Review this message now.'
-    : 'Review it in Messages.'
+    : isReply
+      ? 'A guest replied in an open thread.'
+      : 'Review it in Messages.'
+  const icon = isSafety ? '🚨' : isReply ? '💬' : '📬'
+  const ctaLabel = isSafety
+    ? 'Review now'
+    : isReply
+      ? 'Open thread'
+      : 'View messages'
 
   return (
     <div
@@ -221,7 +266,7 @@ export function OwnerMessageToaster() {
               }
             >
               <span aria-hidden className="mr-1.5">
-                {isSafety ? '🚨' : '📬'}
+                {icon}
               </span>
               {title}
             </p>
@@ -245,7 +290,7 @@ export function OwnerMessageToaster() {
               : 'inline-flex items-center gap-1 rounded-lg bg-flame/15 text-flame border border-flame/40 px-3 py-1.5 text-xs font-semibold hover:bg-flame/25 transition-colors'
           }
         >
-          {isSafety ? 'Review now' : 'View messages'} →
+          {ctaLabel} →
         </Link>
       </div>
     </div>
