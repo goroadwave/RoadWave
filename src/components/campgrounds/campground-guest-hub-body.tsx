@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { CriticalBanner } from '@/components/campgrounds/critical-banner'
+import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
 import { HappeningSection } from '@/components/campgrounds/happening-section'
 import { Lantern } from '@/components/campgrounds/lantern'
 import { TrackedLinkButton } from '@/components/campgrounds/tracked-link-button'
@@ -629,11 +630,14 @@ export function CampgroundGuestHubBody({
               they're visually distinct from the brand-curated presets.
               Hidden entirely when no amenities. */}
           {allAmenities.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-                Campground amenities
-              </h2>
-              <ul className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 pt-1">
+            // Phase 4b -- collapsed-by-default accordion for amenities.
+            // The list still renders the same 2-col mobile / 3-col
+            // desktop grid; just lives inside a DisclosureSection now.
+            <DisclosureSection
+              title="Campground amenities"
+              description={`${allAmenities.length} listed`}
+            >
+              <ul className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3">
                 {allAmenities.map((a) => {
                   const note =
                     typeof amenityNotes[a.label] === 'string'
@@ -658,38 +662,29 @@ export function CampgroundGuestHubBody({
                   )
                 })}
               </ul>
-            </section>
+            </DisclosureSection>
           )}
 
-          {/* Rules & Policies (mig 0049). Free-form text; line breaks
-              preserved with whitespace-pre-wrap. */}
+          {/* Rules & Policies (mig 0049). Phase 4b -- collapsed by
+              default; the inner card chrome is removed since the
+              disclosure provides the container. */}
           {campground.show_rules && campground.rules_text && (
-            <section className="space-y-3">
-              <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-                Rules &amp; policies
-              </h2>
-              <div className="rounded-2xl border border-white/5 bg-card p-4 sm:p-5">
-                <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
-                  {campground.rules_text}
-                </p>
-              </div>
-            </section>
+            <DisclosureSection title="Rules & policies">
+              <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
+                {campground.rules_text}
+              </p>
+            </DisclosureSection>
           )}
 
-          {/* Local Recommendations (mig 0049). Free-form text for now;
-              line breaks preserved. */}
+          {/* Local Recommendations (mig 0049). Phase 4b -- collapsed
+              by default; same container treatment as Rules. */}
           {campground.show_local_recommendations &&
             campground.local_recommendations_text && (
-              <section className="space-y-3">
-                <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-                  Local recommendations
-                </h2>
-                <div className="rounded-2xl border border-white/5 bg-card p-4 sm:p-5">
-                  <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
-                    {campground.local_recommendations_text}
-                  </p>
-                </div>
-              </section>
+              <DisclosureSection title="Local recommendations">
+                <p className="text-sm text-cream whitespace-pre-wrap leading-relaxed">
+                  {campground.local_recommendations_text}
+                </p>
+              </DisclosureSection>
             )}
 
           {/* Phase 4a -- old standalone Bulletins + Meetups sections
@@ -748,17 +743,18 @@ export function CampgroundGuestHubBody({
           />
 
           {/* ----- Meet Other Campers — Optional ----- */}
-          {/* The ONLY surface on this page that triggers a signup/login.
-              Per the guest-hub pivot, RoadWave is useful first
-              (everything above) and social second. This card invites
-              guests into the optional camper-connection feature with
-              an honest explanation of what it requires (an account)
-              and what they get in return (private waves, visibility
-              modes, never any site numbers). */}
-          <section className="space-y-3 pt-2">
-            <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-              Meet other campers — optional
-            </h2>
+          {/* Phase 4b -- wrapped in a DisclosureSection (default
+              closed) because it's the lowest-priority surface on the
+              page per the guest-hub pivot: optional, requires
+              signup/login, social-second. Inner card chrome retained
+              -- the orange-bordered card with the checkmark list
+              and CTA is the recognizable "Meet other campers" block,
+              we just hide it behind a tap on mobile.
+              The ONLY surface on this page that triggers a signup/login. */}
+          <DisclosureSection
+            title="Meet other campers — optional"
+            description="Optional camper connection. Requires a free RoadWave profile."
+          >
             <div className="rounded-2xl border border-flame/30 bg-flame/[0.05] p-5 space-y-4">
               <div className="space-y-2">
                 <p className="text-base font-semibold text-cream leading-snug">
@@ -809,7 +805,7 @@ export function CampgroundGuestHubBody({
                 campground staff.
               </p>
             </div>
-          </section>
+          </DisclosureSection>
         </div>
       </article>
     </main>

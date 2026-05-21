@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { appendCamperMessage } from '@/components/campgrounds/camper-message-storage'
 import { CamperMessageTracker } from '@/components/campgrounds/camper-message-tracker'
+import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
 
 // Guest Engagement Hub on the public campground welcome page. Four
 // independently-toggleable surfaces — each rendered only when both the
@@ -159,16 +160,27 @@ export function WelcomeEngagement(props: Props) {
         <PulseCheck campgroundId={campgroundId} previewMode={previewMode} />
       )}
       {showSupport && (
-        <SupportThisCampground
-          campgroundId={campgroundId}
-          reviewUrl={showReview ? reviewUrl : null}
-          facebookUrl={showFacebook ? facebookUrl : null}
-          facebookButtonLabel={facebookButtonLabel}
-          bookingUrl={showBooking ? bookingUrl : null}
-          bookingMessage={bookingMessage}
-          bookingPromoCode={bookingPromoCode}
-          previewMode={previewMode}
-        />
+        // Phase 4b -- the Support This Campground section is now
+        // collapsed by default in a DisclosureSection. The eyebrow +
+        // helper copy that used to live inside SupportThisCampground
+        // are now passed to the DisclosureSection as its title +
+        // description, so there's no duplicate header inside the
+        // accordion body.
+        <DisclosureSection
+          title="Support this campground"
+          description="Enjoying your stay? Your feedback helps this campground grow."
+        >
+          <SupportThisCampground
+            campgroundId={campgroundId}
+            reviewUrl={showReview ? reviewUrl : null}
+            facebookUrl={showFacebook ? facebookUrl : null}
+            facebookButtonLabel={facebookButtonLabel}
+            bookingUrl={showBooking ? bookingUrl : null}
+            bookingMessage={bookingMessage}
+            bookingPromoCode={bookingPromoCode}
+            previewMode={previewMode}
+          />
+        </DisclosureSection>
       )}
       {showContact && (
         <ContactOffice
@@ -391,13 +403,12 @@ function SupportThisCampground({
       : 'Recommend Us on Facebook'
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-        Support this campground
-      </h2>
-      <p className="text-xs text-mist leading-snug">
-        Enjoying your stay? Your feedback helps this campground grow.
-      </p>
+    // Phase 4b -- the outer <section> + eyebrow + helper copy used
+    // to live here, but they're now provided by the parent
+    // DisclosureSection (title="Support this campground" +
+    // description). Stripped so there's no duplicate header inside
+    // the accordion body.
+    <div className="space-y-3">
       {bookingUrl && (bookingMessage || bookingPromoCode) && (
         <div className="rounded-2xl border border-flame/30 bg-flame/[0.06] px-4 py-3 space-y-1.5">
           {bookingMessage && (
@@ -463,7 +474,7 @@ function SupportThisCampground({
           </a>
         )}
       </div>
-    </section>
+    </div>
   )
 }
 
