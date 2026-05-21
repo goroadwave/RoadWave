@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { loadCamperMessages } from '@/components/campgrounds/camper-message-storage'
 import {
   LANTERN_BULLETINS_EVENT,
   LANTERN_MEETUPS_EVENT,
   LANTERN_OFFICE_REPLY_EVENT,
+  LANTERN_OPEN_THREAD_EVENT,
 } from '@/components/campgrounds/lantern-storage'
 
 // Phase 4c -- small, non-intrusive toasts on the camper QR page.
@@ -24,7 +24,7 @@ import {
 //     so the two sides feel consistent.
 //   * Subtle slide-up animation, disabled when
 //     prefers-reduced-motion is set.
-//   * Auto-dismiss after 6s; manual dismiss via the × button.
+//   * Auto-dismiss after 7s; manual dismiss via the × button.
 //   * Queue cap of 3 -- if a fourth event arrives, the oldest
 //     toast drops off so the screen never stacks more than three
 //     at once.
@@ -32,11 +32,13 @@ import {
 //     a Dismiss button.
 //
 // Tap actions:
-//   * Office reply: opens /m/<id>?t=<token>&from=<slug> in a new
-//     tab, reusing the same secure thread URL the tracker card +
-//     Lantern panel use. The threadId is in the event detail; the
-//     token + slug are looked up from the camper-message-storage
-//     entry that the tracker maintains on this device.
+//   * Office reply: dispatches LANTERN_OPEN_THREAD_EVENT so the
+//     unified Office Help & Messages section (CamperMessageTracker)
+//     expands the matching card inline and scrolls into view. NO
+//     new tab is opened from the QR page -- the camper stays on the
+//     same page they're already on. The /m/<id> route still exists
+//     for external secure email reply links, where opening a fresh
+//     gated page IS the right thing.
 //   * Bulletin / Meetup: smooth-scroll to the matching anchor
 //     (#bulletins / #meetups) inside the Happening section.
 //
@@ -55,7 +57,7 @@ type Toast = {
   threadId?: string
 }
 
-const TOAST_DURATION_MS = 6_000
+const TOAST_DURATION_MS = 7_000
 const MAX_TOASTS = 3
 
 export function CamperToastHost({
@@ -144,29 +146,20 @@ export function CamperToastHost({
 
   function action(t: Toast) {
     if (t.kind === 'reply' && t.threadId) {
-      // Look up the stored entry for this thread to get the token
-      // + slug needed for the secure /m/<id> URL. If the entry
-      // isn't on this device (rare -- means a reply arrived for a
-      // thread the tracker doesn't know about, e.g. a different
-      // browser submitted it), fall back to scrolling to the
-      // tracker card area instead of opening a useless URL.
-      const entry = loadCamperMessages(campgroundId).find(
-        (e) => e.id === t.threadId,
+      // Fire the cross-surface "open this thread inline" event.
+      // CamperMessageTracker listens, expands the matching card,
+      // and scrolls #office-help into view. No new tab, no
+      // navigation -- the camper stays inside the unified Office
+      // Help & Messages section. If the tracker doesn't recognize
+      // the thread id (rare: reply landed for a thread no longer
+      // stored on this device, e.g. it was Cleared from this
+      // device), the tracker silently no-ops and the camper still
+      // has the Lantern entry + persistent card to fall back on.
+      window.dispatchEvent(
+        new CustomEvent(LANTERN_OPEN_THREAD_EVENT, {
+          detail: { campgroundId, threadId: t.threadId },
+        }),
       )
-      if (entry) {
-        const fromParam = entry.campgroundSlug
-          ? `&from=${encodeURIComponent(entry.campgroundSlug)}`
-          : ''
-        window.open(
-          `/m/${encodeURIComponent(entry.id)}?t=${encodeURIComponent(entry.token)}${fromParam}`,
-          '_blank',
-          'noopener,noreferrer',
-        )
-        dismiss(t.key)
-        return
-      }
-      // Fallback: just dismiss the toast. The Lantern + persistent
-      // tracker card on the page still indicate the unread reply.
       dismiss(t.key)
       return
     }
@@ -187,12 +180,14 @@ export function CamperToastHost({
       role="status"
       aria-live="polite"
       // Bottom-center on mobile (with safe-area inset for iOS),
-      // bottom-right on >= sm. z-40 sits above page content but
-      // below the CriticalBanner (which is in document flow at
-      // the top, so z-index doesn't matter for it).
-      className="fixed z-40 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 w-[calc(100%-2rem)] max-w-sm sm:max-w-sm flex flex-col gap-2"
+      // bottom-right on >= sm. z-50 so the toast sits above page
+      // content, the Lantern panel (which is also z-50 but lives
+      // in the header so doesn't overlap), and any sticky elements
+      // at the bottom of the layout. The CriticalBanner is in
+      // document flow at the top, so z-index doesn't matter for it.
+      className="fixed z-50 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 w-[calc(100%-2rem)] max-w-sm sm:max-w-sm flex flex-col gap-2 pointer-events-none"
       style={{
-        bottom: `calc(env(safe-area-inset-bottom, 0px) + 1rem)`,
+        bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem)`,
       }}
     >
       {toasts.map((t) => (
@@ -240,7 +235,10 @@ function CamperToast({
 }) {
   const copy = COPY[toast.kind]
   return (
-    <div className="camper-toast rounded-2xl border border-flame/40 bg-night/95 shadow-2xl shadow-black/40 backdrop-blur px-4 py-3 space-y-2">
+    // pointer-events-auto re-enables interaction on the toast itself
+    // (the parent container is pointer-events-none so non-toast areas
+    // of the bottom bar don't intercept taps).
+    <div className="camper-toast pointer-events-auto rounded-2xl border border-flame/40 bg-night/95 shadow-2xl shadow-black/40 backdrop-blur px-4 py-3 space-y-2">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-semibold text-cream leading-snug min-w-0">
           <span aria-hidden className="mr-1.5">

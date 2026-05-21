@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { CamperScrollRestore } from '@/components/campgrounds/camper-scroll-restore'
 import { CamperToastHost } from '@/components/campgrounds/camper-toast-host'
 import { CriticalBanner } from '@/components/campgrounds/critical-banner'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
@@ -403,7 +404,11 @@ export function CampgroundGuestHubBody({
                   </a>
                 )}
                 {showContactAction && (
-                  <a href="#contact-office" className={quickActionCls}>
+                  // Points at the unified Office Help & Messages
+                  // section that wraps the persistent message
+                  // tracker + Contact Office form (welcome-engagement
+                  // owns the id="office-help" anchor).
+                  <a href="#office-help" className={quickActionCls}>
                     <span aria-hidden>💬</span>
                     <span>Contact office</span>
                   </a>
@@ -823,6 +828,13 @@ export function CampgroundGuestHubBody({
         campgroundId={campground.id}
         previewMode={previewMode}
       />
+
+      {/* Force a fresh reload to start at the top of the page (or
+          honor an explicit URL hash). Prevents the browser's
+          default scroll restoration from dropping the camper into
+          the middle of the page after a refresh or a polling
+          re-render. Renders nothing. */}
+      {!previewMode && <CamperScrollRestore />}
     </main>
   )
 }

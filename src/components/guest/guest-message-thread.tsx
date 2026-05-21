@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 // Guest-side thread view + reply form. Loads /m/<id>?t=<token>.
@@ -14,6 +14,73 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 //
 // We deliberately do NOT pre-fill site / last name from the URL so an
 // accidentally-forwarded link can't bypass the second factor.
+//
+// Same-device skip
+// ----------------
+// When the camper opens /m/<id> from a device that already has the
+// thread persisted in localStorage (because that device is where the
+// camper submitted the original Contact Office message), we
+// auto-unlock with the stored site number + last name and skip the
+// verification form entirely. The token in the URL still has to
+// match the stored token -- this is just a UX shortcut so the camper
+// doesn't re-type credentials they already proved on this device.
+//
+// Email reply links from a different device / browser, or after the
+// camper tapped "Clear from this device" on the QR-page tracker, fall
+// through to the normal site+last-name gate.
+
+// localStorage key prefix shared with camper-message-storage.ts. We
+// keep a copy here instead of importing the helper so the bundled
+// page doesn't drag the whole tracker module + its React hooks into
+// the /m/<id> route.
+const STORED_PREFIX = 'roadwave:office-msgs:'
+
+type StoredHint = {
+  siteNumber: string
+  lastName: string
+}
+
+function readStoredCredsForMessage(
+  messageId: string,
+  token: string,
+): StoredHint | null {
+  if (typeof window === 'undefined') return null
+  try {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i)
+      if (!key || !key.startsWith(STORED_PREFIX)) continue
+      const raw = window.localStorage.getItem(key)
+      if (!raw) continue
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(raw)
+      } catch {
+        continue
+      }
+      if (!Array.isArray(parsed)) continue
+      for (const entry of parsed) {
+        if (!entry || typeof entry !== 'object') continue
+        const r = entry as Record<string, unknown>
+        if (typeof r.id !== 'string' || r.id !== messageId) continue
+        // Token in localStorage MUST match the token in the URL.
+        // A token mismatch means the stored entry isn't this thread
+        // (e.g. ids collided across campgrounds, or someone is
+        // poking at the URL) -- fall through to the verification
+        // gate rather than auto-unlocking with the wrong creds.
+        if (typeof r.token !== 'string' || r.token !== token) continue
+        if (typeof r.siteNumber !== 'string' || r.siteNumber.length === 0) {
+          continue
+        }
+        if (typeof r.lastName !== 'string' || r.lastName.length === 0) continue
+        return { siteNumber: r.siteNumber, lastName: r.lastName }
+      }
+    }
+  } catch {
+    // Storage disabled / quota issues -- silently fall through to
+    // the manual verification gate.
+  }
+  return null
+}
 
 type ThreadRow = {
   message_body: string | null
@@ -79,6 +146,48 @@ export function GuestMessageThread({
   const [replying, startReplying] = useTransition()
   const [replyError, setReplyError] = useState<string | null>(null)
   const [sentNote, setSentNote] = useState(false)
+  // Track whether the page is auto-unlocking from same-device
+  // localStorage credentials. While true the form is suppressed and
+  // a small "Unlocking…" message renders instead. If the auto-unlock
+  // fails (network error, expired token, stored creds mismatch
+  // server-side) we fall back to the manual verification gate with
+  // the stored creds NOT pre-filled (so the camper sees a clean
+  // form, not a confused state).
+  const [autoAttempted, setAutoAttempted] = useState(false)
+  const autoAttemptRef = useRef(false)
+
+  // Same-device skip: scan localStorage for a stored entry that
+  // matches messageId + token, and if found auto-unlock with the
+  // stored site + last name. Runs once per mount; falls back to the
+  // manual gate when nothing matches or the auto-unlock fails.
+  useEffect(() => {
+    if (autoAttemptRef.current) return
+    autoAttemptRef.current = true
+    if (!messageId || !token) return
+    const hint = readStoredCredsForMessage(messageId, token)
+    if (!hint) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAutoAttempted(true)
+    setSiteNumber(hint.siteNumber)
+    setLastName(hint.lastName)
+    startUnlocking(async () => {
+      try {
+        await loadThread(hint.siteNumber, hint.lastName)
+      } catch {
+        // Same-device unlock failed (token expired, RPC error, etc).
+        // Drop the auto-attempt flag so the manual verification form
+        // renders -- the camper can re-type and try again.
+        setAutoAttempted(false)
+        setSiteNumber('')
+        setLastName('')
+      }
+    })
+    // loadThread is declared below the effect but its identity is
+    // stable across renders -- it closes over messageId + token,
+    // which are component props. ESLint can't prove that, so we
+    // explicitly list only the dependencies we care about.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messageId, token])
 
   // Bail early if either piece is missing -- no point letting the
   // user type anything if the token isn't even in the URL.
@@ -194,6 +303,19 @@ export function GuestMessageThread({
   }
 
   if (!thread) {
+    // Auto-unlock is in flight from the same-device localStorage
+    // path. Suppress the verification form so the camper doesn't
+    // see a flash of "Confirm it's you" before the thread loads.
+    if (autoAttempted && unlocking) {
+      return (
+        <div className="space-y-3 rounded-2xl border border-white/10 bg-card p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-flame">
+            Private reply thread
+          </p>
+          <p className="text-sm text-mist leading-snug">Unlocking…</p>
+        </div>
+      )
+    }
     return (
       <div className="space-y-4">
         <div className="space-y-2">
@@ -204,9 +326,9 @@ export function GuestMessageThread({
             Confirm it&apos;s you
           </h1>
           <p className="text-xs text-mist leading-snug">
-            Enter the site number + last name you used when you sent the
-            message to the office. Both have to match before the thread
-            loads -- this keeps the reply private to you.
+            To protect your private message, please confirm your site
+            number and last name. Both have to match what you used when
+            you first sent the message.
           </p>
           {campgroundBackHref && (
             <p className="text-xs text-mist leading-snug">

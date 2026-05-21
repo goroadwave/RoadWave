@@ -10,6 +10,7 @@ import {
   LANTERN_MARK_SEEN_EVENT,
   LANTERN_MEETUPS_EVENT,
   LANTERN_OFFICE_REPLY_EVENT,
+  LANTERN_OPEN_THREAD_EVENT,
   loadAckedCriticalIds,
   loadClearedCriticalIds,
   loadLanternSeen,
@@ -498,13 +499,16 @@ export function Lantern({
 
   function openItem(item: LanternItem) {
     if (item.kind === 'reply') {
-      const fromParam = item.campgroundSlug
-        ? `&from=${encodeURIComponent(item.campgroundSlug)}`
-        : ''
-      window.open(
-        `/m/${encodeURIComponent(item.threadId)}?t=${encodeURIComponent(item.token)}${fromParam}`,
-        '_blank',
-        'noopener,noreferrer',
+      // Stay on the QR page -- dispatch the cross-surface event the
+      // CamperMessageTracker listens for. It expands the matching
+      // card inline AND scrolls #office-help into view. The /m/<id>
+      // route still exists for external email reply links coming
+      // from outside the QR session; only the in-page Lantern entry
+      // changed.
+      window.dispatchEvent(
+        new CustomEvent(LANTERN_OPEN_THREAD_EVENT, {
+          detail: { campgroundId, threadId: item.threadId },
+        }),
       )
     } else if (item.kind === 'bulletin') {
       // scrollIntoView instead of writing window.location.hash --

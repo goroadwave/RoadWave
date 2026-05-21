@@ -175,40 +175,63 @@ export function OwnerMessageToaster() {
 
   const isSafety = toast.kind === 'safety'
   const title = isSafety
-    ? 'New Safety Concern received'
+    ? 'Safety Concern received'
     : 'New guest message received'
+  const body = isSafety
+    ? 'Review this message now.'
+    : 'Review it in Messages.'
 
   return (
     <div
       role="status"
       aria-live={isSafety ? 'assertive' : 'polite'}
-      className="fixed z-40 bottom-24 sm:bottom-6 right-4 sm:right-6 max-w-sm w-[calc(100%-2rem)] sm:w-auto"
+      // z-50 so the toast sits above the persistent Messages nav
+      // (which itself can rise on scroll) and any open dropdowns.
+      // bottom-24 on mobile keeps it above the iOS home indicator
+      // and any sticky bottom bars.
+      className="fixed z-50 bottom-24 sm:bottom-6 right-4 sm:right-6 max-w-sm w-[calc(100%-2rem)] sm:w-auto"
+      style={{
+        bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem)`,
+      }}
     >
       <div
         className={
           isSafety
-            ? 'rounded-2xl border border-red-500/40 bg-night/95 shadow-2xl shadow-red-900/40 backdrop-blur px-4 py-3 space-y-2'
+            // Safety: red ring, faint red glow, accent bar on the
+            // left, brighter red text. Loud enough to grab an
+            // owner's attention without taking over the screen.
+            ? 'rounded-2xl border-2 border-red-500/70 bg-night/95 shadow-2xl shadow-red-900/50 ring-2 ring-red-500/30 backdrop-blur px-4 py-3 space-y-2 relative overflow-hidden'
             : 'rounded-2xl border border-flame/40 bg-night/95 shadow-2xl shadow-black/40 backdrop-blur px-4 py-3 space-y-2'
         }
       >
+        {isSafety && (
+          // Left edge accent strip -- pure visual cue, no a11y role.
+          <span
+            aria-hidden
+            className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"
+          />
+        )}
         <div className="flex items-start justify-between gap-3">
-          <p
-            className={
-              isSafety
-                ? 'text-sm font-semibold text-red-200 leading-snug'
-                : 'text-sm font-semibold text-cream leading-snug'
-            }
-          >
-            <span aria-hidden className="mr-1.5">
-              {isSafety ? '🚨' : '📬'}
-            </span>
-            {title}
-          </p>
+          <div className="min-w-0">
+            <p
+              className={
+                isSafety
+                  ? 'text-sm font-bold text-red-200 leading-snug'
+                  : 'text-sm font-semibold text-cream leading-snug'
+              }
+            >
+              <span aria-hidden className="mr-1.5">
+                {isSafety ? '🚨' : '📬'}
+              </span>
+              {title}
+            </p>
+            <p className="text-xs text-mist leading-snug mt-0.5">{body}</p>
+          </div>
           <button
             type="button"
             onClick={() => setToast(null)}
             aria-label="Dismiss notification"
-            className="text-mist hover:text-cream text-xs leading-none rounded p-1"
+            className="shrink-0 text-mist hover:text-cream text-xs leading-none rounded p-1"
           >
             ✕
           </button>
@@ -218,11 +241,11 @@ export function OwnerMessageToaster() {
           onClick={() => setToast(null)}
           className={
             isSafety
-              ? 'inline-flex items-center gap-1 rounded-lg bg-red-500/20 text-red-200 border border-red-500/40 px-3 py-1.5 text-xs font-semibold hover:bg-red-500/30 transition-colors'
+              ? 'inline-flex items-center gap-1 rounded-lg bg-red-500/25 text-red-100 border border-red-500/60 px-3 py-1.5 text-xs font-bold hover:bg-red-500/35 transition-colors'
               : 'inline-flex items-center gap-1 rounded-lg bg-flame/15 text-flame border border-flame/40 px-3 py-1.5 text-xs font-semibold hover:bg-flame/25 transition-colors'
           }
         >
-          View messages →
+          {isSafety ? 'Review now' : 'View messages'} →
         </Link>
       </div>
     </div>

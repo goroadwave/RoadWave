@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+
 // Browser-only persistence for "I sent the office a message" entries.
 // Backs the persistent CamperMessageTracker card on the campground
 // welcome page so the camper can return to their private reply thread
@@ -181,4 +183,82 @@ export function markCamperMessageSeen(
     e.id === messageId ? { ...e, lastSeenReplyAt } : e,
   )
   saveCamperMessages(campgroundId, next)
+}
+
+// useSyncExternalStore wiring for the per-campground localStorage key.
+// Returns the raw JSON string; the hook below memoizes parsed entries
+// on top of it so multiple consumers in the same tree share the same
+// subscription and the same array identity on re-renders that don't
+// change the underlying storage.
+
+function makeSubscribe(campgroundId: string) {
+  const expectedKey = storageKey(campgroundId)
+  return (notify: () => void) => {
+    function onAdded(e: Event) {
+      const ce = e as CustomEvent<{ campgroundId?: string }>
+      if (ce.detail?.campgroundId === campgroundId) notify()
+    }
+    function onStorage(e: StorageEvent) {
+      if (e.key === expectedKey) notify()
+    }
+    function onFocus() {
+      notify()
+    }
+    window.addEventListener(CAMPER_MSG_EVENT, onAdded)
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      window.removeEventListener(CAMPER_MSG_EVENT, onAdded)
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('focus', onFocus)
+    }
+  }
+}
+
+function makeGetSnapshot(campgroundId: string) {
+  const key = storageKey(campgroundId)
+  return (): string => {
+    if (typeof window === 'undefined') return ''
+    return window.localStorage.getItem(key) ?? ''
+  }
+}
+
+function getServerSnapshot(): string {
+  return ''
+}
+
+// Mount-gated localStorage reader. SSR + first client render see [];
+// the post-mount effect flips the gate so subsequent renders return
+// the parsed entries (avoids the React 19 hydration mismatch we'd
+// otherwise hit for a returning camper with stored office threads).
+//
+// Shared by CamperMessageTracker (renders the cards) AND the
+// OfficeHelpSection wrapper in welcome-engagement (chooses whether to
+// render the form expanded vs collapsed behind "Send another
+// message"). Both consumers read the same string snapshot via
+// useSyncExternalStore, so a single mutation re-renders both without
+// either component knowing about the other.
+export function useCamperMessages(
+  campgroundId: string,
+  previewMode = false,
+): StoredCamperMessage[] {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
+  const subscribe = useMemo(() => makeSubscribe(campgroundId), [campgroundId])
+  const getSnapshot = useMemo(
+    () => makeGetSnapshot(campgroundId),
+    [campgroundId],
+  )
+  const raw = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  return useMemo<StoredCamperMessage[]>(() => {
+    if (previewMode || !mounted) return []
+    // raw is part of the dep array so the parse re-runs when the
+    // underlying string changes; loadCamperMessages itself reads from
+    // localStorage so we don't have to re-implement the parser here.
+    void raw
+    return loadCamperMessages(campgroundId)
+  }, [campgroundId, previewMode, mounted, raw])
 }

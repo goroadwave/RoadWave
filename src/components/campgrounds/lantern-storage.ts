@@ -107,6 +107,14 @@ export const LANTERN_OFFICE_REPLY_EVENT = 'roadwave:lantern-office-reply'
 // clear at the same time. detail: { campgroundId }
 export const LANTERN_MARK_SEEN_EVENT = 'roadwave:lantern-mark-seen'
 
+// Fired by surfaces that want the unified Office Help & Messages
+// tracker card to open inline (the bottom-of-screen reply toast and
+// the Lantern's reply item, today). The tracker listens, scrolls to
+// the #office-help section, and expands the matching card in-place
+// -- replacing the older "open /m/<id> in a new tab" behavior so the
+// camper never leaves the QR page. detail: { campgroundId, threadId }
+export const LANTERN_OPEN_THREAD_EVENT = 'roadwave:lantern-open-thread'
+
 // Phase 3c -- fired by BulletinsList when the active is_critical
 // bulletin in the polled payload changes (different id, different
 // expires_at, or appeared/disappeared). detail:

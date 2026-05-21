@@ -1,7 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { appendCamperMessage } from '@/components/campgrounds/camper-message-storage'
+import { useEffect, useRef, useState } from 'react'
+import {
+  appendCamperMessage,
+  useCamperMessages,
+} from '@/components/campgrounds/camper-message-storage'
 import { CamperMessageTracker } from '@/components/campgrounds/camper-message-tracker'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
 
@@ -15,8 +18,13 @@ import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
 //   2. Review — link out to the configured Google review URL.
 //   3. Book Again — link out with an optional custom message + promo
 //      code; can also point at a phone/contact when no URL is set.
-//   4. Contact the Office — categorized message form into the owner's
-//      dashboard inbox (with optional email notification).
+//   4. Office Help & Messages — unified section combining the
+//      persistent "Your messages with the office" tracker (when the
+//      camper has prior threads on this device) AND the categorized
+//      Contact Office form. Owns id="office-help" anchor and the
+//      post-submit scroll target so a successful send lands the
+//      camper on the new message card instead of being scrolled into
+//      the footer.
 //
 // All taps that aren't a navigation away fire to /api/campground/event
 // via sendBeacon so they roll into the dashboard "This Week" card and
@@ -125,37 +133,34 @@ export function WelcomeEngagement(props: Props) {
     previewMode = false,
   } = props
 
-  // Each section can be hidden independently — if every section ends
-  // up suppressed we render nothing and let the welcome page collapse
-  // the gap.
   const showReview = reviewEnabled && !!reviewUrl
   const showFacebook = facebookEnabled && !!facebookUrl
   const showBooking = bookingEnabled && !!bookingUrl
   const showContact = contactEnabled
   const showPulse = pulseEnabled
-  // "Support This Campground" renders if any of its three CTAs are
-  // configured. Each button is independently gated below; the section
-  // wrapper just decides whether the headline appears.
   const showSupport = showReview || showFacebook || showBooking
 
-  // The tracker reads localStorage and only renders if the camper
-  // has existing office messages for this campground. Even when every
-  // other surface is off, we want the tracker to keep showing so a
-  // returning camper can still find their thread.
-  const trackerNode = (
-    <CamperMessageTracker
+  // The OfficeHelpSection self-decides whether to render: if the
+  // owner has Contact Office turned off AND the camper has no
+  // stored threads on this device, it returns null. Otherwise it
+  // renders the unified section (heading + tracker + form). Mount
+  // it unconditionally so a returning camper with stored threads
+  // sees them even when other surfaces are all disabled.
+  const officeHelpNode = (
+    <OfficeHelpSection
       campgroundId={campgroundId}
+      campgroundSlug={campgroundSlug}
+      contactEnabled={showContact}
       previewMode={previewMode}
     />
   )
 
   if (!showReview && !showFacebook && !showBooking && !showContact && !showPulse) {
-    return <div className="space-y-8">{trackerNode}</div>
+    return <div className="space-y-8">{officeHelpNode}</div>
   }
 
   return (
     <div className="space-y-8">
-      {trackerNode}
       {showPulse && (
         <PulseCheck campgroundId={campgroundId} previewMode={previewMode} />
       )}
@@ -182,13 +187,7 @@ export function WelcomeEngagement(props: Props) {
           />
         </DisclosureSection>
       )}
-      {showContact && (
-        <ContactOffice
-          campgroundId={campgroundId}
-          campgroundSlug={campgroundSlug}
-          previewMode={previewMode}
-        />
-      )}
+      {officeHelpNode}
     </div>
   )
 }
@@ -479,7 +478,155 @@ function SupportThisCampground({
 }
 
 // ---------------------------------------------------------------------------
-// Contact the Office
+// Office Help & Messages -- unified section
+// ---------------------------------------------------------------------------
+// Owns the single <section id="office-help"> wrapper and one heading
+// for everything office-related: the persistent "Your messages with
+// the office" tracker (CamperMessageTracker, which now renders bare
+// cards with no section/heading of its own) AND the categorized
+// Contact Office form.
+//
+// Layout rules per the spec:
+//   * If the camper has any stored thread on this device -> tracker
+//     cards render at the top; the form collapses behind a tiny
+//     "+ Send another message" button below them. Tap to expand the
+//     form; submit reverts to the collapsed state. The tracker card
+//     above is the camper's success / "check replies" surface.
+//   * If the camper has no stored thread on this device -> the form
+//     is rendered directly (no toggle), so a first-time camper sees
+//     the inputs immediately.
+//   * On post-submit success the section's top is scrolled into
+//     view (NOT the footer). The newly-created tracker card lands
+//     at the top of the section, so the camper sees the
+//     confirmation card without a jarring jump.
+//
+// Mount rule: renders nothing when the owner has Contact Office
+// disabled AND the camper has no stored threads. That way the
+// section only exists on the page when there's something useful in
+// it -- and a returning camper still sees their thread even if the
+// owner has toggled the form off in the meantime.
+
+function OfficeHelpSection({
+  campgroundId,
+  campgroundSlug,
+  contactEnabled,
+  previewMode,
+}: {
+  campgroundId: string
+  campgroundSlug: string | null
+  contactEnabled: boolean
+  previewMode: boolean
+}) {
+  const entries = useCamperMessages(campgroundId, previewMode)
+  const hasEntries = entries.length > 0
+
+  // Form expanded by default ONLY when there are no entries (so a
+  // first-time camper goes straight to the form). When there's a
+  // stored thread, start collapsed -- the camper most likely
+  // returned to read a reply, not to send a new message.
+  const [formOpen, setFormOpen] = useState(!hasEntries)
+  const previousHadEntries = useRef(hasEntries)
+
+  // Keep `formOpen` in sync with the entry list:
+  //   * Transition from "no entries" -> "has entries" (camper just
+  //     submitted): collapse the form. The tracker card above is the
+  //     confirmation surface.
+  //   * Transition from "has entries" -> "no entries" (cleared the
+  //     last card on this device): expand so a returning camper
+  //     doesn't have to tap "Send another" to type a fresh message.
+  useEffect(() => {
+    if (previousHadEntries.current === hasEntries) return
+    setFormOpen(!hasEntries)
+    previousHadEntries.current = hasEntries
+  }, [hasEntries])
+
+  // Nothing to render when both conditions hide it (no entries
+  // stored AND the owner has the Contact form disabled).
+  if (!contactEnabled && !hasEntries) return null
+
+  return (
+    <section id="office-help" className="space-y-3 scroll-mt-4">
+      <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+        Office Help &amp; Messages
+      </h2>
+
+      {/* Tracker cards (the camper's stored threads on this device).
+          Returns null when entries.length === 0 so we don't render
+          an empty <div>. The cards include inline expand-to-thread
+          + reply UX so the camper never leaves this section. */}
+      <CamperMessageTracker
+        campgroundId={campgroundId}
+        previewMode={previewMode}
+      />
+
+      {contactEnabled && (
+        <ContactOfficeBlock
+          campgroundId={campgroundId}
+          campgroundSlug={campgroundSlug}
+          previewMode={previewMode}
+          hasEntries={hasEntries}
+          formOpen={formOpen}
+          onOpenForm={() => setFormOpen(true)}
+          onSubmitted={() => setFormOpen(false)}
+        />
+      )}
+    </section>
+  )
+}
+
+// Decides between the small "+ Send another message" trigger (when
+// there's already a stored thread above and the camper hasn't
+// requested the form) and the full form. After a successful submit
+// the parent flips formOpen back to false so the camper falls back
+// to the tracker card as the source of truth.
+
+function ContactOfficeBlock({
+  campgroundId,
+  campgroundSlug,
+  previewMode,
+  hasEntries,
+  formOpen,
+  onOpenForm,
+  onSubmitted,
+}: {
+  campgroundId: string
+  campgroundSlug: string | null
+  previewMode: boolean
+  hasEntries: boolean
+  formOpen: boolean
+  onOpenForm: () => void
+  onSubmitted: () => void
+}) {
+  // When the camper has a stored thread AND hasn't asked to compose
+  // again, render the tiny trigger. The trigger doesn't include its
+  // own anchor -- the parent section's id="office-help" is the only
+  // scroll target on the page for this surface.
+  if (hasEntries && !formOpen) {
+    return (
+      <p className="text-xs text-mist">
+        <button
+          type="button"
+          onClick={onOpenForm}
+          className="underline-offset-2 hover:text-cream hover:underline"
+        >
+          + Send another message
+        </button>
+      </p>
+    )
+  }
+
+  return (
+    <ContactOfficeForm
+      campgroundId={campgroundId}
+      campgroundSlug={campgroundSlug}
+      previewMode={previewMode}
+      onSubmitted={onSubmitted}
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Contact the Office -- form-only component
 // ---------------------------------------------------------------------------
 
 // Allowed values for preferred_contact_method. Mirrors mig 0052's
@@ -487,14 +634,19 @@ function SupportThisCampground({
 // first ("Email me back" tends to dominate).
 type PreferredContactMethod = 'email' | 'phone' | 'text' | 'no_reply'
 
-function ContactOffice({
+function ContactOfficeForm({
   campgroundId,
   campgroundSlug,
   previewMode,
+  onSubmitted,
 }: {
   campgroundId: string
   campgroundSlug: string | null
   previewMode: boolean
+  /** Fires after a successful submit. The OfficeHelpSection wrapper
+   *  flips back to the collapsed-trigger state so the tracker card
+   *  above is the single visible confirmation surface. */
+  onSubmitted: () => void
 }) {
   // Structured guest-info fields persisted to public.campground_messages
   // (mig 0052). All five contact pointers are owner-only PII; the
@@ -511,35 +663,7 @@ function ContactOffice({
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sent, setSent] = useState(false)
   const [startedLogged, setStartedLogged] = useState(false)
-  // After a successful submit we DON'T render a full inline "Check
-  // replies" card -- that duplicated the persistent "Your messages
-  // with the office" tracker rendered above. We just show a short
-  // confirmation line and let the tracker (which received the same
-  // entry via appendCamperMessage) be the single source of truth
-  // for the camper's office threads on this device.
-
-  // After a successful submit, the Contact Office form collapses
-  // from ~700px tall to a small "+ Send another message" link.
-  // Without an explicit scroll, the browser preserves the same
-  // scroll-Y offset, which now points well below the form -- the
-  // camper ends up looking at the footer / camper-connections
-  // accordion instead of their new message card. Scroll to the
-  // tracker's #office-messages anchor so they land on the new
-  // card. The 80ms timeout lets the form collapse + the tracker
-  // re-render with the new entry settle before we measure the
-  // anchor position.
-  useEffect(() => {
-    if (!sent) return
-    if (typeof window === 'undefined') return
-    const id = window.setTimeout(() => {
-      document
-        .getElementById('office-messages')
-        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 80)
-    return () => window.clearTimeout(id)
-  }, [sent])
 
   // Fires once per ContactOffice mount the first time the camper
   // interacts with any field. Distinct from the contact_message
@@ -647,15 +771,14 @@ function ContactOffice({
           replyToken = j.guest_reply_token
         }
       } catch {
-        // Body not JSON -- skip the link, still show the basic "Sent" UI.
+        // Body not JSON -- skip persistence, still show "Sent" UI.
       }
       if (replyId && replyToken) {
         // Persist to localStorage so the CamperMessageTracker can
-        // restore the "Check replies" card after reload. Scoped per
-        // campground; entries from other campgrounds aren't touched.
-        // The tracker is the single rendering surface for the
-        // camper's threads -- the inline form just flips to a short
-        // "Sent" line below.
+        // render the new card immediately. Scoped per campground;
+        // entries from other campgrounds aren't touched. The
+        // tracker card above is the single rendering surface for
+        // the camper's threads -- this form just collapses.
         appendCamperMessage(campgroundId, {
           id: replyId,
           token: replyToken,
@@ -667,8 +790,7 @@ function ContactOffice({
           campgroundSlug,
         })
       }
-      // Reset + show confirmation. We keep the section visible so the
-      // guest can send another if needed.
+      // Reset all form fields so re-opening the form starts fresh.
       setSiteNumber('')
       setFirstName('')
       setLastName('')
@@ -677,7 +799,21 @@ function ContactOffice({
       setPreferredMethod('')
       setCategory('')
       setBody('')
-      setSent(true)
+      // Hand control back to the parent: it flips formOpen to false
+      // so the tracker card above becomes the only "Sent" surface.
+      onSubmitted()
+      // Smooth-scroll to the top of the unified section so the
+      // camper SEES the newly-rendered card. Without this, after
+      // the form collapses by ~700px the browser leaves the
+      // scrollY where it was, dropping the camper into the
+      // footer / "Meet Other Campers" accordion area. 80ms gives
+      // React time to render the new tracker card so it's the
+      // actual top of the section we scroll to.
+      window.setTimeout(() => {
+        document
+          .getElementById('office-help')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 80)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Send failed.')
     } finally {
@@ -685,215 +821,186 @@ function ContactOffice({
     }
   }
 
-  // Once a message has been submitted, the persistent tracker card
-  // above ("Your messages with the office") is the sole UI for the
-  // just-sent thread. We collapse this whole section to ONE tiny
-  // underline link so there's nothing here that could read as a
-  // second card -- no eyebrow heading, no green check, no
-  // confirmation paragraph, no border, no background. Click the
-  // link to open a fresh form for another submission.
-  if (sent) {
-    // Anchor target still attached so the Quick Actions "Contact
-    // office" button doesn't scroll past nothing after a successful
-    // submit -- the tiny "Send another" link is what they land on.
-    return (
-      <p id="contact-office" className="text-xs text-mist scroll-mt-4">
-        <button
-          type="button"
-          onClick={() => setSent(false)}
-          className="underline-offset-2 hover:text-cream hover:underline"
-        >
-          + Send another message
-        </button>
-      </p>
-    )
-  }
-
   return (
-    <section id="contact-office" className="space-y-3 scroll-mt-4">
-      <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-        Contact the office
-      </h2>
-      <form
-        onSubmit={submit}
-        className="space-y-3 rounded-2xl border border-white/5 bg-card p-4"
-      >
-        <p className="text-xs text-mist leading-snug">
-          For emergencies, call 911. For urgent campground issues, call the
-          office directly.
-        </p>
-        <p className="text-[11px] text-mist/80 leading-snug">
-          Your site number and contact details go privately to the office
-          only. They aren&apos;t shown to other campers anywhere on RoadWave.
-        </p>
+    <form
+      onSubmit={submit}
+      className="space-y-3 rounded-2xl border border-white/5 bg-card p-4"
+    >
+      <p className="text-xs text-mist leading-snug">
+        For emergencies, call 911. For urgent campground issues, call the
+        office directly.
+      </p>
+      <p className="text-[11px] text-mist/80 leading-snug">
+        Your site number and contact details go privately to the office
+        only. They aren&apos;t shown to other campers anywhere on RoadWave.
+      </p>
 
-        {/* Site number — required. Free text so RVs in alpha sites,
-            tent loops, or named sections all work. */}
-        <Field label="Site number" required>
+      {/* Site number — required. Free text so RVs in alpha sites,
+          tent loops, or named sections all work. */}
+      <Field label="Site number" required>
+        <input
+          type="text"
+          value={siteNumber}
+          onChange={(e) => setSiteNumber(e.target.value)}
+          onFocus={markStarted}
+          maxLength={60}
+          placeholder="e.g. 12, A-7, Birch 14"
+          className={inputCls}
+          required
+          autoComplete="off"
+        />
+      </Field>
+
+      {/* Name row — last name required, first optional. */}
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Last name" required>
           <input
             type="text"
-            value={siteNumber}
-            onChange={(e) => setSiteNumber(e.target.value)}
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             onFocus={markStarted}
-            maxLength={60}
-            placeholder="e.g. 12, A-7, Birch 14"
+            maxLength={80}
+            placeholder="Smith"
             className={inputCls}
             required
-            autoComplete="off"
+            autoComplete="family-name"
           />
         </Field>
-
-        {/* Name row — last name required, first optional. */}
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="Last name" required>
-            <input
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              onFocus={markStarted}
-              maxLength={80}
-              placeholder="Smith"
-              className={inputCls}
-              required
-              autoComplete="family-name"
-            />
-          </Field>
-          <Field label="First name">
-            <input
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              onFocus={markStarted}
-              maxLength={80}
-              placeholder="Optional"
-              className={inputCls}
-              autoComplete="given-name"
-            />
-          </Field>
-        </div>
-
-        {/* Preferred contact method. Conditional phone/email rendering
-            below keys off this. no_reply collapses both to keep the
-            "I just want to flag something" path light. */}
-        <div>
-          <label className="mb-1 block text-xs font-medium text-cream">
-            How should the office reach you?{' '}
-            <span aria-hidden className="text-red-300">*</span>
-          </label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {(
-              [
-                { value: 'email', label: '📧 Email me' },
-                { value: 'phone', label: '📞 Call me' },
-                { value: 'text', label: '💬 Text me' },
-                { value: 'no_reply', label: '🙅 No reply needed' },
-              ] as { value: PreferredContactMethod; label: string }[]
-            ).map((opt) => {
-              const selected = preferredMethod === opt.value
-              return (
-                <label
-                  key={opt.value}
-                  className={
-                    selected
-                      ? 'inline-flex items-center gap-2 rounded-lg border border-flame bg-flame/15 px-3 py-2 text-xs font-semibold text-flame cursor-pointer'
-                      : 'inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-cream cursor-pointer hover:border-white/20'
-                  }
-                >
-                  <input
-                    type="radio"
-                    name="preferred_contact_method"
-                    value={opt.value}
-                    checked={selected}
-                    onChange={() => {
-                      setPreferredMethod(opt.value)
-                      markStarted()
-                    }}
-                    className="sr-only"
-                  />
-                  {opt.label}
-                </label>
-              )
-            })}
-          </div>
-        </div>
-
-        {needsPhone && (
-          <Field label="Phone number" required>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              onFocus={markStarted}
-              maxLength={60}
-              placeholder="555-123-4567"
-              className={inputCls}
-              required
-              autoComplete="tel"
-              inputMode="tel"
-            />
-          </Field>
-        )}
-        {needsEmail && (
-          <Field label="Email address" required>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onFocus={markStarted}
-              maxLength={200}
-              placeholder="you@example.com"
-              className={inputCls}
-              required
-              autoComplete="email"
-              inputMode="email"
-            />
-          </Field>
-        )}
-
-        {/* Category + message. Category required, message required. */}
-        <div>
-          <label className="mb-1 block text-xs font-medium text-cream">
-            What&apos;s this about?{' '}
-            <span aria-hidden className="text-red-300">*</span>
-          </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
+        <Field label="First name">
+          <input
+            type="text"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
             onFocus={markStarted}
-            className={selectCls}
-            required
-          >
-            <option value="">Pick a category…</option>
-            {CONTACT_CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value} className="bg-night text-cream">
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <Field label="Your message" required>
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onFocus={markStarted}
-            rows={4}
-            maxLength={2000}
-            placeholder="What can the office help with?"
-            className={textareaCls}
-            required
+            maxLength={80}
+            placeholder="Optional"
+            className={inputCls}
+            autoComplete="given-name"
           />
         </Field>
+      </div>
 
-        {error && <p className="text-xs text-red-300">{error}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold hover:bg-amber-400 disabled:opacity-50 transition-colors"
+      {/* Preferred contact method. Conditional phone/email rendering
+          below keys off this. no_reply collapses both to keep the
+          "I just want to flag something" path light. */}
+      <div>
+        <label className="mb-1 block text-xs font-medium text-cream">
+          How should the office reach you?{' '}
+          <span aria-hidden className="text-red-300">*</span>
+        </label>
+        <div className="grid grid-cols-2 gap-1.5">
+          {(
+            [
+              { value: 'email', label: '📧 Email me' },
+              { value: 'phone', label: '📞 Call me' },
+              { value: 'text', label: '💬 Text me' },
+              { value: 'no_reply', label: '🙅 No reply needed' },
+            ] as { value: PreferredContactMethod; label: string }[]
+          ).map((opt) => {
+            const selected = preferredMethod === opt.value
+            return (
+              <label
+                key={opt.value}
+                className={
+                  selected
+                    ? 'inline-flex items-center gap-2 rounded-lg border border-flame bg-flame/15 px-3 py-2 text-xs font-semibold text-flame cursor-pointer'
+                    : 'inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-cream cursor-pointer hover:border-white/20'
+                }
+              >
+                <input
+                  type="radio"
+                  name="preferred_contact_method"
+                  value={opt.value}
+                  checked={selected}
+                  onChange={() => {
+                    setPreferredMethod(opt.value)
+                    markStarted()
+                  }}
+                  className="sr-only"
+                />
+                {opt.label}
+              </label>
+            )
+          })}
+        </div>
+      </div>
+
+      {needsPhone && (
+        <Field label="Phone number" required>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            onFocus={markStarted}
+            maxLength={60}
+            placeholder="555-123-4567"
+            className={inputCls}
+            required
+            autoComplete="tel"
+            inputMode="tel"
+          />
+        </Field>
+      )}
+      {needsEmail && (
+        <Field label="Email address" required>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onFocus={markStarted}
+            maxLength={200}
+            placeholder="you@example.com"
+            className={inputCls}
+            required
+            autoComplete="email"
+            inputMode="email"
+          />
+        </Field>
+      )}
+
+      {/* Category + message. Category required, message required. */}
+      <div>
+        <label className="mb-1 block text-xs font-medium text-cream">
+          What&apos;s this about?{' '}
+          <span aria-hidden className="text-red-300">*</span>
+        </label>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          onFocus={markStarted}
+          className={selectCls}
+          required
         >
-          {submitting ? 'Sending…' : 'Send message'}
-        </button>
-      </form>
-    </section>
+          <option value="">Pick a category…</option>
+          {CONTACT_CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value} className="bg-night text-cream">
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <Field label="Your message" required>
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          onFocus={markStarted}
+          rows={4}
+          maxLength={2000}
+          placeholder="What can the office help with?"
+          className={textareaCls}
+          required
+        />
+      </Field>
+
+      {error && <p className="text-xs text-red-300">{error}</p>}
+      <button
+        type="submit"
+        disabled={submitting}
+        className="inline-flex items-center justify-center gap-2 rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold hover:bg-amber-400 disabled:opacity-50 transition-colors"
+      >
+        {submitting ? 'Sending…' : 'Send message'}
+      </button>
+    </form>
   )
 }
 
