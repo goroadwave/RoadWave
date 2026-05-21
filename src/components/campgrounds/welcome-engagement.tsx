@@ -7,6 +7,7 @@ import {
 } from '@/components/campgrounds/camper-message-storage'
 import { CamperMessageTracker } from '@/components/campgrounds/camper-message-tracker'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
+import { LANTERN_OPEN_THREAD_EVENT } from '@/components/campgrounds/lantern-storage'
 
 // Guest Engagement Hub on the public campground welcome page. Four
 // independently-toggleable surfaces — each rendered only when both the
@@ -526,6 +527,11 @@ function OfficeHelpSection({
   // returned to read a reply, not to send a new message.
   const [formOpen, setFormOpen] = useState(!hasEntries)
   const previousHadEntries = useRef(hasEntries)
+  // Monotonically increasing counter the OfficeHelpCard wrapper
+  // watches; bumping it forces the disclosure card open. We bump it
+  // on post-submit so the camper always sees the new tracker card
+  // (even if the section was closed before they tapped Send).
+  const [openSignal, setOpenSignal] = useState(0)
 
   // Keep `formOpen` in sync with the entry list:
   //   * Transition from "no entries" -> "has entries" (camper just
@@ -545,11 +551,15 @@ function OfficeHelpSection({
   if (!contactEnabled && !hasEntries) return null
 
   return (
-    <section id="office-help" className="space-y-3 scroll-mt-4">
-      <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
-        Office Help &amp; Messages
-      </h2>
-
+    <OfficeHelpCard
+      campgroundId={campgroundId}
+      // Default-open when the camper has a stored thread on this
+      // device -- they came back to read a reply, so the section
+      // should be visible without an extra tap. First-time visitors
+      // get a closed card with the friendly summary copy.
+      defaultOpen={hasEntries}
+      openSignal={openSignal}
+    >
       {/* Tracker cards (the camper's stored threads on this device).
           Returns null when entries.length === 0 so we don't render
           an empty <div>. The cards include inline expand-to-thread
@@ -567,10 +577,128 @@ function OfficeHelpSection({
           hasEntries={hasEntries}
           formOpen={formOpen}
           onOpenForm={() => setFormOpen(true)}
-          onSubmitted={() => setFormOpen(false)}
+          onSubmitted={() => {
+            setFormOpen(false)
+            // Force the disclosure card open so the camper sees
+            // their newly-rendered tracker card. Without this, a
+            // first-time camper who tapped a closed card to send a
+            // message would land back on a collapsed card after
+            // submit and not see the confirmation.
+            setOpenSignal((s) => s + 1)
+          }}
         />
       )}
-    </section>
+    </OfficeHelpCard>
+  )
+}
+
+// Disclosure-style card wrapper for the unified Office Help &
+// Messages section. Owns id="office-help" + the friendly summary
+// copy + the chevron. Uses native <details> so children stay
+// mounted whether the card is open or closed -- important because
+// the CamperMessageTracker inside is what polls for office replies
+// and dispatches the toast event. Unmounting on collapse would
+// silence the only path that fires the camper-side reply toast.
+//
+// Imperative open paths (a ref-driven `<details>.open = true`):
+//   * URL hash on mount + hashchange -- when the Quick Action
+//     "Contact office" link or any other anchor link drops the
+//     camper at #office-help, the card auto-opens after the
+//     browser scroll lands.
+//   * LANTERN_OPEN_THREAD_EVENT -- the toast and the Lantern reply
+//     item dispatch this; the tracker listens to expand the
+//     matching card inline, and this wrapper listens to make sure
+//     the disclosure card is open so the camper can see the
+//     expanded thread.
+//   * `openSignal` prop -- the parent OfficeHelpSection bumps
+//     this counter after a successful submit so the just-created
+//     tracker card is visible without an extra tap.
+//
+// Visual design mirrors DisclosureSection (rounded-2xl, eyebrow
+// title, mist-tinted description, rotating chevron) so the section
+// reads as part of the same accordion family as Support This
+// Campground and Meet Other Campers.
+
+function OfficeHelpCard({
+  campgroundId,
+  defaultOpen,
+  openSignal,
+  children,
+}: {
+  campgroundId: string
+  defaultOpen: boolean
+  openSignal: number
+  children: React.ReactNode
+}) {
+  const ref = useRef<HTMLDetailsElement>(null)
+
+  // Open on hashchange (Quick Action link + any anchor that lands
+  // here mid-session) + on LANTERN_OPEN_THREAD_EVENT (toast and
+  // Lantern reply item). Also opens once on mount if the page
+  // loaded with #office-help already in the URL.
+  useEffect(() => {
+    function forceOpen() {
+      const el = ref.current
+      if (el && !el.open) el.open = true
+    }
+    function onHashChange() {
+      if (window.location.hash === '#office-help') forceOpen()
+    }
+    function onOpenThread(e: Event) {
+      const ce = e as CustomEvent<{ campgroundId?: string }>
+      if (ce.detail?.campgroundId !== campgroundId) return
+      forceOpen()
+    }
+    if (window.location.hash === '#office-help') forceOpen()
+    window.addEventListener('hashchange', onHashChange)
+    window.addEventListener(LANTERN_OPEN_THREAD_EVENT, onOpenThread)
+    return () => {
+      window.removeEventListener('hashchange', onHashChange)
+      window.removeEventListener(LANTERN_OPEN_THREAD_EVENT, onOpenThread)
+    }
+  }, [campgroundId])
+
+  // Parent-driven open. Bumping the signal opens the card; we
+  // ignore the initial value (0) so this effect doesn't fight
+  // defaultOpen on first render.
+  useEffect(() => {
+    if (openSignal <= 0) return
+    const el = ref.current
+    if (el && !el.open) el.open = true
+  }, [openSignal])
+
+  return (
+    <details
+      ref={ref}
+      id="office-help"
+      open={defaultOpen || undefined}
+      // Matches DisclosureSection chrome so the section reads as
+      // part of the same accordion family. scroll-mt-4 keeps a
+      // small visual margin above the heading when anchor-scrolled
+      // into view.
+      className="group scroll-mt-4 rounded-2xl border border-white/5 bg-card/40 overflow-hidden open:bg-card/60"
+    >
+      <summary className="cursor-pointer list-none px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors min-h-[44px]">
+        <div className="min-w-0 space-y-0.5">
+          <span className="block text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
+            Office Help &amp; Messages
+          </span>
+          <span className="block text-xs text-mist leading-snug">
+            Need to send a direct message to the office? We&apos;ll
+            keep it private between you and the campground.
+          </span>
+        </div>
+        <span
+          aria-hidden
+          className="shrink-0 text-mist transition-transform group-open:rotate-180"
+        >
+          ▾
+        </span>
+      </summary>
+      <div className="px-4 pb-4 sm:px-5 sm:pb-5 pt-1 space-y-3">
+        {children}
+      </div>
+    </details>
   )
 }
 

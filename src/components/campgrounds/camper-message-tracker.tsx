@@ -406,14 +406,20 @@ export function CamperMessageTracker({
       const entry = entries.find((x) => x.id === threadId)
       if (!entry) return
       openInline(entry)
-      // Scroll the unified section into view AFTER the expand state
-      // flips so the card has its tall expanded layout when the
-      // scroll happens. 50ms lets React commit the state change.
+      // Scroll the unified section into view AFTER:
+      //   1. the OfficeHelpCard disclosure has had time to open in
+      //      response to the same event (it also listens for
+      //      LANTERN_OPEN_THREAD_EVENT and force-opens the <details>),
+      //   2. this tracker has committed the expand state for the
+      //      target card.
+      // 120ms gives React a render frame on slower mobile so the
+      // scroll lands on the fully-expanded layout instead of the
+      // pre-open height.
       window.setTimeout(() => {
         document
           .getElementById('office-help')
           ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }, 50)
+      }, 120)
     }
     window.addEventListener(LANTERN_OPEN_THREAD_EVENT, onOpenThread)
     return () =>
