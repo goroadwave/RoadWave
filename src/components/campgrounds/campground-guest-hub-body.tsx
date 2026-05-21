@@ -10,6 +10,7 @@ import { QrScrollTopGuard } from '@/components/campgrounds/qr-scroll-top-guard'
 import { TrackedLinkButton } from '@/components/campgrounds/tracked-link-button'
 import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
 import { WifiCopyButton } from '@/components/campgrounds/wifi-copy-button'
+import { AppNav } from '@/components/ui/app-nav'
 import { Logo } from '@/components/ui/logo'
 import { splitAmenities } from '@/lib/campgrounds/amenities'
 import { isQuickCheckInSlug } from '@/lib/checkin/quick-checkin-slugs'
@@ -144,6 +145,11 @@ export type GuestHubAuthedViewer = {
   viewerInterests: string[]
   initialInterests: string[]
   privacyMode: PrivacyMode
+  /** True when the camper currently has any active check_ins row.
+   *  Drives the AppNav's "Updates Only" 8th-slot action button --
+   *  it's only meaningful when the camper is checked into a
+   *  campground. */
+  hasActiveCheckIn: boolean
 }
 
 type Props = {
@@ -310,7 +316,7 @@ export function CampgroundGuestHubBody({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var KNOWN={'#park-map':1,'#wifi':1,'#office-help':1,'#bulletins':1,'#meetups':1,'#critical-notice':1};if('scrollRestoration' in history){history.scrollRestoration='manual'}var h=location.hash;if(h&&KNOWN[h]){try{history.replaceState(null,'',location.pathname+location.search)}catch(_){}}var pin=function(){window.scrollTo(0,0);if(document.scrollingElement)document.scrollingElement.scrollTop=0;document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0)};pin();var stop=false;var halt=function(){stop=true};var ev=['touchstart','pointerdown','wheel','keydown'];for(var i=0;i<ev.length;i++)window.addEventListener(ev[i],halt,{once:true,passive:ev[i]!=='keydown'});var n=0;var id=setInterval(function(){n++;if(n>100||stop){clearInterval(id);return}pin()},30);window.addEventListener('load',function(){if(!stop)pin()});window.addEventListener('pageshow',function(e){if(e.persisted&&!stop)pin()})}catch(e){}",
+              "try{(function(){if('scrollRestoration' in history){history.scrollRestoration='manual'}var h=location.hash;var DEEPLINK={'#camper-connections':1};if(h&&DEEPLINK[h]){/* Phase F: deliberate deep-link from /nearby. Skip the pin loop AND skip the hash-strip; let the browser do its native anchor-jump once layout settles. */return}var KNOWN={'#park-map':1,'#wifi':1,'#office-help':1,'#bulletins':1,'#meetups':1,'#critical-notice':1};if(h&&KNOWN[h]){try{history.replaceState(null,'',location.pathname+location.search)}catch(_){}}var pin=function(){window.scrollTo(0,0);if(document.scrollingElement)document.scrollingElement.scrollTop=0;document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0)};pin();var stop=false;var halt=function(){stop=true};var ev=['touchstart','pointerdown','wheel','keydown'];for(var i=0;i<ev.length;i++)window.addEventListener(ev[i],halt,{once:true,passive:ev[i]!=='keydown'});var n=0;var id=setInterval(function(){n++;if(n>100||stop){clearInterval(id);return}pin()},30);window.addEventListener('load',function(){if(!stop)pin()});window.addEventListener('pageshow',function(e){if(e.persisted&&!stop)pin()})})()}catch(e){}",
           }}
         />
       )}
@@ -384,6 +390,25 @@ export function CampgroundGuestHubBody({
           covered. */}
       <article className="px-4 pb-[calc(env(safe-area-inset-bottom)+8rem)] sm:pb-24">
         <div className="mx-auto max-w-xl space-y-10">
+          {/* Phase F (2026-05-21) -- when the visitor is signed in,
+              render the same AppNav tab strip the (app) layout
+              shows on /home, /waves, /crossed-paths, etc. The
+              campground hub route is OUTSIDE the (app) group so
+              the layout's nav doesn't reach here automatically.
+              Without this, a camper landing on the hub had no
+              visible path to Waves / Past Waves / Profile -- they
+              had to type URLs. sticky=false because the hub's
+              header is not sticky and `top-[56px]` would float the
+              strip in empty space. previewMode is the owner-preview
+              path where the nav doesn't belong (owner is not a
+              camper). */}
+          {auth && !previewMode && (
+            <AppNav
+              showUpdatesOnly={auth.hasActiveCheckIn}
+              currentPrivacyMode={auth.privacyMode}
+              sticky={false}
+            />
+          )}
           {/* Phase 3c -- Critical weather / safety notice. Pinned at
               the very top of the page when there's an active
               is_critical bulletin. Renders nothing when there isn't.

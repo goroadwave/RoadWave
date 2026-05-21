@@ -38,6 +38,15 @@ const KNOWN_SECTION_HASHES = new Set([
   '#critical-notice',
 ])
 
+// Phase F (2026-05-21): deliberate deep-link anchors that the AppNav
+// fires intentionally (currently just the "Camper Connections" tab
+// at /nearby, which redirects to /campground/<slug>#camper-connections).
+// For these we want the browser's native anchor-jump to land the
+// camper at the section; the pin loop is skipped entirely. Must
+// stay in sync with the DEEPLINK set in the inline script in
+// campground-guest-hub-body.tsx.
+const DEEPLINK_HASHES = new Set(['#camper-connections'])
+
 function pin() {
   if (typeof window === 'undefined') return
   window.scrollTo(0, 0)
@@ -67,6 +76,15 @@ export function QrScrollTopGuard() {
     }
 
     const h = window.location.hash
+
+    // Phase F: deliberate deep-link from the AppNav (e.g.
+    // #camper-connections fired by /nearby). Skip the strip AND
+    // skip the pin loop -- the browser's anchor-jump should win
+    // and land the camper at the section.
+    if (h && DEEPLINK_HASHES.has(h)) {
+      return
+    }
+
     if (h && KNOWN_SECTION_HASHES.has(h)) {
       try {
         window.history.replaceState(

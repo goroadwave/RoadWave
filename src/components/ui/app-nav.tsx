@@ -65,14 +65,31 @@ type Props = {
     | 'quiet'
     | 'invisible'
     | 'campground_updates_only'
+  /** When true (default), the nav is sticky-positioned under the
+   *  (app) layout's 56px header. When false, render inline -- used
+   *  by the signed-in campground hub at /campground/[slug] which
+   *  lives outside the (app) group and has its own non-sticky
+   *  header. Without this opt-out the nav would float at top:56px
+   *  in empty space on the hub. */
+  sticky?: boolean
 }
 
-export function AppNav({ showUpdatesOnly = false, currentPrivacyMode }: Props) {
+export function AppNav({
+  showUpdatesOnly = false,
+  currentPrivacyMode,
+  sticky = true,
+}: Props) {
   const pathname = usePathname()
   const cuoActive = currentPrivacyMode === 'campground_updates_only'
 
   return (
-    <nav className="border-b border-white/5 bg-night/60 backdrop-blur sticky top-[56px] z-10">
+    <nav
+      className={
+        sticky
+          ? 'border-b border-white/5 bg-night/60 backdrop-blur sticky top-[56px] z-10'
+          : 'rounded-2xl border border-white/10 bg-night/60 backdrop-blur'
+      }
+    >
       <div className="mx-auto max-w-3xl px-3 py-2">
         <ul className="grid grid-cols-4 gap-1 text-[11px] sm:text-xs">
           {TABS.map((t) => {

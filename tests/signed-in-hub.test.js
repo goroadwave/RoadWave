@@ -141,6 +141,14 @@ test.describe('Signed-in hub copy (anon visit)', () => {
 // CamperConnectionsCard layers in correctly. Each run creates a
 // quickcheckin-<random>@example.com user that the demo-reset script
 // sweeps.
+//
+// Tests in this block are serialized (mode: 'serial') because they
+// all do back-to-back Supabase auth user creation via quickcheckin.
+// Running them in parallel hits an implicit rate limit on the auth
+// /signup endpoint and the second test flakes on "Coffee button not
+// found" -- the form just hadn't loaded the interest chips yet.
+test.describe.configure({ mode: 'serial' })
+
 test.describe('Signed-in hub (authed visit)', () => {
   test('Camper Connections card renders in place of the anon CTA', async ({
     page,
@@ -232,7 +240,7 @@ test.describe('Signed-in hub (authed visit)', () => {
     expect(y, 'authed hub scrollY must be at the top').toBeLessThanOrEqual(50)
   })
 
-  test('/nearby redirects authed camper to the campground hub', async ({
+  test('/nearby redirects authed camper to the hub WITH #camper-connections anchor', async ({
     page,
   }) => {
     // Provision via quickcheckin (same demo flow).
@@ -247,11 +255,85 @@ test.describe('Signed-in hub (authed visit)', () => {
       .click()
     await page.waitForURL(/\/home$/, { timeout: 30_000 })
 
-    // The renamed "Camper Connections" nav tab points at /nearby.
-    // /nearby must forward to /campground/<slug>.
+    // The renamed "Camper Connections" nav tab points at /nearby,
+    // which redirects to the hub with a #camper-connections deep
+    // link. Phase F: the inline scroll-pin script special-cases
+    // this anchor so the browser anchor-jumps to the section.
     await page.goto('/nearby')
     await expect(page).toHaveURL(
-      /\/campground\/roadwave-demo-campground(\?.*)?$/,
+      /\/campground\/roadwave-demo-campground(\?.*)?#camper-connections$/,
     )
+
+    // The deep-link should leave the camper near the Camper
+    // Connections section, not at the top of the page.
+    await page.waitForTimeout(1500)
+    const y = await page.evaluate(() => window.scrollY || 0)
+    expect(
+      y,
+      'deep-link #camper-connections should put the camper near the section, not at the top',
+    ).toBeGreaterThan(200)
+  })
+
+  test('AppNav renders on the hub when authed (Waves/Past Waves reachable)', async ({
+    page,
+  }) => {
+    // Provision via quickcheckin.
+    await page.goto(`${QR_PATH}?token=${DEMO_TOKEN}`)
+    await page.getByRole('link', { name: /Join Camper Connections/i }).first().click()
+    await page.waitForURL(/\/quickcheckin/)
+    await page.getByText(/^Visible$/i).first().click()
+    await page.getByRole('button', { name: /^Coffee$/i }).click()
+    await page.locator('input[name="accept_terms"]').check()
+    await page.getByRole('button', { name: /Complete Check-In to/i }).click()
+    await page.waitForURL(/\/home$/, { timeout: 30_000 })
+
+    // Land on the hub and confirm the in-app nav strip is visible
+    // (it's not there for anon visitors -- see the next test).
+    // The tab labels we need to reach: Waves, Past Waves, Home.
+    await page.goto(QR_PATH)
+    for (const label of ['Home', 'Camper Connections', 'Waves', 'Past Waves']) {
+      await expect(
+        page.getByRole('link', { name: new RegExp(`^${label}$`, 'i') }).first(),
+        `AppNav must expose "${label}" on the signed-in hub`,
+      ).toBeVisible()
+    }
+
+    // The Waves tab routes to /waves, NOT back to /campground or /home.
+    const wavesLink = page
+      .getByRole('link', { name: /^Waves$/i })
+      .first()
+    expect(await wavesLink.getAttribute('href')).toBe('/waves')
+
+    // The Past Waves tab routes to /crossed-paths.
+    const pastWavesLink = page
+      .getByRole('link', { name: /^Past Waves$/i })
+      .first()
+    expect(await pastWavesLink.getAttribute('href')).toBe('/crossed-paths')
+  })
+})
+
+test.describe('AppNav visibility on the public hub (anon)', () => {
+  test('AppNav does NOT render on the hub when anonymous', async ({
+    page,
+  }) => {
+    // Fresh anon context -- the hub must NOT show the authenticated
+    // nav strip. The "Sign in" header link is the only entry to
+    // auth, by design.
+    await page.goto(`${QR_PATH}?token=${DEMO_TOKEN}`)
+
+    // Each AppNav tab label that does NOT also appear as page
+    // content. "Home" would also match "RoadWave home" in some
+    // anon copy, so we instead check the unique AppNav-only tabs.
+    for (const label of ['Camper Connections', 'Waves', 'Past Waves']) {
+      await expect(
+        page.getByRole('link', { name: new RegExp(`^${label}$`, 'i') }),
+        `anon hub must not expose AppNav tab "${label}"`,
+      ).toHaveCount(0)
+    }
+
+    // The "Sign in" link IS visible -- it's the only auth entry.
+    await expect(
+      page.getByRole('link', { name: /^Sign in$/ }).first(),
+    ).toBeVisible()
   })
 })

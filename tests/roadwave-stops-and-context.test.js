@@ -105,22 +105,24 @@ test.describe('Auth-page campground context strip', () => {
 })
 
 test.describe('Arrival & Departure card', () => {
-  test('hidden on the hub when no times are set (demo campground)', async ({
+  test('renders on the hub when owner has set times (demo campground)', async ({
     page,
   }) => {
-    // The seeded demo campground does NOT have check_in_time /
-    // check_out_time / arrival_departure_note populated. The card
-    // should hide cleanly -- no orphan heading, no empty rounded
-    // empty box.
+    // scripts/seed-demo-arrival-departure.mjs populates the demo
+    // campground with sample check-in / checkout times. The card
+    // must render those values near the top of the hub (between
+    // Quick Actions and Wi-Fi per the spec).
     await page.goto(`/campground/${QR_SLUG}?token=${DEMO_TOKEN}`)
 
-    // Heading "Arrival & Departure" must not appear when the
-    // owner hasn't filled any of the fields.
     await expect(
       page.getByRole('heading', { name: /Arrival & Departure/i }),
-    ).toHaveCount(0)
-    await expect(page.getByText(/^Check-in$/i)).toHaveCount(0)
-    await expect(page.getByText(/^Checkout$/i)).toHaveCount(0)
+    ).toBeVisible()
+
+    // The seeded values from scripts/seed-demo-arrival-departure.mjs.
+    await expect(page.getByText(/^Check-in$/i).first()).toBeVisible()
+    await expect(page.getByText(/^2:00 PM$/).first()).toBeVisible()
+    await expect(page.getByText(/^Checkout$/i).first()).toBeVisible()
+    await expect(page.getByText(/^11:00 AM$/).first()).toBeVisible()
 
     // Rest of the hub still renders -- "Join Camper Connections"
     // CTA is the easy bottom-of-page sentinel.

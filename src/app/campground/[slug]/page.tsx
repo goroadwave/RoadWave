@@ -348,6 +348,7 @@ async function resolveAuthedViewer(
     { data: campers },
     { data: myWaves },
     { data: matches },
+    { data: activeCheckInRow },
   ] = await Promise.all([
     supabase
       .from('profile_interests')
@@ -359,6 +360,20 @@ async function resolveAuthedViewer(
       .select('to_profile_id, status')
       .eq('from_profile_id', user.id),
     supabase.from('crossed_paths').select('profile_a_id, profile_b_id, status'),
+    // hasActiveCheckIn drives the AppNav's "Updates Only" 8th-slot
+    // action button. Even when checkin_by_token above didn't pop a
+    // new row (failed token, RLS edge case), the camper may still
+    // have an active check-in at a different campground -- a
+    // separate select gives us the truth without re-using the
+    // RPC's return value. Limit 1 because we only need yes/no.
+    supabase
+      .from('check_ins')
+      .select('id')
+      .eq('profile_id', user.id)
+      .eq('status', 'active')
+      .gt('expires_at', new Date().toISOString())
+      .limit(1)
+      .maybeSingle<{ id: string }>(),
   ])
 
   const viewerInterests = (viewerInterestRows ?? [])
@@ -393,5 +408,6 @@ async function resolveAuthedViewer(
     viewerInterests,
     initialInterests: profile.nearby_filter_interests ?? [],
     privacyMode: profile.privacy_mode,
+    hasActiveCheckIn: !!activeCheckInRow,
   }
 }
