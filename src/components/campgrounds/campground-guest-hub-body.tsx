@@ -508,18 +508,32 @@ export function CampgroundGuestHubBody({
                     Park map
                   </h2>
                   <div className="rounded-2xl border border-leaf/30 bg-leaf/[0.06] p-3 sm:p-4 space-y-3">
+                    {/* aspect-[4/3] reserves stable vertical space
+                        so the page doesn't grow when the image
+                        finishes loading -- killing the CLS jump
+                        that could land mobile campers mid-page on
+                        reload even with the multi-tick scroll
+                        guard in place. The image inside uses
+                        object-contain so it letterboxes /
+                        pillarboxes inside the slot whatever its
+                        actual aspect ratio. max-h-[60vh] caps the
+                        slot on tall viewports so a tall map
+                        doesn't push the rest of the page out of
+                        view on desktop. */}
                     <a
                       href={sourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block rounded-xl overflow-hidden border border-white/5 bg-night/40 hover:border-leaf/60 transition-colors"
+                      className="block aspect-[4/3] max-h-[60vh] rounded-xl overflow-hidden border border-white/5 bg-night/40 hover:border-leaf/60 transition-colors"
                       aria-label="Open the campground map at full size"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- owner-uploaded asset, dimensions vary */}
                       <img
                         src={sourceUrl}
                         alt={`Campground map for ${campground.name}`}
-                        className="block w-full h-auto max-h-[60vh] object-contain bg-night/30"
+                        loading="lazy"
+                        decoding="async"
+                        className="block h-full w-full object-contain bg-night/30"
                       />
                     </a>
                     <div className="flex items-center justify-between gap-3">
