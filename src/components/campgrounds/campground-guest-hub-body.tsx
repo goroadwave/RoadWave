@@ -788,7 +788,7 @@ export function CampgroundGuestHubBody({
             <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
               Meet other campers — optional
             </h2>
-            <div className="rounded-2xl border border-flame/30 bg-flame/[0.05] p-5 space-y-4">
+            <div className="rounded-2xl border border-flame/30 bg-flame/[0.05] p-5 sm:p-6 space-y-5">
               <div className="space-y-2">
                 <p className="font-display text-xl sm:text-2xl font-extrabold text-cream leading-[1.15]">
                   Find your campground people without making it weird.
@@ -827,6 +827,75 @@ export function CampgroundGuestHubBody({
                   </span>
                 </li>
               </ul>
+
+              {/* How it works -- a 3-step numbered mini-card row so
+                  campers get a one-glance mental model of the flow
+                  before tapping the CTA. Numbers in pill chips for
+                  scannability; labels short enough to fit a
+                  three-column grid on iPhone-mini width without
+                  wrapping awkwardly. Cards are decorative -- they
+                  don't have their own CTAs. */}
+              <div className="space-y-2">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-flame font-semibold">
+                  How it works
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { num: '1', label: 'Choose interests' },
+                    { num: '2', label: 'Send a wave' },
+                    { num: '3', label: 'Mutual hello' },
+                  ].map((s) => (
+                    <div
+                      key={s.num}
+                      className="rounded-xl border border-flame/20 bg-flame/[0.04] px-2 py-3 text-center space-y-1.5"
+                    >
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-flame/15 text-flame text-xs font-bold">
+                        {s.num}
+                      </span>
+                      <span className="block text-[11px] text-cream leading-tight font-medium">
+                        {s.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Visibility pills -- small visual cue that the camper
+                  controls how findable they are. Subtle color
+                  variation (leaf for Visible, amber for Quiet, mist
+                  for Invisible) reinforces the gradient without
+                  competing with the primary CTA. Pure decoration --
+                  the actual visibility picker lives in the profile
+                  setup flow that the Join CTA leads to. */}
+              <div className="space-y-2">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-mist font-semibold">
+                  You control your visibility
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-leaf/30 bg-leaf/[0.06] px-2.5 py-1 text-[11px] font-medium text-leaf">
+                    <span
+                      aria-hidden
+                      className="h-1.5 w-1.5 rounded-full bg-leaf"
+                    />
+                    Visible
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-300/[0.06] px-2.5 py-1 text-[11px] font-medium text-amber-300">
+                    <span
+                      aria-hidden
+                      className="h-1.5 w-1.5 rounded-full bg-amber-300"
+                    />
+                    Quiet
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-mist">
+                    <span
+                      aria-hidden
+                      className="h-1.5 w-1.5 rounded-full bg-mist"
+                    />
+                    Invisible
+                  </span>
+                </div>
+              </div>
+
               <Link
                 href={meetOtherCampersUrl}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-flame text-night px-6 py-3 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
