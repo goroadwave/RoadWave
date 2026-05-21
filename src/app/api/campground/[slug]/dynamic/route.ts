@@ -125,6 +125,20 @@ export async function GET(
       ? criticalRows[0]
       : null
 
+  // TEMP DEBUG -- remove after meetup-visibility regression
+  // resolved. Logs the meetups query result so we can confirm in
+  // Vercel logs whether saved meetups are being returned, and what
+  // nowIso the filter is using (in case a timezone issue is making
+  // a future-looking meetup look expired UTC-wise).
+  console.log('[debug-meetup-read]', {
+    slug,
+    campgroundId: cg.id,
+    nowIso,
+    bulletinsCount: bulletins?.length ?? 0,
+    meetupsCount: meetups?.length ?? 0,
+    firstMeetup: meetups && meetups.length > 0 ? meetups[0] : null,
+  })
+
   return NextResponse.json(
     {
       ok: true,
