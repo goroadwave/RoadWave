@@ -45,7 +45,10 @@
   jobs:
     smoke:
       runs-on: ubuntu-latest
-      timeout-minutes: 15
+      # 20-minute cap covers the slower mobile-safari (WebKit) project
+      # alongside chromium. Was 15; bumped 2026-05-21 when both
+      # browsers became required for smoke to pass.
+      timeout-minutes: 20
 
       steps:
         - name: Check out HEAD
@@ -60,8 +63,13 @@
         - name: Install dependencies
           run: npm ci
 
-        - name: Install Chromium for Playwright
-          run: npx playwright install --with-deps chromium
+        # playwright.config.js declares two projects: chromium AND
+        # mobile-safari (WebKit, iPhone 14 Pro emulation). `npm run
+        # test:e2e` runs both, so we install both browser binaries.
+        # If you ever rip out the mobile-safari project, you can drop
+        # `webkit` from this list to shave ~30s off the install step.
+        - name: Install Playwright browsers (chromium + webkit)
+          run: npx playwright install --with-deps chromium webkit
 
         - name: Wait for Vercel to roll the new build (push only)
           if: github.event_name == 'push'
