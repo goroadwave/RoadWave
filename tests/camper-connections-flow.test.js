@@ -75,10 +75,10 @@ async function clickFirstSendWave(page) {
   // runs whose check_ins have expired or whose visibility flipped.
   // Their cards still render from the nearby_campers RPC's snapshot
   // but the waves RLS rejects the actual insert ("You can't wave at
-  // this camper right now"). Try generously so we have a high chance
-  // of landing on a real, currently-active counterpart. 8 attempts
-  // keeps us well under the 60s test budget even in the worst case.
-  const MAX_ATTEMPTS = 8
+  // this camper right now"). Budget: up to 5 attempts × 4s settle =
+  // 20s worst case, leaves room for the rest of the test inside the
+  // 60s Playwright timeout (esp. on mobile-safari).
+  const MAX_ATTEMPTS = 5
   const attempts = Math.min(count, MAX_ATTEMPTS)
   let lastWinner = null
   for (let i = 0; i < attempts; i++) {
@@ -91,8 +91,8 @@ async function clickFirstSendWave(page) {
       .first()
     const err = page.locator('p.text-red-300').first()
     const winner = await Promise.race([
-      pill.waitFor({ state: 'visible', timeout: 6_000 }).then(() => 'pill'),
-      err.waitFor({ state: 'visible', timeout: 6_000 }).then(() => 'err'),
+      pill.waitFor({ state: 'visible', timeout: 4_000 }).then(() => 'pill'),
+      err.waitFor({ state: 'visible', timeout: 4_000 }).then(() => 'err'),
     ]).catch(() => null)
     lastWinner = winner
     if (winner === 'pill') {
@@ -118,13 +118,21 @@ test.describe('Camper Connections: A. Basic mutual wave', () => {
   test('Send a Wave → Wave back → Matched, plus discovery and entry-points', async ({
     browser,
   }, testInfo) => {
+    // Two parallel quickcheckins + the full mutual-wave loop +
+    // /crossed-paths cross-check is ~75s on mobile-safari under
+    // demo-campground noise. Bump above the 60s default so the
+    // test budget covers the slowest legit run.
+    testInfo.setTimeout(120_000)
     const ctxA = await browser.newContext({ viewport: { width: 390, height: 844 } })
     const ctxB = await browser.newContext({ viewport: { width: 390, height: 844 } })
     const pageA = await ctxA.newPage()
     const pageB = await ctxB.newPage()
     try {
-      await quickCheckIn(pageA)
-      await quickCheckIn(pageB)
+      // Parallelize the two quickcheckins -- they each hit a
+      // throwaway auth.users + check_ins insert, no contention with
+      // each other in prod. Saves ~5s per test on mobile-safari and
+      // keeps the whole flow inside the 60s test budget.
+      await Promise.all([quickCheckIn(pageA), quickCheckIn(pageB)])
 
       // Camper A sends. v2 label MUST be "Send a Wave 👋" on the
       // primary action button -- not the old terse "Wave 👋".
@@ -228,6 +236,10 @@ test.describe('Camper Connections: B. Static-response dialogue', () => {
   test('matched dialogue shows template buttons and tap-to-send works', async ({
     browser,
   }, testInfo) => {
+    // Drives two campers through quickcheckin -> wave -> consent ->
+    // conversation -> static template send -> message visible. ~90s
+    // worst case on mobile-safari given the noisy demo campground.
+    testInfo.setTimeout(150_000)
     // Two campers, both wave at each other (best effort), then drive
     // each through the consent prompt so the conversation unlocks.
     const ctxA = await browser.newContext({ viewport: { width: 390, height: 844 } })
@@ -235,8 +247,11 @@ test.describe('Camper Connections: B. Static-response dialogue', () => {
     const pageA = await ctxA.newPage()
     const pageB = await ctxB.newPage()
     try {
-      await quickCheckIn(pageA)
-      await quickCheckIn(pageB)
+      // Parallelize the two quickcheckins -- they each hit a
+      // throwaway auth.users + check_ins insert, no contention with
+      // each other in prod. Saves ~5s per test on mobile-safari and
+      // keeps the whole flow inside the 60s test budget.
+      await Promise.all([quickCheckIn(pageA), quickCheckIn(pageB)])
 
       // Both campers send a wave (best effort to pair with each
       // other; either side waving at the other is sufficient for
