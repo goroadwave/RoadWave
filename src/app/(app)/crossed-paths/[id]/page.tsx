@@ -1,12 +1,19 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { format, formatDistanceToNow, isSameDay } from 'date-fns'
+import { CrossedPathAutoRefresh } from '@/components/crossed-paths/crossed-path-auto-refresh'
 import { CrossedPathConversation } from '@/components/crossed-paths/crossed-path-conversation'
 import { ConsentPrompt } from '@/components/crossed-paths/consent-prompt'
 import { NewConnectionBanner } from '@/components/crossed-paths/new-connection-banner'
 import { ReportDialog } from '@/components/report/report-dialog'
 import { SafetyBanner } from '@/components/ui/safety-banner'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+
+// Force-dynamic so the conversation re-fetches on every navigation
+// AND on every router.refresh() the CrossedPathAutoRefresh island
+// fires. Without this, Next can cache the RSC payload and the auto-
+// refresh would never see the new messages.
+export const dynamic = 'force-dynamic'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -165,6 +172,12 @@ export default async function CrossedPathDetailPage({ params }: Props) {
         currentUserId={user.id}
         groups={grouped}
       />
+
+      {/* Lightweight router.refresh() polling so a message from the
+          other camper lands without a manual reload. Matches the
+          OwnerMessagesAutoRefresh idiom; 5s interval for a
+          chat-like feel. */}
+      <CrossedPathAutoRefresh />
     </div>
   )
 }
