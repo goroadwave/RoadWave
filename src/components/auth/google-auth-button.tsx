@@ -121,7 +121,17 @@ export function GoogleAuthButton({
     }
 
     const supabase = createSupabaseBrowserClient()
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+    // Use the canonical site origin (NEXT_PUBLIC_SITE_URL) for the OAuth
+    // redirectTo so Supabase honors it regardless of which host the camper
+    // landed on. window.location.origin produces a Vercel branch URL like
+    // road-wave.vercel.app on shared links; that host is not on the
+    // Supabase Auth allow-list, so Supabase silently rewrites redirectTo
+    // to the project Site URL and the camper ends up on the marketing
+    // homepage with no `next` preserved. Inlined at build time by Next.
+    const siteOrigin =
+      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+      window.location.origin
+    const redirectTo = `${siteOrigin}/auth/callback?next=${encodeURIComponent(next)}`
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo },
