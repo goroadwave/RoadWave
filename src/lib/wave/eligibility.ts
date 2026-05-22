@@ -74,11 +74,23 @@ export async function computeWaveEligibility(
   if (!SENDER_OK_MODES.has(viewer.privacy_mode)) {
     return { ok: false, reason: 'sender_invisible' }
   }
-  if (!target || target.privacy_mode == null) {
+  // Recipient privacy check. Same nearby_campers contract argument
+  // applies here as in the batch path: the caller clicked a card that
+  // nearby_campers returned, so the target IS visible. If the admin
+  // lookup misses the row, fall through to the shared-checkin gate
+  // instead of rejecting. See the batch variant below for the full
+  // explanation. The shared-checkin check below is the real safety
+  // gate (check_ins.profile_id has an FK to profiles.id).
+  if (target && target.privacy_mode == null) {
     return { ok: false, reason: 'recipient_missing_profile' }
   }
-  if (target.privacy_mode !== 'visible') {
+  if (target && target.privacy_mode !== 'visible') {
     return { ok: false, reason: 'recipient_not_visible' }
+  }
+  if (!target) {
+    console.log(
+      `[wave-eligibility] admin missed target row (single) uid=${viewerId} target=${targetId}`,
+    )
   }
 
   // Shared active check-in at the SAME campground the hub page is
@@ -263,6 +275,7 @@ export async function computeWaveEligibilityBatch(
     if (targetSet.has(other)) matchedTargets.add(other)
   }
 
+  let loggedMissingTarget = false
   for (const targetId of unique) {
     let reason: WaveEligibilityReason = 'ok'
     if (!viewer || viewer.privacy_mode == null) {
@@ -271,9 +284,24 @@ export async function computeWaveEligibilityBatch(
       reason = 'sender_invisible'
     } else {
       const target = targetProfiles.get(targetId)
-      if (!target || target.privacy_mode == null) {
+      // Recipient privacy check. The targetIds passed in came from
+      // nearby_campers, a SECURITY DEFINER SQL function (mig 0001:538)
+      // that ALREADY filters by `p.privacy_mode = 'visible'` AND an
+      // active shared check-in. So any id we see here is guaranteed
+      // to be a visible camper checked in at this campground. If the
+      // admin .in() lookup returns no row for it (we've seen the
+      // admin client miss rows that nearby_campers + the identity
+      // enrichment admin query both find), trust the RPC contract --
+      // fall through to the check_ins + waves + matches gates rather
+      // than rejecting the wave. The real safety check is the
+      // check_ins lookup below: the target needs an active check_in
+      // row at this campground, and check_ins.profile_id has an FK
+      // to profiles.id so the camper IS a real profile.
+      if (target && target.privacy_mode == null) {
+        // Schema is NOT NULL DEFAULT 'visible' so this is
+        // schema-violating data, not the admin-miss case.
         reason = 'recipient_missing_profile'
-      } else if (target.privacy_mode !== 'visible') {
+      } else if (target && target.privacy_mode !== 'visible') {
         reason = 'recipient_not_visible'
       } else if (!viewerCheckinOk || !checkinsByProfile.has(targetId)) {
         reason = 'no_shared_active_checkin'
@@ -281,6 +309,18 @@ export async function computeWaveEligibilityBatch(
         reason = 'already_waved'
       } else if (matchedTargets.has(targetId)) {
         reason = 'already_matched'
+      }
+      // Log the admin-miss once per batch so we can see whether the
+      // problem is the whole result set (root cause = admin client
+      // misconfig / connection-pool issue) or a sporadic single id.
+      if (!target && !loggedMissingTarget) {
+        loggedMissingTarget = true
+        console.log(
+          `[wave-eligibility] admin missed target rows uid=${viewerId} ` +
+            `targetCount=${unique.length} ` +
+            `targetRowsReturned=${targetProfileRows?.length ?? 0} ` +
+            `firstMissing=${targetId}`,
+        )
       }
     }
     out.set(targetId, { ok: reason === 'ok', reason })
