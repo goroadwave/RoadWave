@@ -99,6 +99,20 @@ export function WaveButton({
     const copy =
       (WAVE_REASON_COPY as Record<string, string>)[eligibility] ??
       WAVE_REASON_COPY.rls_denied
+    // Sender-side reasons are the only ones the camper themselves can
+    // resolve. Surface a direct CTA to the setup surface so the camper
+    // doesn't read "Wave not available" with nothing to act on. Other
+    // reasons (recipient state, shared check-in, RLS) depend on the
+    // other camper or the network, so no CTA there.
+    const senderCta =
+      eligibility === 'sender_missing_profile'
+        ? { href: '/profile/setup', label: 'Complete profile' }
+        : eligibility === 'sender_invisible'
+          ? {
+              href: '/settings/privacy',
+              label: 'Set visibility',
+            }
+          : null
     return (
       <div className="space-y-1">
         <div
@@ -110,6 +124,15 @@ export function WaveButton({
           Wave not available
         </div>
         <p className="text-[11px] text-mist/80 leading-snug">{copy}</p>
+        {senderCta && (
+          <Link
+            href={senderCta.href}
+            data-testid="wave-ineligible-cta"
+            className="block w-full rounded-lg border border-flame/40 bg-flame/[0.06] text-cream px-3 py-2 text-center text-sm font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
+          >
+            {senderCta.label} →
+          </Link>
+        )}
       </div>
     )
   }

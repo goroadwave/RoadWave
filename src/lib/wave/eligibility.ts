@@ -274,6 +274,22 @@ export async function computeWaveEligibilityBatch(
     !!viewer &&
     viewer.privacy_mode != null &&
     SENDER_OK_MODES.has(viewer.privacy_mode)
+  // Diagnostic: surface the exact sender-state the eligibility check
+  // sees when it would block. Visible in Vercel runtime logs. The
+  // schema defaults privacy_mode to 'visible' and is NOT NULL, so a
+  // viewer who renders the camper card but lands here means either
+  // (a) the handle_new_user trigger never fired for this OAuth user
+  // (admin lookup returns no row), or (b) the camper saved a
+  // privacy_mode value outside SENDER_OK_MODES via /profile/setup.
+  // Either way we want the row state in the logs to confirm before
+  // changing schema or UI defaults.
+  if (!viewerOk) {
+    console.log(
+      `[wave-eligibility] viewer ineligible uid=${viewerId} row=${
+        viewer ? 'found' : 'MISSING'
+      } privacy_mode=${viewer?.privacy_mode ?? 'NULL'}`,
+    )
+  }
   const viewerCheckinOk = (checkinRows ?? []).some(
     (c) => c.profile_id === viewerId,
   )
