@@ -67,8 +67,10 @@ async function quickCheckIn(page) {
  * @returns {Promise<string | null>}
  */
 async function clickFirstSendWave(page) {
-  await page.goto(`/campground/${DEMO_SLUG}`)
-  // v3 hub now pre-flights eligibility server-side: cards the wave
+  await page.goto('/nearby')
+  // v6 IA: camper-list lives on /nearby (a focused page), not on
+  // the long campground hub. Pre-flight eligibility is computed
+  // server-side here: cards the wave
   // RLS would reject render `[data-testid="wave-ineligible"]` and
   // are skipped here. We only ever click an eligible button, so the
   // post-click pipeline should reliably reach the Wave sent /
@@ -145,7 +147,7 @@ test.describe('Camper Connections: A. Basic mutual wave', () => {
       // crashed). This catches the real regression class we care
       // about even when the campground is too quiet to exercise
       // the wave pipeline below.
-      await pageA.goto(`/campground/${DEMO_SLUG}`)
+      await pageA.goto('/nearby')
       await expect(
         pageA.getByRole('heading', { name: /Camper Connections/i }).first(),
         'hub MUST render the Camper Connections section',
@@ -485,7 +487,7 @@ test.describe('Camper Connections: E. Invisible camper toggle', () => {
     const page = await ctx.newPage()
     try {
       await quickCheckIn(page)
-      await page.goto(`/campground/${DEMO_SLUG}`)
+      await page.goto('/nearby')
 
       // Tap Invisible.
       const invisible = page.getByRole('button', { name: /^Invisible$/i }).first()
@@ -591,7 +593,7 @@ test.describe('Camper Connections: H. Eligibility invariants', () => {
       // own-id check). Easiest reflective surface: the /home page
       // exposes display_name; we instead use the /profile page +
       // the camper card render to assert directly.
-      await page.goto(`/campground/${DEMO_SLUG}`)
+      await page.goto('/nearby')
       // Wait for the Camper Connections section to mount.
       await expect(
         page.getByRole('heading', { name: /Camper Connections/i }),
@@ -653,7 +655,7 @@ test.describe('Camper Connections: H. Eligibility invariants', () => {
     const page = await ctx.newPage()
     try {
       await quickCheckIn(page)
-      await page.goto(`/campground/${DEMO_SLUG}`)
+      await page.goto('/nearby')
 
       // Single round-trip: ask the browser to give us, for every
       // active Send a Wave button, the data-wave-eligibility value
@@ -712,7 +714,7 @@ test.describe('Camper Connections: H. Eligibility invariants', () => {
     const page = await ctx.newPage()
     try {
       await quickCheckIn(page)
-      await page.goto(`/campground/${DEMO_SLUG}`)
+      await page.goto('/nearby')
       const cards = page.locator('[data-testid="camper-card"]')
       const count = await cards.count()
       if (count === 0) return // empty campground -- nothing to verify

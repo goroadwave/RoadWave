@@ -27,11 +27,18 @@
 //   * A reload of the destination URL keeps the camper on the
 //     destination, not back on the hub.
 //
-// By design, two tabs DO route through the hub:
-//   * "Campground" → /checkin → /campground/<slug>   (the hub IS Campground info)
-//   * "Camper Connections" → /nearby → /campground/<slug>#camper-connections
-// These are documented and intentional. The other five tabs MUST
-// land on their own routes.
+// IA refactor (Camper Connections v6, 2026-05-22): AppNav reduced
+// from 8 items to 5. Meetups / Privacy / Updates Only moved to
+// dashboard cards on /home. Camper Connections is now its own page
+// at /nearby (NOT an anchor on the long campground hub). Active
+// nav set:
+//   * Home          (/home)
+//   * Campground    (/checkin -> /campground/<slug>)
+//   * Camper Conn.  (/nearby)
+//   * Waves         (/waves)
+//   * Past Waves    (/crossed-paths)
+// Tests below click from /home (where the nav lives now); the
+// hub's in-body AppNav was retired.
 
 import { expect, test } from '@playwright/test'
 
@@ -59,26 +66,23 @@ async function provision(page) {
 test.describe.configure({ mode: 'serial' })
 
 test.describe('AppNav tabs: stay on their destinations after click', () => {
-  // Each tab that should land + stay on its own route. We test from
-  // the hub specifically since that's where the user reported the
-  // bug.
+  // Five-tab v6 nav. Click from /home (which lives inside the (app)
+  // layout that mounts AppNav). Each tab MUST land + stay on its
+  // own route -- no anchor jumping, no bounce back to the QR hub.
   const STAYS = [
-    { label: /^Home$/, expectedUrl: /\/home$/ },
-    { label: /^Meetups$/, expectedUrl: /\/meetups$/ },
     { label: /^Waves$/, expectedUrl: /\/waves$/ },
-    { label: /^Privacy$/, expectedUrl: /\/settings\/privacy$/ },
     { label: /^Past Waves$/, expectedUrl: /\/crossed-paths$/ },
+    { label: /^Camper Connections$/, expectedUrl: /\/nearby$/ },
   ]
 
-  test('all five non-hub tabs land + stay on their destinations from the hub', async ({
+  test('non-hub nav tabs land + stay on their destinations', async ({
     page,
   }) => {
     await provision(page)
     for (const tab of STAYS) {
-      // Start fresh on the campground hub for each tab so the AppNav
-      // is mounted and we're testing the click from the surface the
-      // user reported the bug on.
-      await page.goto(`/campground/${QR_SLUG}`)
+      // Start each tab from /home so the (app) layout's AppNav is
+      // freshly mounted.
+      await page.goto('/home')
       await expect(
         page.getByRole('link', { name: tab.label }).first(),
         `AppNav must expose tab for ${tab.label}`,
@@ -90,7 +94,7 @@ test.describe('AppNav tabs: stay on their destinations after click', () => {
       await page.waitForURL(tab.expectedUrl, { timeout: 10_000 })
 
       // 1-second settle window catches a delayed router.push that
-      // would relaunch the bounce after navigation completes.
+      // would relaunch a bounce after navigation completes.
       await page.waitForTimeout(1000)
       expect(
         page.url(),
@@ -121,30 +125,29 @@ test.describe('AppNav tabs: stay on their destinations after click', () => {
     // the intended behavior: "Campground" tab opens campground info.
   })
 
-  test('Camper Connections tab deep-links to /campground/<slug>#camper-connections (by design)', async ({
+  test('Camper Connections tab lands on /nearby (focused page, not a hub anchor)', async ({
     page,
   }) => {
+    // v6 IA: Camper Connections has its own page. Tapping the tab
+    // MUST land at /nearby (top of a focused view), not anchor-
+    // jump halfway down a long mixed campground page.
     await provision(page)
-    await page.goto(`/campground/${QR_SLUG}`)
+    await page.goto('/home')
     await page
       .getByRole('link', { name: /^Camper Connections$/ })
       .first()
       .click()
-    await page.waitForURL(
-      new RegExp(`/campground/${QR_SLUG}(\\?.*)?#camper-connections$`),
-      { timeout: 10_000 },
-    )
+    await page.waitForURL(/\/nearby$/, { timeout: 10_000 })
+    expect(page.url()).not.toMatch(/#camper-connections/)
   })
 
   test('Profile is reachable from the Camper Connections card "Edit interests" link', async ({
     page,
   }) => {
-    // Profile isn't in AppNav -- it's reached from the Camper
-    // Connections card on the hub. The user's bug report mentioned
-    // Profile, so we confirm clicking "Edit interests" lands on
-    // /profile/setup and stays.
+    // CamperConnectionsCard is now mounted on /nearby (its own
+    // focused page). The "Edit interests" link still exists there.
     await provision(page)
-    await page.goto(`/campground/${QR_SLUG}`)
+    await page.goto('/nearby')
     await page
       .getByRole('link', { name: /Edit interests/i })
       .first()
@@ -158,7 +161,7 @@ test.describe('AppNav tabs: stay on their destinations after click', () => {
     page,
   }) => {
     await provision(page)
-    await page.goto(`/campground/${QR_SLUG}`)
+    await page.goto('/nearby')
     await page
       .getByRole('link', { name: /Privacy settings/i })
       .first()

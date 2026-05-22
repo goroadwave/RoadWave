@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { ArrivalDepartureCard } from '@/components/campgrounds/arrival-departure-card'
-import { CamperConnectionsCard } from '@/components/campgrounds/camper-connections-card'
 import { CamperToastHost } from '@/components/campgrounds/camper-toast-host'
 import { CriticalBanner } from '@/components/campgrounds/critical-banner'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
@@ -10,7 +9,6 @@ import { QrScrollTopGuard } from '@/components/campgrounds/qr-scroll-top-guard'
 import { TrackedLinkButton } from '@/components/campgrounds/tracked-link-button'
 import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
 import { WifiCopyButton } from '@/components/campgrounds/wifi-copy-button'
-import { AppNav } from '@/components/ui/app-nav'
 import { Logo } from '@/components/ui/logo'
 import { splitAmenities } from '@/lib/campgrounds/amenities'
 import { isQuickCheckInSlug } from '@/lib/checkin/quick-checkin-slugs'
@@ -402,24 +400,40 @@ export function CampgroundGuestHubBody({
           covered. */}
       <article className="px-4 pb-[calc(env(safe-area-inset-bottom)+8rem)] sm:pb-24">
         <div className="mx-auto max-w-xl space-y-10">
-          {/* Phase F (2026-05-21) -- when the visitor is signed in,
-              render the same AppNav tab strip the (app) layout
-              shows on /home, /waves, /crossed-paths, etc. The
-              campground hub route is OUTSIDE the (app) group so
-              the layout's nav doesn't reach here automatically.
-              Without this, a camper landing on the hub had no
-              visible path to Waves / Past Waves / Profile -- they
-              had to type URLs. sticky=false because the hub's
-              header is not sticky and `top-[56px]` would float the
-              strip in empty space. previewMode is the owner-preview
-              path where the nav doesn't belong (owner is not a
-              camper). */}
+          {/* IA refactor (Camper Connections v6, 2026-05-22). The
+              QR page used to render an in-body AppNav strip for
+              authed visitors so they could reach /waves, /past-
+              waves, etc. without typing URLs. Post-refactor the
+              QR page is the campground HELPER -- the camper-to-
+              camper layer lives on /home (My RoadWave dashboard)
+              and /nearby (focused Camper Connections), both of
+              which mount AppNav via the (app) layout. The header
+              "My RoadWave" link is the canonical jump-off back to
+              the signed-in shell. Removing the duplicate in-body
+              nav keeps the QR page focused on campground utility
+              for both anon AND authed visitors -- they see the
+              same content, the camper-to-camper layer is just one
+              tap away through the header. */}
           {auth && !previewMode && (
-            <AppNav
-              showUpdatesOnly={auth.hasActiveCheckIn}
-              currentPrivacyMode={auth.privacyMode}
-              sticky={false}
-            />
+            <div className="rounded-2xl border border-flame/30 bg-flame/[0.05] p-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-cream leading-snug">
+                You&apos;re signed in. Camper Connections, Waves, and
+                Past Waves live on{' '}
+                <Link
+                  href="/home"
+                  className="font-semibold text-flame underline-offset-2 hover:underline"
+                >
+                  My RoadWave
+                </Link>
+                .
+              </p>
+              <Link
+                href="/nearby"
+                className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-flame text-night px-3 py-1.5 text-xs font-semibold hover:bg-amber-400 transition-colors"
+              >
+                Campers here →
+              </Link>
+            </div>
           )}
           {/* Phase 3c -- Critical weather / safety notice. Pinned at
               the very top of the page when there's an active
@@ -961,37 +975,22 @@ export function CampgroundGuestHubBody({
             previewMode={previewMode}
           />
 
-          {/* ----- Camper Connections (authed) / Meet Other Campers (anon) ----- */}
-          {/* Two render variants share this slot at the bottom of the hub:
-                * Anon -- "Meet Other Campers — Optional" CTA card,
-                  preserved below. Drives signup via meetOtherCampersUrl;
-                  next= now points back to /campground/<slug> (this
-                  page) so the camper lands on the live Connections
-                  layer post-auth instead of a separate check-in screen.
-                * Authed -- <CamperConnectionsCard>: visibility pills,
-                  Campers Here list, wave UI, edit-interests link,
-                  privacy reassurance. Renders the social layer in
-                  place; no further auth handoff. */}
-          {auth ? (
-            <CamperConnectionsCard
-              campgroundId={campground.id}
-              campgroundSlug={campground.slug}
-              campers={auth.campers}
-              waveStateByProfileId={auth.waveStateByProfileId}
-              crossedPathByProfileId={auth.crossedPathByProfileId}
-              waveEligibilityByProfileId={auth.waveEligibilityByProfileId}
-              viewerInterests={auth.viewerInterests}
-              initialInterests={auth.initialInterests}
-              currentVisibility={
-                auth.privacyMode === 'campground_updates_only'
-                  ? 'invisible'
-                  : auth.privacyMode
-              }
-              updatesOnlyMode={
-                auth.privacyMode === 'campground_updates_only'
-              }
-            />
-          ) : (
+          {/* ----- Camper Connections invite (anon only) ----- */}
+          {/* IA refactor (Camper Connections v6, 2026-05-22). The
+              authed CamperConnectionsCard used to render in this
+              slot at the bottom of the long campground utility --
+              that meant tapping "Camper Connections" anchor-jumped
+              halfway down a mixed page and felt like a UX accident.
+              Post-refactor the authed Camper Connections layer is
+              its own focused page at /nearby (mounted inside the
+              (app) layout). The QR page now ONLY renders the anon
+              "Meet other campers" CTA in this slot -- authed
+              visitors see the small "Camper Connections live on My
+              RoadWave" banner near the top of the page instead.
+              The CamperConnectionsCard import is kept so the
+              component tree stays the same on /owner/preview etc.,
+              but it's not mounted from here anymore. */}
+          {!auth && (
           <section className="space-y-3">
             <h2 className="text-[11px] uppercase tracking-[0.2em] text-flame font-semibold">
               Meet other campers — optional
