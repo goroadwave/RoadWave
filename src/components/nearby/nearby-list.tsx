@@ -16,6 +16,10 @@ type Props = {
    *  each CamperCard's WaveButton so matched/connected states can
    *  deep-link to /crossed-paths/<id>. */
   crossedPathByProfileId?: Record<string, string>
+  /** Wave eligibility code keyed by other-camper profile_id. "ok"
+   *  unlocks the active Send a Wave button; anything else routes
+   *  the WaveButton into its disabled "ineligible" state. */
+  waveEligibilityByProfileId?: Record<string, string>
   viewerInterests: string[]
   initialInterests?: string[]
 }
@@ -25,6 +29,7 @@ export function NearbyList({
   campgroundId,
   waveStateByProfileId,
   crossedPathByProfileId = {},
+  waveEligibilityByProfileId = {},
   viewerInterests,
   initialInterests = [],
 }: Props) {
@@ -138,6 +143,9 @@ export function NearbyList({
                 campgroundId={campgroundId}
                 waveState={waveStateByProfileId[c.profile_id] ?? 'none'}
                 crossedPathId={crossedPathByProfileId[c.profile_id] ?? null}
+                waveEligibility={
+                  waveEligibilityByProfileId[c.profile_id] ?? 'ok'
+                }
                 viewerInterests={viewerInterests}
               />
             </li>

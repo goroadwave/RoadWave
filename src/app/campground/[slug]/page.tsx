@@ -10,6 +10,10 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import type { NearbyCamper, PrivacyMode } from '@/lib/types/db'
 import type { WaveState } from '@/components/waves/wave-button'
+import {
+  computeWaveEligibilityBatch,
+  type WaveEligibilityReason,
+} from '@/lib/wave/eligibility'
 
 // Unified guest hub. Anonymous viewers see the campground info
 // surfaces (Park Map, Wi-Fi, Emergency Info, Rules, Local Recs,
@@ -430,11 +434,75 @@ async function resolveAuthedViewer(
     if (m.id) crossedPathByProfileId[otherId] = m.id
   }
 
+  // Camper Connections v3: enrich the redacted nearby_campers RPC
+  // rows with display_name + username via the admin client (the
+  // profiles_select_* policies don't allow a non-matched SELECT). A
+  // camper has already opted into discovery by setting
+  // privacy_mode='visible', so showing their display_name on the
+  // card is consistent with the same-RLS scope the RPC already
+  // operates under -- and gives the card a real identity instead of
+  // the generic "A nearby camper" placeholder.
+  const rawCampers = (campers ?? []) as Array<
+    NearbyCamper & {
+      display_name?: string | null
+      username?: string | null
+    }
+  >
+  const otherIds = rawCampers
+    .map((c) => c.profile_id)
+    .filter((id): id is string => !!id && id !== user.id)
+
+  const admin = createSupabaseAdminClient()
+  const { data: identityRows } =
+    otherIds.length > 0
+      ? await admin
+          .from('profiles')
+          .select('id, display_name, username')
+          .in('id', otherIds)
+      : { data: [] as { id: string; display_name: string | null; username: string | null }[] }
+  const identityById = new Map(
+    (identityRows ?? []).map((r) => [r.id, r] as const),
+  )
+
+  // Per-camper eligibility. The hub page now hides cards (or
+  // renders disabled states) for campers the wave RLS would reject,
+  // so no camper ever sees an active Send a Wave button that fails
+  // on click. The batched compute uses the same admin-client lookups
+  // we just did so we don't pay an extra round-trip per card.
+  const eligibilityByProfileId = await computeWaveEligibilityBatch(
+    user.id,
+    otherIds,
+    campgroundId,
+  )
+  const waveEligibilityByProfileId: Record<string, WaveEligibilityReason> = {}
+  for (const [id, elig] of eligibilityByProfileId.entries()) {
+    waveEligibilityByProfileId[id] = elig.reason
+  }
+
+  // SAFETY GATE: also strip the viewer's own profile if it somehow
+  // appears in the nearby_campers result (the RPC excludes it, but
+  // defense-in-depth in case of a future regression). A camper must
+  // never see their own card and must never be able to wave at
+  // themselves through this UI.
+  const enrichedCampers: NearbyCamper[] = rawCampers
+    .filter((c) => c.profile_id !== user.id)
+    .map((c) => {
+      const ident = identityById.get(c.profile_id)
+      return {
+        profile_id: c.profile_id,
+        rig_type: c.rig_type ?? null,
+        interests: c.interests ?? null,
+        display_name: ident?.display_name ?? null,
+        username: ident?.username ?? null,
+      }
+    })
+
   return {
     userId: user.id,
-    campers: (campers ?? []) as NearbyCamper[],
+    campers: enrichedCampers,
     waveStateByProfileId,
     crossedPathByProfileId,
+    waveEligibilityByProfileId,
     viewerInterests,
     initialInterests: profile.nearby_filter_interests ?? [],
     privacyMode: profile.privacy_mode,

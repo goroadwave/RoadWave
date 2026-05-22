@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState, useTransition } from 'react'
 import { sendWaveAction } from '@/lib/actions/waves'
+import { WAVE_REASON_COPY } from '@/lib/wave/eligibility'
 
 // Drives the Wave affordance on every camper card on the signed-in
 // campground hub (and on /nearby's redirected hub view). Each state
@@ -27,9 +28,16 @@ import { sendWaveAction } from '@/lib/actions/waves'
 //                    inert state so the camper isn't repeatedly
 //                    surfaced.
 //
+// Additionally, when `initialEligibility` is NOT 'ok', the button
+// renders a non-active disabled state with a recovery-copy hint --
+// covers the "card was rendered but RLS would reject the insert"
+// drift (target's check-in expired between hub render and click,
+// target flipped visibility mid-session, etc.).
+//
 // Privacy contract enforced upstream:
-//   * sendWaveAction insertion is RLS-gated (mig 0033) so an invisible
-//     target rejects the write even if a stale UI state slips through.
+//   * sendWaveAction's pre-flight (computeWaveEligibility) mirrors the
+//     waves RLS so the action never silently fails. The reason code
+//     is returned to the UI for accurate post-click rendering.
 //   * crossedPathId is only set when the viewer is actually on the
 //     crossed_paths row (RLS limits the SELECT to participants).
 //   * No site numbers / GPS / cross-campground stale presence here.
@@ -50,6 +58,10 @@ type Props = {
    *  Drives the "Say Hi →" / "Open chat →" deep-link on matched +
    *  connected states. Null for other states. */
   crossedPathId?: string | null
+  /** Pre-flight wave eligibility reason from the hub page. "ok" =
+   *  primary CTA. Anything else swaps to a disabled state with the
+   *  reason copy so no camper ever taps an active button that fails. */
+  initialEligibility?: string
 }
 
 export function WaveButton({
@@ -57,14 +69,13 @@ export function WaveButton({
   campgroundId,
   initialState = 'none',
   crossedPathId = null,
+  initialEligibility = 'ok',
 }: Props) {
   const [state, setState] = useState<WaveState>(initialState)
   const [crossedPath, setCrossedPath] = useState<string | null>(crossedPathId)
+  const [eligibility, setEligibility] = useState<string>(initialEligibility)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
-  // Brief confirmation toast under the button after a successful send.
-  // Spec: the button becomes inactive immediately and a one-liner
-  // confirms what happens next.
   const [showToast, setShowToast] = useState<'sent' | 'matched' | null>(null)
 
   useEffect(() => {
@@ -72,6 +83,36 @@ export function WaveButton({
     const t = window.setTimeout(() => setShowToast(null), 4500)
     return () => window.clearTimeout(t)
   }, [showToast])
+
+  // INELIGIBLE branch -- the pre-flight already knows the wave would
+  // be rejected. Render a quiet disabled state with the reason copy
+  // instead of the primary CTA. Skip this branch when the state is
+  // already a post-click state (waved / matched / connected) because
+  // those override eligibility (e.g. already_waved means we ARE on
+  // 'waved').
+  if (
+    state === 'none' &&
+    eligibility !== 'ok' &&
+    eligibility !== 'already_waved' &&
+    eligibility !== 'already_matched'
+  ) {
+    const copy =
+      (WAVE_REASON_COPY as Record<string, string>)[eligibility] ??
+      WAVE_REASON_COPY.rls_denied
+    return (
+      <div className="space-y-1">
+        <div
+          aria-disabled
+          data-testid="wave-ineligible"
+          data-eligibility-reason={eligibility}
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-center text-sm font-semibold text-mist"
+        >
+          Wave not available
+        </div>
+        <p className="text-[11px] text-mist/80 leading-snug">{copy}</p>
+      </div>
+    )
+  }
 
   if (state === 'wave_back') {
     return (
@@ -191,22 +232,26 @@ export function WaveButton({
     startTransition(async () => {
       const result = await sendWaveAction(targetId, campgroundId)
       if (result.error) {
+        // If the server told us a specific reason, route to the
+        // ineligible branch on the next render instead of just
+        // surfacing a transient error. This catches a race where the
+        // pre-flight on the hub passed but the actual insert was
+        // rejected -- the camper now sees the disabled state with
+        // the correct copy.
+        if (result.reason && result.reason !== 'rls_denied') {
+          setEligibility(result.reason)
+        }
         setError(result.error)
         return
       }
       if (result.matched) {
         setState('matched')
-        // The server action returns the new crossed_paths id when a
-        // match was created so the freshly-rendered "Say Hi →" link
-        // works without a server round-trip.
         if (result.crossedPathId) setCrossedPath(result.crossedPathId)
         setShowToast('matched')
       } else {
         setState('waved')
         setShowToast('sent')
       }
-      // from arg kept for future analytics — currently identical
-      // behavior whether the click started in 'none' or 'wave_back'.
       void from
     })
   }

@@ -113,12 +113,28 @@ export interface LegalAck {
   accepted_at: string
 }
 
-// Shape returned by the nearby_campers() RPC. Pre-connection privacy
-// rule: identifying fields (name, avatar, notes, hometown, etc.) are
-// never returned. The discovery card renders shared-interest overlap
-// + rig type only.
+// Shape returned by the nearby_campers() RPC, enriched server-side
+// by /campground/[slug]/page.tsx with display_name + username
+// (looked up via the admin client because the profiles_select_*
+// policies don't allow a regular SELECT pre-match). Camper Connections
+// v3 (2026-05-21) surfaces a real identity on the discovery card --
+// a camper has already opted into discovery by setting
+// privacy_mode='visible'; the older blanket "A nearby camper"
+// redaction left every card identityless and contradicted the
+// product framing of "say hi to a real person at your campground".
+//
+// rig + interests stay individually gated by their share_* flags --
+// those are richer profile data and remain opt-in-per-field.
 export interface NearbyCamper {
   profile_id: string
   rig_type: string | null
   interests: string[] | null
+  /** Camper's chosen display name. Always non-null for properly-
+   *  provisioned accounts (the handle_new_user trigger requires it),
+   *  but may be null for half-provisioned legacy rows. Falls back to
+   *  username for rendering. */
+  display_name: string | null
+  /** Stable username slug. Used as the primary identity fallback and
+   *  the @-handle line under the display name. */
+  username: string | null
 }

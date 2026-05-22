@@ -34,6 +34,12 @@ type Props = {
    *  connected campers get the Say Hi → / Open chat → deep-link
    *  directly on the card. */
   crossedPathByProfileId?: Record<string, string>
+  /** Wave eligibility code keyed by other-camper profile_id (the
+   *  same key as waveStateByProfileId). "ok" = active button safe.
+   *  Anything else = the wave RLS would reject -- WaveButton
+   *  renders a disabled state with a recovery hint instead of the
+   *  primary Send a Wave CTA. */
+  waveEligibilityByProfileId?: Record<string, string>
   viewerInterests: string[]
   initialInterests?: string[]
   currentVisibility: Visibility
@@ -79,6 +85,7 @@ export function CamperConnectionsCard({
   campers,
   waveStateByProfileId,
   crossedPathByProfileId = {},
+  waveEligibilityByProfileId = {},
   viewerInterests,
   initialInterests = [],
   currentVisibility,
@@ -171,6 +178,7 @@ export function CamperConnectionsCard({
               campgroundId={campgroundId}
               waveStateByProfileId={waveStateByProfileId}
               crossedPathByProfileId={crossedPathByProfileId}
+              waveEligibilityByProfileId={waveEligibilityByProfileId}
               viewerInterests={viewerInterests}
               initialInterests={initialInterests}
             />

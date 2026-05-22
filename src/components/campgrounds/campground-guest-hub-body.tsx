@@ -147,6 +147,13 @@ export type GuestHubAuthedViewer = {
    *  deep-link directly when a matched / connected camper is
    *  visible. Empty map when the viewer has no mutual matches. */
   crossedPathByProfileId: Record<string, string>
+  /** Pre-flight wave eligibility result keyed by other-camper
+   *  profile_id. "ok" means the Send a Wave button is safe to
+   *  render active; anything else means the card should render a
+   *  disabled state (or be hidden) so the camper never sees an
+   *  active button that fails on click. Computed server-side by
+   *  computeWaveEligibilityBatch in lib/wave/eligibility.ts. */
+  waveEligibilityByProfileId: Record<string, string>
   viewerInterests: string[]
   initialInterests: string[]
   privacyMode: PrivacyMode
@@ -972,6 +979,7 @@ export function CampgroundGuestHubBody({
               campers={auth.campers}
               waveStateByProfileId={auth.waveStateByProfileId}
               crossedPathByProfileId={auth.crossedPathByProfileId}
+              waveEligibilityByProfileId={auth.waveEligibilityByProfileId}
               viewerInterests={auth.viewerInterests}
               initialInterests={auth.initialInterests}
               currentVisibility={

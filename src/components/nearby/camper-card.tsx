@@ -15,6 +15,12 @@ type Props = {
    *  row. Drives the "Say Hi →" deep-link the WaveButton renders for
    *  matched + connected states. Null otherwise. */
   crossedPathId?: string | null
+  /** Pre-flight eligibility reason from
+   *  computeWaveEligibilityBatch. "ok" unlocks the active Send a Wave
+   *  button. Anything else hands the WaveButton an `initialReason` so
+   *  it renders the disabled state -- no active button that fails on
+   *  click. */
+  waveEligibility?: string
 }
 
 export function CamperCard({
@@ -23,20 +29,41 @@ export function CamperCard({
   waveState,
   viewerInterests,
   crossedPathId = null,
+  waveEligibility = 'ok',
 }: Props) {
   const viewerSet = new Set(viewerInterests)
   const shared = (camper.interests ?? []).filter((slug) => viewerSet.has(slug))
 
+  // Identity (Camper Connections v3): show display_name (preferred)
+  // or @username (fallback), or "Camper nearby" when neither is
+  // available. The current viewer's own card is filtered out
+  // server-side (defense-in-depth in the hub-page enrichment), so a
+  // card render here is always SOMEONE else.
+  const displayName = camper.display_name?.trim() || null
+  const username = camper.username?.trim() || null
+  const identity = displayName ?? (username ? `@${username}` : 'Camper nearby')
+  const showUsernameLine = !!displayName && !!username
+
   return (
-    <article className="flex h-full flex-col gap-3 rounded-2xl border border-white/5 bg-card p-4 shadow-lg shadow-black/20">
-      <header className="space-y-2">
+    <article
+      className="flex h-full flex-col gap-3 rounded-2xl border border-white/5 bg-card p-4 shadow-lg shadow-black/20"
+      data-testid="camper-card"
+      data-target-id={camper.profile_id}
+      data-wave-eligibility={waveEligibility}
+    >
+      <header className="space-y-1.5">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-mist/70">
-          A nearby camper
+          Camper here
         </p>
+        <h3 className="font-display text-lg font-extrabold text-cream leading-tight">
+          {identity}
+        </h3>
+        {showUsernameLine && (
+          <p className="text-[11px] text-mist">@{username}</p>
+        )}
         {camper.rig_type && (
-          <p className="text-sm text-cream">
-            <span className="text-mist">Rig · </span>
-            <span className="font-semibold">{camper.rig_type}</span>
+          <p className="text-xs text-mist">
+            Rig · <span className="text-cream font-semibold">{camper.rig_type}</span>
           </p>
         )}
       </header>
@@ -68,6 +95,7 @@ export function CamperCard({
           campgroundId={campgroundId}
           initialState={waveState}
           crossedPathId={crossedPathId}
+          initialEligibility={waveEligibility}
         />
         <p className="text-[11px] text-mist/70 leading-snug">
           Suggest meeting in a public campground area.
