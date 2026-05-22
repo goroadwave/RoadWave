@@ -150,15 +150,9 @@ test.describe('Signed-in hub copy (anon visit)', () => {
 test.describe.configure({ mode: 'serial' })
 
 test.describe('Signed-in hub (authed visit)', () => {
-  test('CamperConnectionsCard renders on /nearby (focused page, not embedded in the hub)', async ({
+  test('Camper Connections card renders in place of the anon CTA', async ({
     page,
   }) => {
-    // IA v6 (2026-05-22): the CamperConnectionsCard moved off the
-    // long campground hub onto its own dedicated /nearby page.
-    // This test verifies that move + that all the same affordances
-    // (visibility pills, edit interests, privacy settings) are
-    // still reachable.
-
     // 1. Provision a fresh camper via the demo quickcheckin form.
     await page.goto(`${QR_PATH}?token=${DEMO_TOKEN}`)
     await page.getByRole('link', { name: /Join Camper Connections/i }).first().click()
@@ -173,22 +167,33 @@ test.describe('Signed-in hub (authed visit)', () => {
       .click()
     await page.waitForURL(/\/home$/, { timeout: 30_000 })
 
-    // 2. Visit /nearby -- the focused Camper Connections page.
-    await page.goto('/nearby')
-    await expect(page).toHaveURL(/\/nearby$/)
+    // 2. Visit the hub directly. The new auth-aware page should
+    //    detect the active check-in, upsert presence (idempotent),
+    //    fetch nearby campers + wave state, and render the
+    //    CamperConnectionsCard in place of the anon "Meet other
+    //    campers" CTA card.
+    await page.goto(QR_PATH)
+    await expect(page).toHaveURL(/\/campground\/roadwave-demo-campground/)
 
-    // 3. Page-level heading + camper-card section heading.
+    // 3. New section heading + headline must be visible.
     await expect(
-      page.getByRole('heading', {
-        level: 1,
-        name: /Camper Connections at/i,
-      }),
+      page.getByRole('heading', { level: 2, name: /Camper connections/i }),
     ).toBeVisible()
     await expect(
-      page.getByText('Find your campground people without making it weird.').first(),
+      page
+        .getByText('Find your campground people without making it weird.')
+        .first(),
+    ).toBeVisible()
+    await expect(
+      page.getByText(
+        /See campers here who share your interests\. Wave if you want to connect\. Nothing opens unless it's mutual\./,
+      ),
     ).toBeVisible()
 
-    // 4. Visibility pills must be in the DOM, Visible pressed.
+    // 4. Interactive visibility pills must be in the DOM. They are
+    //    rendered as <button aria-pressed=...> with the current mode
+    //    highlighted. We picked "Visible" in the quickcheckin form,
+    //    so the Visible pill must be pressed.
     const visiblePill = page.getByRole('button', { name: /^Visible$/ }).first()
     await expect(visiblePill).toBeVisible()
     await expect(visiblePill).toHaveAttribute('aria-pressed', 'true')
@@ -207,14 +212,35 @@ test.describe('Signed-in hub (authed visit)', () => {
       page.getByRole('link', { name: /Join Camper Connections/i }),
     ).toHaveCount(0)
 
-    // 7. Lands at the top -- focused page, no anchor-jump halfway
-    //    down a mixed surface anymore.
-    await page.waitForTimeout(1500)
+    // 7. Header shows the authed shortcut + Sign out, not Sign in.
+    await expect(
+      page.getByRole('link', { name: /^My RoadWave$/ }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('button', { name: /^Sign out$/ }),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: /^Sign in$/ }),
+    ).toHaveCount(0)
+
+    // 8. None of the retired strings appear on the authed hub.
+    const body = await page.locator('body').innerText()
+    for (const phrase of RETIRED_PHRASES) {
+      expect(
+        body,
+        `authed hub must not contain retired phrase "${phrase}"`,
+      ).not.toContain(phrase)
+    }
+
+    // 9. Lands at the top -- the existing inline pin script + the
+    //    QrScrollTopGuard must still fire after the new auth-aware
+    //    branch runs.
+    await page.waitForTimeout(3200)
     const y = await page.evaluate(() => window.scrollY || 0)
-    expect(y, '/nearby must land at the top').toBeLessThanOrEqual(50)
+    expect(y, 'authed hub scrollY must be at the top').toBeLessThanOrEqual(50)
   })
 
-  test('the signed-in hub shows campground utility only (no embedded CamperConnections)', async ({
+  test('/nearby redirects authed camper to the hub WITH #camper-connections anchor', async ({
     page,
   }) => {
     // Provision via quickcheckin (same demo flow).
@@ -229,33 +255,26 @@ test.describe('Signed-in hub (authed visit)', () => {
       .click()
     await page.waitForURL(/\/home$/, { timeout: 30_000 })
 
-    // After IA v6, /campground/<slug> for signed-in campers shows
-    // the SAME campground utility (Wi-Fi, map, rules, amenities,
-    // updates, meetups, office help) as anon visitors -- no
-    // embedded CamperConnectionsCard, no in-body AppNav.
-    await page.goto(QR_PATH)
-    await expect(page).toHaveURL(/\/campground\/roadwave-demo-campground/)
+    // The renamed "Camper Connections" nav tab points at /nearby,
+    // which redirects to the hub with a #camper-connections deep
+    // link. Phase F: the inline scroll-pin script special-cases
+    // this anchor so the browser anchor-jumps to the section.
+    await page.goto('/nearby')
+    await expect(page).toHaveURL(
+      /\/campground\/roadwave-demo-campground(\?.*)?#camper-connections$/,
+    )
 
-    // The "Find your campground people..." headline -- previously
-    // also on the CamperConnectionsCard for authed users -- now
-    // only appears as the anon CTA. For an authed visitor it must
-    // NOT show (they see the smaller "Camper Connections live on
-    // My RoadWave" banner instead).
-    await expect(
-      page.getByText('Find your campground people without making it weird.'),
-    ).toHaveCount(0)
-
-    // The small banner that points to /nearby + /home must be
-    // present so the signed-in camper has a one-tap path to the
-    // camper-to-camper layer.
-    await expect(
-      page.getByRole('link', { name: /Campers here →/i }).first(),
-    ).toBeVisible()
-    const camperLink = page.getByRole('link', { name: /Campers here →/i }).first()
-    expect(await camperLink.getAttribute('href')).toBe('/nearby')
+    // The deep-link should leave the camper near the Camper
+    // Connections section, not at the top of the page.
+    await page.waitForTimeout(1500)
+    const y = await page.evaluate(() => window.scrollY || 0)
+    expect(
+      y,
+      'deep-link #camper-connections should put the camper near the section, not at the top',
+    ).toBeGreaterThan(200)
   })
 
-  test('AppNav renders inside the (app) layout (Home, Waves, Past Waves)', async ({
+  test('AppNav renders on the hub when authed (Waves/Past Waves reachable)', async ({
     page,
   }) => {
     // Provision via quickcheckin.
@@ -268,32 +287,28 @@ test.describe('Signed-in hub (authed visit)', () => {
     await page.getByRole('button', { name: /Complete Check-In to/i }).click()
     await page.waitForURL(/\/home$/, { timeout: 30_000 })
 
-    // AppNav lives on every (app)-group page (/home, /nearby,
-    // /waves, /crossed-paths, /settings/privacy). It's no longer
-    // embedded in the QR campground hub. Verify the five-tab v6
-    // set is reachable from /home.
-    for (const label of ['Home', 'Campground', 'Camper Connections', 'Waves', 'Past Waves']) {
+    // Land on the hub and confirm the in-app nav strip is visible
+    // (it's not there for anon visitors -- see the next test).
+    // The tab labels we need to reach: Waves, Past Waves, Home.
+    await page.goto(QR_PATH)
+    for (const label of ['Home', 'Camper Connections', 'Waves', 'Past Waves']) {
       await expect(
         page.getByRole('link', { name: new RegExp(`^${label}$`, 'i') }).first(),
-        `AppNav must expose "${label}" on /home`,
+        `AppNav must expose "${label}" on the signed-in hub`,
       ).toBeVisible()
     }
 
-    // Waves tab routes to /waves.
-    const wavesLink = page.getByRole('link', { name: /^Waves$/i }).first()
+    // The Waves tab routes to /waves, NOT back to /campground or /home.
+    const wavesLink = page
+      .getByRole('link', { name: /^Waves$/i })
+      .first()
     expect(await wavesLink.getAttribute('href')).toBe('/waves')
 
-    // Past Waves tab routes to /crossed-paths.
+    // The Past Waves tab routes to /crossed-paths.
     const pastWavesLink = page
       .getByRole('link', { name: /^Past Waves$/i })
       .first()
     expect(await pastWavesLink.getAttribute('href')).toBe('/crossed-paths')
-
-    // Camper Connections tab routes to /nearby (NOT a hub anchor).
-    const ccLink = page
-      .getByRole('link', { name: /^Camper Connections$/i })
-      .first()
-    expect(await ccLink.getAttribute('href')).toBe('/nearby')
   })
 })
 
