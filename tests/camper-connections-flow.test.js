@@ -612,7 +612,12 @@ test.describe('Camper Connections: H. Eligibility invariants', () => {
   test('every active Send a Wave button is backed by an eligible target', async ({
     browser,
   }, testInfo) => {
-    testInfo.setTimeout(90_000)
+    // Mobile-safari can render this hub in 30s+ on a noisy demo
+    // campground; bump above the 60s default. The actual assertion
+    // work below is one batched evaluateAll() round-trip per
+    // selector, NOT per card, so the test budget is mostly hub
+    // render time + quickcheckin.
+    testInfo.setTimeout(150_000)
     const ctx = await browser.newContext({
       viewport: { width: 390, height: 844 },
     })
@@ -621,43 +626,47 @@ test.describe('Camper Connections: H. Eligibility invariants', () => {
       await quickCheckIn(page)
       await page.goto(`/campground/${DEMO_SLUG}`)
 
-      // Every visible Send a Wave button MUST live inside a card
-      // whose `data-wave-eligibility` is "ok". Cards with any
-      // other reason must render `wave-ineligible` instead.
-      const sendButtons = page.locator('[data-testid="send-wave-button"]')
-      const sendCount = await sendButtons.count()
+      // Single round-trip: ask the browser to give us, for every
+      // active Send a Wave button, the data-wave-eligibility value
+      // of its enclosing camper card. Looping in JS-land with
+      // per-element evaluate() was timing out on mobile-safari
+      // when the campground had a lot of cards.
+      const sendButtonReasons = await page
+        .locator('[data-testid="send-wave-button"]')
+        .evaluateAll((els) =>
+          els.map(
+            (el) =>
+              el
+                .closest('[data-testid="camper-card"]')
+                ?.getAttribute('data-wave-eligibility') ?? null,
+          ),
+        )
       testInfo.annotations.push({
         type: 'H-eligible-send-buttons',
-        description: String(sendCount),
+        description: String(sendButtonReasons.length),
       })
-
-      for (let i = 0; i < sendCount; i++) {
-        const btn = sendButtons.nth(i)
-        const reason = await btn.evaluate((el) =>
-          el.closest('[data-testid="camper-card"]')?.getAttribute(
-            'data-wave-eligibility',
-          ) ?? null,
-        )
+      for (let i = 0; i < sendButtonReasons.length; i++) {
         expect(
-          reason,
+          sendButtonReasons[i],
           `Send a Wave button #${i} must sit inside a card with eligibility=ok`,
         ).toBe('ok')
       }
 
-      // Inversely, every wave-ineligible state must have a reason
-      // OTHER than "ok" surfaced on its parent card.
-      const ineligible = page.locator('[data-testid="wave-ineligible"]')
-      const inCount = await ineligible.count()
+      // Same single-round-trip batching for the ineligible side.
+      const ineligibleReasons = await page
+        .locator('[data-testid="wave-ineligible"]')
+        .evaluateAll((els) =>
+          els.map((el) => el.getAttribute('data-eligibility-reason')),
+        )
       testInfo.annotations.push({
         type: 'H-ineligible-cards',
-        description: String(inCount),
+        description: String(ineligibleReasons.length),
       })
-      for (let i = 0; i < inCount; i++) {
-        const el = ineligible.nth(i)
-        const reason = await el.getAttribute('data-eligibility-reason')
+      for (let i = 0; i < ineligibleReasons.length; i++) {
+        const reason = ineligibleReasons[i]
         expect(
           reason && reason !== 'ok',
-          `ineligible card #${i} must carry a non-ok reason code`,
+          `ineligible card #${i} must carry a non-ok reason code (got: ${reason})`,
         ).toBe(true)
       }
     } finally {
