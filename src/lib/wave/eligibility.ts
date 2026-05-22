@@ -195,6 +195,13 @@ export async function computeWaveEligibility(
 // whether its Send a Wave button should be active. Returns a map
 // keyed by target profile_id so the caller can render disabled
 // states without extra round-trips.
+//
+// Implementation note: keeps the four admin queries simple .in() /
+// .eq() filters -- nested .or(and(...),and(...)) syntax was producing
+// 19s+ hub renders against the live database. Crossed_paths reads
+// every row referencing the viewer once (the viewer's match graph is
+// small, single-digit rows for a typical camper), then we filter
+// client-side. Same with waves -- only the viewer's outgoing waves.
 export async function computeWaveEligibilityBatch(
   viewerId: string,
   targetIds: string[],
@@ -207,10 +214,8 @@ export async function computeWaveEligibilityBatch(
 
   const admin = createSupabaseAdminClient()
   const nowIso = new Date().toISOString()
+  const targetSet = new Set(unique)
 
-  // One round-trip for profiles, one for check_ins, one for waves, one
-  // for crossed_paths. We could parallelize but the latencies are
-  // already low and sequential keeps the connection use predictable.
   const [
     { data: profileRows },
     { data: checkinRows },
@@ -236,24 +241,29 @@ export async function computeWaveEligibilityBatch(
       .eq('from_profile_id', viewerId)
       .in('to_profile_id', unique)
       .returns<{ to_profile_id: string }[]>(),
-    admin
-      .from('crossed_paths')
-      .select('profile_a_id, profile_b_id, status')
-      .or(
-        unique
-          .map(
-            (id) =>
-              `and(profile_a_id.eq.${viewerId < id ? viewerId : id},profile_b_id.eq.${viewerId < id ? id : viewerId})`,
-          )
-          .join(','),
-      )
-      .returns<
-        {
-          profile_a_id: string
-          profile_b_id: string
-          status: string
-        }[]
-      >(),
+    // Crossed_paths: fetch every row touching the viewer. The viewer's
+    // match graph is small enough that scanning client-side is faster
+    // than building a multi-AND filter that PostgREST struggles to
+    // plan. Two simple .eq() reads in parallel cover both canonical
+    // positions (profile_a_id or profile_b_id).
+    Promise.all([
+      admin
+        .from('crossed_paths')
+        .select('profile_a_id, profile_b_id, status')
+        .eq('profile_a_id', viewerId)
+        .returns<
+          { profile_a_id: string; profile_b_id: string; status: string }[]
+        >(),
+      admin
+        .from('crossed_paths')
+        .select('profile_a_id, profile_b_id, status')
+        .eq('profile_b_id', viewerId)
+        .returns<
+          { profile_a_id: string; profile_b_id: string; status: string }[]
+        >(),
+    ]).then(([asA, asB]) => ({
+      data: [...(asA.data ?? []), ...(asB.data ?? [])],
+    })),
   ])
 
   const profiles = new Map<string, ProfileRow>(
@@ -273,11 +283,11 @@ export async function computeWaveEligibilityBatch(
   const wavedTargets = new Set(
     (outgoingWaves ?? []).map((w) => w.to_profile_id),
   )
-  const matchedTargets = new Set<string>(
-    (matches ?? []).map((m) =>
-      m.profile_a_id === viewerId ? m.profile_b_id : m.profile_a_id,
-    ),
-  )
+  const matchedTargets = new Set<string>()
+  for (const m of matches ?? []) {
+    const other = m.profile_a_id === viewerId ? m.profile_b_id : m.profile_a_id
+    if (targetSet.has(other)) matchedTargets.add(other)
+  }
 
   for (const targetId of unique) {
     let reason: WaveEligibilityReason = 'ok'
