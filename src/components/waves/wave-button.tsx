@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState, useTransition } from 'react'
 import { sendWaveAction } from '@/lib/actions/waves'
-import { WAVE_REASON_COPY } from '@/lib/wave/eligibility'
+import { WAVE_REASON_COPY } from '@/lib/wave/reason-copy'
 
 // Drives the Wave affordance on every camper card on the signed-in
 // campground hub (and on /nearby's redirected hub view). Each state

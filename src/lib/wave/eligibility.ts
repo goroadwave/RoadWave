@@ -1,88 +1,22 @@
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import {
+  WAVE_REASON_COPY,
+  type WaveEligibility,
+  type WaveEligibilityReason,
+} from '@/lib/wave/reason-copy'
+
+// Re-export so existing callers (sendWaveAction, etc.) that import
+// from '@/lib/wave/eligibility' keep working. Client components like
+// WaveButton should import directly from '@/lib/wave/reason-copy' to
+// avoid pulling in the server-only Supabase clients below.
+export { WAVE_REASON_COPY }
+export type { WaveEligibility, WaveEligibilityReason }
 
 // Structured reason codes for "why can't this camper wave at that
 // camper". Mirrors the waves_insert_targeted RLS clauses from mig
 // 0033 plus the table-level CHECK and UNIQUE constraints from mig
-// 0001. The generic "row-level security" error string the supabase
-// client returns is opaque; this lets the UI surface an actionable
-// message AND lets the hub-page query pre-filter ineligible cards so
-// no camper ever sees an active Send a Wave button that fails on
-// click.
-//
-// Codes (additive only -- never reuse a name, never drop one):
-//   * ok                         -- insert will succeed
-//   * same_user                  -- target IS the caller
-//   * sender_missing_profile     -- caller has no profiles row
-//   * sender_invisible           -- caller's privacy_mode is not in
-//                                   ('visible','quiet') -- matches the
-//                                   RLS sender clause
-//   * recipient_missing_profile  -- target has no profiles row
-//   * recipient_not_visible      -- target's privacy_mode != 'visible'
-//   * no_shared_active_checkin   -- viewer + target are not both
-//                                   currently checked in to the same
-//                                   campground (covers expired
-//                                   check_ins, cross-campground stale
-//                                   presence, and the campground
-//                                   mismatch race)
-//   * already_waved              -- the (from, to) unique constraint
-//                                   would conflict
-//   * already_matched            -- crossed_paths row exists in any
-//                                   status (UI should be on Matched +
-//                                   Say Hi, not Send a Wave)
-//   * recipient_blocked          -- reserved; no block list in today's
-//                                   schema but the UI handles it so a
-//                                   future migration can light it up
-//                                   without a code change here
-//   * wrong_id                   -- target_id is malformed / null
-//   * rls_denied                 -- catch-all when this function returns
-//                                   "ok" but the actual insert still
-//                                   rejects under RLS. Means the rules
-//                                   in this file have drifted from the
-//                                   live RLS policy -- the action logs
-//                                   the row so we can patch.
-
-export type WaveEligibilityReason =
-  | 'ok'
-  | 'same_user'
-  | 'sender_missing_profile'
-  | 'sender_invisible'
-  | 'recipient_missing_profile'
-  | 'recipient_not_visible'
-  | 'no_shared_active_checkin'
-  | 'already_waved'
-  | 'already_matched'
-  | 'recipient_blocked'
-  | 'wrong_id'
-  | 'rls_denied'
-
-export type WaveEligibility = {
-  ok: boolean
-  reason: WaveEligibilityReason
-}
-
-// Human-readable copy keyed by reason. Used by both the WaveButton
-// (ineligible state) and the sendWaveAction error path. Keep these
-// short -- they render under a camper card. Avoid blame language;
-// the camper viewing the card has done nothing wrong.
-export const WAVE_REASON_COPY: Record<WaveEligibilityReason, string> = {
-  ok: '',
-  same_user: 'This is your own card.',
-  sender_missing_profile:
-    'Finish setting up your profile to wave at other campers.',
-  sender_invisible:
-    "You're in Invisible / Updates Only mode — switch to Visible or Quiet to send a wave.",
-  recipient_missing_profile:
-    "This camper hasn't finished setting up their profile yet.",
-  recipient_not_visible: 'This camper is not accepting waves right now.',
-  no_shared_active_checkin:
-    "This camper's check-in just expired. Refresh to update the list.",
-  already_waved: 'Wave already sent — check your Lantern for updates.',
-  already_matched: 'You already matched — open the conversation to say hi.',
-  recipient_blocked: 'This camper is no longer reachable.',
-  wrong_id: 'Could not identify this camper. Refresh the list.',
-  rls_denied:
-    "You can't wave at this camper right now — refresh the list and try again.",
-}
+// 0001. See reason-copy.ts for the type and the human-readable copy.
 
 // Privacy modes the waves_insert_targeted RLS accepts on the sender
 // side. Anything outside this set blocks the insert.
@@ -116,18 +50,24 @@ export async function computeWaveEligibility(
   if (viewerId === targetId) return { ok: false, reason: 'same_user' }
 
   const admin = createSupabaseAdminClient()
+  const userScoped = await createSupabaseServerClient()
 
-  // Pull viewer + target profile rows in one round-trip.
-  const { data: profileRows } = await admin
-    .from('profiles')
-    .select('id, privacy_mode')
-    .in('id', [viewerId, targetId])
-    .returns<ProfileRow[]>()
-  const profiles = new Map<string, ProfileRow>(
-    (profileRows ?? []).map((p) => [p.id, p]),
-  )
-  const viewer = profiles.get(viewerId)
-  const target = profiles.get(targetId)
+  // Viewer's own row goes through the user-scoped client (always
+  // visible via profiles_select_own RLS); the target goes through
+  // admin (pre-match the user-scoped client can't see it). See the
+  // batch variant below for the bug this routes around.
+  const [{ data: viewer }, { data: target }] = await Promise.all([
+    userScoped
+      .from('profiles')
+      .select('id, privacy_mode')
+      .eq('id', viewerId)
+      .maybeSingle<ProfileRow>(),
+    admin
+      .from('profiles')
+      .select('id, privacy_mode')
+      .eq('id', targetId)
+      .maybeSingle<ProfileRow>(),
+  ])
   if (!viewer || viewer.privacy_mode == null) {
     return { ok: false, reason: 'sender_missing_profile' }
   }
@@ -213,19 +153,37 @@ export async function computeWaveEligibilityBatch(
   if (unique.length === 0) return out
 
   const admin = createSupabaseAdminClient()
+  // The viewer's own row is read via the user-scoped client. The
+  // profiles_select_own RLS policy (mig 0015) guarantees the caller
+  // always sees their own row, and /home + /profile/setup both prove
+  // the row exists from that path. The admin client's bulk .in(...)
+  // lookup has been observed (RoadMark, 2026-05-22) to miss the
+  // viewer's row even when the user-scoped read finds it -- root
+  // cause unconfirmed; possibly a connection-pool view race or a
+  // mismatch between user.id casing/format and what the admin client
+  // is querying. Reading the viewer's row via the user-scoped client
+  // routes around it entirely. Targets still go through admin because
+  // pre-match the user-scoped client can't see them.
+  const userScoped = await createSupabaseServerClient()
   const nowIso = new Date().toISOString()
   const targetSet = new Set(unique)
 
   const [
-    { data: profileRows },
+    { data: viewerOwn },
+    { data: targetProfileRows },
     { data: checkinRows },
     { data: outgoingWaves },
     { data: matches },
   ] = await Promise.all([
+    userScoped
+      .from('profiles')
+      .select('id, privacy_mode')
+      .eq('id', viewerId)
+      .maybeSingle<ProfileRow>(),
     admin
       .from('profiles')
       .select('id, privacy_mode')
-      .in('id', [viewerId, ...unique])
+      .in('id', unique)
       .returns<ProfileRow[]>(),
     admin
       .from('check_ins')
@@ -266,28 +224,28 @@ export async function computeWaveEligibilityBatch(
     })),
   ])
 
-  const profiles = new Map<string, ProfileRow>(
-    (profileRows ?? []).map((p) => [p.id, p]),
+  // Targets keyed by id. Viewer is intentionally NOT in this map --
+  // it now comes from the user-scoped lookup above.
+  const targetProfiles = new Map<string, ProfileRow>(
+    (targetProfileRows ?? []).map((p) => [p.id, p]),
   )
-  const viewer = profiles.get(viewerId)
+  const viewer = viewerOwn ?? null
   const viewerOk =
     !!viewer &&
     viewer.privacy_mode != null &&
     SENDER_OK_MODES.has(viewer.privacy_mode)
-  // Diagnostic: surface the exact sender-state the eligibility check
-  // sees when it would block. Visible in Vercel runtime logs. The
-  // schema defaults privacy_mode to 'visible' and is NOT NULL, so a
-  // viewer who renders the camper card but lands here means either
-  // (a) the handle_new_user trigger never fired for this OAuth user
-  // (admin lookup returns no row), or (b) the camper saved a
-  // privacy_mode value outside SENDER_OK_MODES via /profile/setup.
-  // Either way we want the row state in the logs to confirm before
-  // changing schema or UI defaults.
+  // Diagnostic: when the viewer fails the sender check, log the exact
+  // shape we saw from both clients so we can finally pin down the
+  // RoadMark report (admin missed the row, user-scoped found it -- or
+  // didn't). Includes the viewer's id so it can be cross-referenced
+  // against profiles in Supabase Studio.
   if (!viewerOk) {
     console.log(
-      `[wave-eligibility] viewer ineligible uid=${viewerId} row=${
-        viewer ? 'found' : 'MISSING'
-      } privacy_mode=${viewer?.privacy_mode ?? 'NULL'}`,
+      `[wave-eligibility] viewer ineligible uid=${viewerId} ` +
+        `userScopedRow=${viewerOwn ? 'found' : 'MISSING'} ` +
+        `userScopedPrivacy=${viewerOwn?.privacy_mode ?? 'NULL'} ` +
+        `targetCount=${unique.length} ` +
+        `targetRowsReturned=${targetProfileRows?.length ?? 0}`,
     )
   }
   const viewerCheckinOk = (checkinRows ?? []).some(
@@ -312,7 +270,7 @@ export async function computeWaveEligibilityBatch(
     } else if (!viewerOk) {
       reason = 'sender_invisible'
     } else {
-      const target = profiles.get(targetId)
+      const target = targetProfiles.get(targetId)
       if (!target || target.privacy_mode == null) {
         reason = 'recipient_missing_profile'
       } else if (target.privacy_mode !== 'visible') {
