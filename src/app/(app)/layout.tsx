@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AppLantern } from '@/components/lantern/app-lantern'
+import { AppToastHost } from '@/components/lantern/app-toast-host'
 import { GuestSupportChat } from '@/components/support/guest-support-chat'
 import { TourOverlay } from '@/components/support/tour-overlay'
 import { AppNav } from '@/components/ui/app-nav'
@@ -126,6 +127,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </header>
       <AppNav initialBadgeCounts={initialBadgeCounts} />
       <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-6">{children}</main>
+      <AppToastHost />
       <GuestSupportChat />
       <TourOverlay />
     </div>
