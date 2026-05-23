@@ -1143,6 +1143,8 @@ export function CampgroundGuestHubBody({
       <CamperToastHost
         campgroundId={campground.id}
         previewMode={previewMode}
+        initialBulletinIds={bulletins.map((b) => b.id)}
+        initialMeetupIds={meetups.map((m) => m.id)}
       />
     </main>
   )

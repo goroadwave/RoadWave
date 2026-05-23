@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   LANTERN_BULLETINS_EVENT,
   LANTERN_MEETUPS_EVENT,
@@ -55,12 +55,17 @@ import {
 type ToastKind = 'reply' | 'bulletin' | 'meetup'
 
 type Toast = {
-  // Unique id per toast for React keys + auto-dismiss cancel.
+  // Unique id per toast for React keys.
   key: number
   kind: ToastKind
   // Only set for replies -- the message thread id, used to
   // resolve the localStorage entry on click.
   threadId?: string
+  // The dedupe id: bulletins.id / meetups.id / threadId. Tracked
+  // in `toastedRef` so a poll that re-fires the same event after
+  // the camper dismissed the toast doesn't bring it back. Set for
+  // every toast kind.
+  refId: string
 }
 
 const MAX_TOASTS = 3
@@ -68,12 +73,38 @@ const MAX_TOASTS = 3
 export function CamperToastHost({
   campgroundId,
   previewMode = false,
+  initialBulletinIds = [],
+  initialMeetupIds = [],
 }: {
   campgroundId: string
   previewMode?: boolean
+  /** Bulletins already visible at SSR render time. Seeded into the
+   *  bulletin dedupe set so the first poll-after-mount doesn't pop
+   *  a toast for content the camper can already see on the page. */
+  initialBulletinIds?: string[]
+  /** Same for meetups. */
+  initialMeetupIds?: string[]
 }) {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [mounted, setMounted] = useState(false)
+  // Per-kind already-toasted id set. Survives toast dismissal so a
+  // subsequent poll that re-dispatches the same event (because the
+  // poller compares list shape and re-fires whenever any field
+  // differs) does NOT bring the toast back. Cleared on unmount.
+  //
+  // Keyed by ref id (bulletin.id / meetup.id / thread.id). Once a
+  // ref id is in the set, no further toast of that kind+id ever
+  // pushes. New ref ids (i.e. genuinely new bulletins/meetups)
+  // still pop because they're not in the set.
+  //
+  // Seeded with the SSR-visible item ids so the first poll doesn't
+  // toast something that was already on the page when the camper
+  // arrived.
+  const toastedRef = useRef({
+    bulletin: new Set<string>(initialBulletinIds),
+    meetup: new Set<string>(initialMeetupIds),
+    reply: new Set<string>(),
+  })
 
   // Mount gate -- the host is rendered server-side as nothing
   // (no toasts in initial state), then hydrates without any
@@ -88,6 +119,12 @@ export function CamperToastHost({
     if (!mounted || previewMode) return
 
     function push(t: Omit<Toast, 'key'>) {
+      // Dedupe by ref id within this kind. If the camper already
+      // saw (and dismissed) a toast for this id, don't bring it
+      // back. The Lantern still holds the underlying record.
+      const seen = toastedRef.current[t.kind]
+      if (seen.has(t.refId)) return
+      seen.add(t.refId)
       const next: Toast = { ...t, key: Date.now() + Math.random() }
       setToasts((prev) => {
         // Drop the oldest if we're already at capacity, then
@@ -104,17 +141,44 @@ export function CamperToastHost({
         threadId?: string
       }>
       if (ce.detail?.campgroundId !== campgroundId) return
-      push({ kind: 'reply', threadId: ce.detail.threadId })
+      const threadId = ce.detail.threadId
+      if (!threadId) return
+      push({ kind: 'reply', threadId, refId: threadId })
     }
     function onBulletins(e: Event) {
-      const ce = e as CustomEvent<{ campgroundId?: string }>
+      const ce = e as CustomEvent<{
+        campgroundId?: string
+        bulletins?: { id: string; created_at: string }[]
+      }>
       if (ce.detail?.campgroundId !== campgroundId) return
-      push({ kind: 'bulletin' })
+      const list = ce.detail.bulletins ?? []
+      // Toast the newest item we haven't already toasted. Iterating
+      // newest-first means a burst of new bulletins still shows
+      // each one (subject to MAX_TOASTS capacity).
+      const sorted = [...list].sort((a, b) =>
+        a.created_at < b.created_at ? 1 : -1,
+      )
+      for (const b of sorted) {
+        if (toastedRef.current.bulletin.has(b.id)) continue
+        push({ kind: 'bulletin', refId: b.id })
+        break
+      }
     }
     function onMeetups(e: Event) {
-      const ce = e as CustomEvent<{ campgroundId?: string }>
+      const ce = e as CustomEvent<{
+        campgroundId?: string
+        meetups?: { id: string; created_at: string }[]
+      }>
       if (ce.detail?.campgroundId !== campgroundId) return
-      push({ kind: 'meetup' })
+      const list = ce.detail.meetups ?? []
+      const sorted = [...list].sort((a, b) =>
+        a.created_at < b.created_at ? 1 : -1,
+      )
+      for (const m of sorted) {
+        if (toastedRef.current.meetup.has(m.id)) continue
+        push({ kind: 'meetup', refId: m.id })
+        break
+      }
     }
 
     window.addEventListener(LANTERN_OFFICE_REPLY_EVENT, onReply)

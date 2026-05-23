@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createPortal } from 'react-dom'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import {
   markAllNotificationsReadAction,
@@ -57,18 +56,13 @@ export function AppLantern({ pollIntervalMs = POLL_INTERVAL_DEFAULT }: Props) {
   const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
-  const [mounted, setMounted] = useState(false)
   const [activeBulletin, setActiveBulletin] = useState<BulletinPayload | null>(
     null,
   )
   const buttonRef = useRef<HTMLButtonElement | null>(null)
+  const panelRef = useRef<HTMLDivElement | null>(null)
   // Track last seen unread count so we can chirp on new arrivals only.
   const lastUnreadCountRef = useRef(0)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // Fetch the most recent 20 notifications for the user. RLS scopes
   // automatically to auth.uid().
@@ -130,6 +124,24 @@ export function AppLantern({ pollIntervalMs = POLL_INTERVAL_DEFAULT }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
+  // Click-outside closes the panel (mirrors QR Lantern's pattern).
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent | TouchEvent) {
+      const target = e.target as Node | null
+      if (!target) return
+      if (buttonRef.current && buttonRef.current.contains(target)) return
+      if (panelRef.current && panelRef.current.contains(target)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('touchstart', onDown)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('touchstart', onDown)
+    }
+  }, [open])
+
   // Escape closes the bulletin overlay too.
   useEffect(() => {
     if (!activeBulletin) return
@@ -140,37 +152,12 @@ export function AppLantern({ pollIntervalMs = POLL_INTERVAL_DEFAULT }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [activeBulletin])
 
-  function openPanel() {
-    const rect = buttonRef.current?.getBoundingClientRect()
-    if (rect) {
-      // Anchor below the button. Clamp `right` so the 320px-wide
-      // panel never overflows the LEFT edge on narrow viewports —
-      // if the button is far from the right edge of the viewport
-      // (e.g., header padding + adjacent buttons), the natural
-      // `right = innerWidth - rect.right` would push the panel
-      // past the screen's left side. Cap it so the panel always
-      // fits (or shrinks via max-width).
-      const PANEL = 320
-      const SAFE = 8
-      const desiredRight = Math.round(window.innerWidth - rect.right)
-      const maxRight = Math.max(SAFE, window.innerWidth - PANEL - SAFE)
-      setPos({
-        top: Math.round(rect.bottom + 8),
-        right: Math.max(SAFE, Math.min(desiredRight, maxRight)),
-      })
-    } else {
-      setPos({ top: 56, right: 12 })
-    }
-    setOpen(true)
-  }
-
   function closePanel() {
     setOpen(false)
   }
 
   function toggleOpen() {
-    if (open) closePanel()
-    else openPanel()
+    setOpen((prev) => !prev)
   }
 
   async function markRead(id: string) {
@@ -277,150 +264,213 @@ export function AppLantern({ pollIntervalMs = POLL_INTERVAL_DEFAULT }: Props) {
     await markAllNotificationsReadAction()
   }
 
+  // QR-Lantern style: emoji button with .lantern-pulse when unread,
+  // absolute-positioned dropdown panel constrained to viewport width
+  // so it never overflows on narrow mobile screens. Same visual
+  // treatment as src/components/campgrounds/lantern.tsx so the camper
+  // sees the SAME Lantern across QR + signed-in surfaces.
+  const buttonClass = unread > 0 ? 'lantern-pulse' : ''
   return (
-    <>
+    <div className="relative">
       <button
         ref={buttonRef}
         type="button"
         onClick={toggleOpen}
-        aria-label="Activity Lantern — see waves, check-ins, and updates"
+        aria-label={
+          unread > 0
+            ? `Activity Lantern -- ${unread} new`
+            : 'Activity Lantern'
+        }
         aria-expanded={open}
         aria-haspopup="menu"
-        className={
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 transition-colors ${
           unread > 0
-            ? 'group relative inline-flex h-9 w-9 items-center justify-center rounded-full transition-shadow shadow-[0_0_14px_3px_rgba(245,158,11,0.45)] hover:shadow-[0_0_18px_4px_rgba(245,158,11,0.55)]'
-            : 'group relative inline-flex h-9 w-9 items-center justify-center rounded-full transition-shadow hover:shadow-[0_0_10px_2px_rgba(245,158,11,0.25)]'
-        }
-        data-unread={unread}
+            ? 'bg-flame/15 border border-flame/40 text-flame hover:bg-flame/20'
+            : 'border border-white/10 text-mist hover:text-cream hover:border-white/20'
+        } ${buttonClass}`}
       >
-        <LanternIcon className="h-5 w-5" lit={unread > 0} />
-        <span
-          aria-hidden
-          className="hidden md:group-hover:block absolute top-full mt-2 right-0 whitespace-nowrap rounded-md border border-flame/40 bg-night px-2 py-1 text-[10px] font-medium text-cream pointer-events-none z-10"
-        >
-          Activity Lantern — see waves, check-ins, and updates
+        <span aria-hidden className="text-base leading-none">
+          🏮
         </span>
+        {unread > 0 && (
+          <span className="text-[11px] font-semibold tabular-nums">
+            {unread}
+          </span>
+        )}
       </button>
 
-      {mounted && open && pos
-        ? createPortal(
-            <>
-              <button
-                type="button"
-                aria-label="Close notifications"
-                onClick={closePanel}
-                className="fixed inset-0 z-[100] cursor-default bg-transparent"
-              />
-              <div
-                role="menu"
-                aria-label="Notifications"
-                style={{ top: pos.top, right: pos.right }}
-                className="fixed w-80 max-w-[calc(100vw-1rem)] z-[101] rounded-2xl border border-white/10 bg-card p-2 shadow-2xl shadow-black/60"
-              >
-                <div className="px-2 pt-1.5 pb-2 flex items-center justify-between">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-flame">
-                    Activity
-                  </p>
-                  {unread > 0 && (
-                    <button
-                      type="button"
-                      onClick={markAllRead}
-                      className="text-[11px] text-mist hover:text-flame underline-offset-2 hover:underline"
-                    >
-                      Mark all as read
-                    </button>
-                  )}
-                </div>
-                {notifications.length === 0 ? (
-                  <p className="px-3 py-4 text-center text-xs text-mist">
-                    Nothing new yet. Wave at someone nearby to get the lantern
-                    glowing.
-                  </p>
-                ) : (
-                  <ul className="space-y-1 max-h-80 overflow-y-auto">
-                    {notifications.map((n) => (
-                      <li key={n.id}>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => tapNotification(n)}
-                          className={
-                            n.is_read
-                              ? 'w-full text-left rounded-lg px-3 py-2 text-sm text-mist hover:bg-white/[0.03] transition-colors'
-                              : 'w-full text-left rounded-lg px-3 py-2 text-sm text-cream hover:bg-flame/10 transition-colors'
-                          }
-                        >
-                          <span className="flex items-start gap-2">
-                            {!n.is_read && (
-                              <span
-                                aria-hidden
-                                className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-flame"
-                              />
-                            )}
-                            <span className={n.is_read ? 'opacity-70' : ''}>
-                              {n.message}
-                            </span>
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </>,
-            document.body,
-          )
-        : null}
-
-      {mounted && activeBulletin
-        ? createPortal(
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="app-bulletin-title"
-              className="fixed inset-0 z-[110] flex items-center justify-center bg-night/90 backdrop-blur px-4"
-              onClick={dismissBulletin}
-            >
-              <div
-                className="relative w-full max-w-md rounded-2xl border border-flame/40 bg-card p-6 shadow-2xl shadow-black/70 space-y-4"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-mist">
-                  Campground Bulletin
-                </p>
-                <div className="flex items-center gap-2">
-                  <h2
-                    id="app-bulletin-title"
-                    className="font-display text-xl font-extrabold text-cream"
-                  >
-                    {activeBulletin.campground_name}
-                  </h2>
-                  <VerifiedCheck className="h-5 w-5 shrink-0" />
-                </div>
-                <p className="text-sm text-cream leading-relaxed whitespace-pre-line">
-                  {activeBulletin.message}
-                </p>
-                <p className="text-[11px] text-mist">
-                  Posted {formatTimestamp(activeBulletin.created_at)}
-                </p>
+      {open && (
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-label="Recent notifications"
+          className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-card shadow-xl z-50 overflow-hidden"
+        >
+          <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-flame font-semibold">
+              Activity
+            </p>
+            <div className="flex items-center gap-3">
+              {unread > 0 && (
                 <button
                   type="button"
-                  onClick={dismissBulletin}
-                  className="w-full rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
+                  onClick={markAllRead}
+                  className="text-[11px] text-mist hover:text-flame underline-offset-2 hover:underline"
                 >
-                  Dismiss
+                  Mark all read
                 </button>
-                <p className="text-center text-[10px] text-mist/70 leading-snug">
-                  Campground bulletins are posted by verified campground
-                  staff only.
-                </p>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
-    </>
+              )}
+              <button
+                type="button"
+                onClick={closePanel}
+                className="text-[11px] text-mist hover:text-cream underline-offset-2 hover:underline"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          {notifications.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-mist">
+              Nothing new yet. Wave at someone nearby or check in to a
+              campground to get the lantern glowing.
+            </p>
+          ) : (
+            <ul className="divide-y divide-white/5 max-h-96 overflow-y-auto">
+              {notifications.map((n) => (
+                <li key={n.id}>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => tapNotification(n)}
+                    className="w-full text-left px-4 py-3 hover:bg-white/[0.04] transition-colors flex items-start gap-3"
+                  >
+                    <span aria-hidden className="text-base leading-none mt-0.5">
+                      {iconForType(n.type)}
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span
+                        className={
+                          n.is_read
+                            ? 'block text-sm font-semibold text-mist leading-tight'
+                            : 'block text-sm font-semibold text-cream leading-tight'
+                        }
+                      >
+                        {titleForType(n.type)}
+                      </span>
+                      <span
+                        className={
+                          n.is_read
+                            ? 'block text-xs text-mist/70 mt-0.5 leading-snug line-clamp-2'
+                            : 'block text-xs text-mist mt-0.5 leading-snug line-clamp-2'
+                        }
+                      >
+                        {n.message}
+                      </span>
+                      <span className="block text-[10px] text-mist/70 mt-1 tabular-nums">
+                        {formatTimestamp(n.created_at)}
+                      </span>
+                    </span>
+                    {!n.is_read && (
+                      <span
+                        aria-hidden
+                        className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-flame"
+                      />
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {activeBulletin && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="app-bulletin-title"
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-night/90 backdrop-blur px-4"
+          onClick={dismissBulletin}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl border border-flame/40 bg-card p-6 shadow-2xl shadow-black/70 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-mist">
+              Campground Bulletin
+            </p>
+            <div className="flex items-center gap-2">
+              <h2
+                id="app-bulletin-title"
+                className="font-display text-xl font-extrabold text-cream"
+              >
+                {activeBulletin.campground_name}
+              </h2>
+              <VerifiedCheck className="h-5 w-5 shrink-0" />
+            </div>
+            <p className="text-sm text-cream leading-relaxed whitespace-pre-line">
+              {activeBulletin.message}
+            </p>
+            <p className="text-[11px] text-mist">
+              Posted {formatTimestamp(activeBulletin.created_at)}
+            </p>
+            <button
+              type="button"
+              onClick={dismissBulletin}
+              className="w-full rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
+            >
+              Dismiss
+            </button>
+            <p className="text-center text-[10px] text-mist/70 leading-snug">
+              Campground bulletins are posted by verified campground
+              staff only.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   )
+}
+
+// Human-friendly title for each NotificationType -- shown above the
+// raw `message` body in the Lantern panel so the camper can scan by
+// kind without reading the full text.
+function titleForType(t: NotificationType): string {
+  switch (t) {
+    case 'wave_sent':
+      return 'Wave sent'
+    case 'wave_received':
+      return 'New wave for you'
+    case 'wave_matched':
+      return 'Matched 🎉'
+    case 'wave_connected':
+      return 'Now connected'
+    case 'new_message':
+      return 'New message'
+    case 'bulletin':
+      return 'New announcement'
+    case 'meetup_invite':
+      return 'New meetup'
+    case 'meetup_rsvp':
+      return 'Meetup RSVP'
+  }
+}
+
+function iconForType(t: NotificationType): string {
+  switch (t) {
+    case 'wave_sent':
+    case 'wave_received':
+    case 'wave_matched':
+    case 'wave_connected':
+      return '👋'
+    case 'new_message':
+      return '💬'
+    case 'bulletin':
+      return '📣'
+    case 'meetup_invite':
+    case 'meetup_rsvp':
+      return '📅'
+  }
 }
 
 function formatTimestamp(iso: string): string {
@@ -442,72 +492,6 @@ function formatTimestamp(iso: string): string {
     hour: 'numeric',
     minute: '2-digit',
   })
-}
-
-// Inline lantern SVG (same shape as the demo, kept here so the live app
-// has zero demo-component dependencies).
-function LanternIcon({
-  className,
-  lit,
-}: {
-  className?: string
-  lit: boolean
-}) {
-  const flameFill = lit ? '#f59e0b' : '#94a3b8'
-  const bodyStroke = lit ? '#f5ecd9' : '#94a3b8'
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M12 3c-1.5 0-2.5 1-2.5 2"
-        stroke={bodyStroke}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M12 3c1.5 0 2.5 1 2.5 2"
-        stroke={bodyStroke}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <rect
-        x="8"
-        y="5"
-        width="8"
-        height="2"
-        rx="0.5"
-        stroke={bodyStroke}
-        strokeWidth="1.3"
-      />
-      <rect
-        x="7"
-        y="7"
-        width="10"
-        height="11"
-        rx="1.2"
-        stroke={bodyStroke}
-        strokeWidth="1.3"
-      />
-      <path
-        d="M12 10c-1.2 1-1.6 2.2-1 3.3.4.7 1.1 1 1 2-.7-.3-1.2-.9-1.4-1.7-.6.7-.7 1.6-.2 2.5C11 16.7 11.5 17 12 17s1-.3 1.6-1c.5-.9.4-1.8-.2-2.5-.2.8-.7 1.4-1.4 1.7-.1-1 .6-1.3 1-2 .6-1.1.2-2.3-1-3.2z"
-        fill={flameFill}
-      />
-      <rect
-        x="8.5"
-        y="18"
-        width="7"
-        height="2"
-        rx="0.4"
-        stroke={bodyStroke}
-        strokeWidth="1.3"
-      />
-    </svg>
-  )
 }
 
 function VerifiedCheck({ className }: { className?: string }) {
