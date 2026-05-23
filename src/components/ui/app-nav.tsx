@@ -3,17 +3,23 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-// 7-tab nav matching the demo's GuestApp nav. 4-column grid wraps to
-// a second row on phone widths. Renders as a sticky strip directly
+// 8-tab nav matching the demo's GuestApp nav. 4-column grid wraps to
+// a clean 4x2 on phone widths. Renders as a sticky strip directly
 // below the layout header.
 //
-// History: this strip briefly had an 8th "Updates Only" action button
-// that flipped the user into campground_updates_only privacy mode in
-// one tap. Removed 2026-05-23 -- checked-in campers see bulletins +
-// meetups naturally inside the campground experience and Lantern, so
-// the shortcut wasn't pulling its weight. Updates-Only is still
-// reachable from /settings/privacy (the Privacy tab) for campers
-// who explicitly want it.
+// Label evolution (2026-05-23):
+//   * "Privacy" -> "Profile". Campers parse "Profile" instantly;
+//     "Privacy" was overloaded with the visibility-mode picker AND
+//     felt clinical. The /profile route is an account index that
+//     surfaces the editable profile fields (display name, rig type,
+//     interests via /profile/setup) AND the visibility/privacy
+//     controls (via /settings/privacy), so the label change is a
+//     copy fix, not a destination move.
+//   * Added "Bulletins". Campground bulletins are surfaced in the
+//     Campground tab + Lantern, but a dedicated nav slot gives a
+//     focused view + a shareable URL. Replaces the old 8th "Updates
+//     Only" slot conceptually -- this is a place, not a privacy
+//     mode toggle.
 const TABS: {
   href: string
   label: string
@@ -33,8 +39,17 @@ const TABS: {
   { href: '/nearby', label: 'Camper Connections' },
   { href: '/meetups', label: 'Meetups' },
   { href: '/waves', label: 'Waves' },
-  { href: '/settings/privacy', label: 'Privacy', matchPrefix: '/settings/privacy' },
+  {
+    href: '/profile',
+    label: 'Profile',
+    // Light up "Profile" while the camper is on any /profile/* sub-route
+    // (e.g. /profile/setup) AND on /settings/privacy (the privacy
+    // picker is conceptually "profile -> privacy").
+    matchPrefix: '/profile',
+    alsoActiveOn: [/^\/settings\/privacy/],
+  },
   { href: '/crossed-paths', label: 'Past Waves' },
+  { href: '/bulletins', label: 'Bulletins' },
 ]
 
 type Props = {
