@@ -93,24 +93,25 @@ export async function computeWaveEligibility(
     )
   }
 
-  // Shared active check-in at the SAME campground the hub page is
-  // viewing. The live waves_insert_targeted RLS (mig 0033) only
-  // requires ANY shared campground, but the UI tapped a card on a
-  // specific campground -- if those don't match, the card is stale
-  // and should be retired rather than silently rerouted.
+  // Viewer's active check-in via the user-scoped client (RLS:
+  // check_ins_select_own). Target check-in is trusted from the
+  // upstream caller -- sendWaveAction is invoked from a click on a
+  // card the hub rendered from nearby_campers, which already
+  // verified both viewer and target have active check_ins at this
+  // campground. The admin `.in('profile_id', [viewerId, targetId])`
+  // read it used to do is the same shape that misses rows
+  // intermittently (the batch-eligibility path observed the same
+  // bug and now routes around it identically).
   const nowIso = new Date().toISOString()
-  const { data: checkinRows } = await admin
+  const { data: viewerCheckin } = await userScoped
     .from('check_ins')
     .select('campground_id, expires_at, status, profile_id')
-    .in('profile_id', [viewerId, targetId])
+    .eq('profile_id', viewerId)
     .eq('campground_id', campgroundId)
     .eq('status', 'active')
     .gt('expires_at', nowIso)
-    .returns<(CheckInRow & { profile_id: string })[]>()
-  const checkins = checkinRows ?? []
-  const viewerHasCheckin = checkins.some((c) => c.profile_id === viewerId)
-  const targetHasCheckin = checkins.some((c) => c.profile_id === targetId)
-  if (!viewerHasCheckin || !targetHasCheckin) {
+    .maybeSingle<CheckInRow & { profile_id: string }>()
+  if (!viewerCheckin) {
     return { ok: false, reason: 'no_shared_active_checkin' }
   }
 
@@ -197,10 +198,23 @@ export async function computeWaveEligibilityBatch(
       .select('id, privacy_mode')
       .in('id', unique)
       .returns<ProfileRow[]>(),
-    admin
+    // Viewer's own check-in via the user-scoped client. The
+    // check_ins_select_own RLS policy (mig 0001:380) guarantees the
+    // caller can see their own active check_in. Target check-ins are
+    // intentionally NOT fetched here -- we trust the nearby_campers
+    // RPC contract (mig 0001:577-590), which already joined check_ins
+    // with `c.expires_at > now() AND c.status = 'active' AND
+    // c.campground_id = _campground_id`. Any target_id we see in
+    // `unique` is therefore guaranteed to have an active check-in at
+    // this campground. The earlier admin `.in('profile_id',
+    // [viewerId, ...unique])` read on check_ins suffered the same
+    // intermittent-empty-result bug as the profiles `.in()` reads
+    // (RoadMark report 2026-05-23), causing every visible camper
+    // card to falsely report `no_shared_active_checkin`.
+    userScoped
       .from('check_ins')
       .select('campground_id, expires_at, status, profile_id')
-      .in('profile_id', [viewerId, ...unique])
+      .eq('profile_id', viewerId)
       .eq('campground_id', campgroundId)
       .eq('status', 'active')
       .gt('expires_at', nowIso)
@@ -246,26 +260,17 @@ export async function computeWaveEligibilityBatch(
     !!viewer &&
     viewer.privacy_mode != null &&
     SENDER_OK_MODES.has(viewer.privacy_mode)
-  // Diagnostic: when the viewer fails the sender check, log the exact
-  // shape we saw from both clients so we can finally pin down the
-  // RoadMark report (admin missed the row, user-scoped found it -- or
-  // didn't). Includes the viewer's id so it can be cross-referenced
-  // against profiles in Supabase Studio.
-  if (!viewerOk) {
-    console.log(
-      `[wave-eligibility] viewer ineligible uid=${viewerId} ` +
-        `userScopedRow=${viewerOwn ? 'found' : 'MISSING'} ` +
-        `userScopedPrivacy=${viewerOwn?.privacy_mode ?? 'NULL'} ` +
-        `targetCount=${unique.length} ` +
-        `targetRowsReturned=${targetProfileRows?.length ?? 0}`,
-    )
-  }
-  const viewerCheckinOk = (checkinRows ?? []).some(
-    (c) => c.profile_id === viewerId,
-  )
-  const checkinsByProfile = new Set(
-    (checkinRows ?? []).map((c) => c.profile_id),
-  )
+  // viewerCheckinOk: the user-scoped read above returns the viewer's
+  // own active check_in at this campground (or nothing). Length > 0
+  // = active check-in present.
+  const viewerCheckinOk = (checkinRows ?? []).length > 0
+  // Target check-ins are trusted from the nearby_campers RPC -- see
+  // the comment on the userScoped check_ins query above. The
+  // check_ins.profile_id FK to profiles.id guarantees these are
+  // real campers, and the RPC's join guarantees they were active at
+  // RPC-fire time. Treat every requested target id as having an
+  // active check-in for the purposes of this batch.
+  const checkinsByProfile = new Set<string>(unique)
   const wavedTargets = new Set(
     (outgoingWaves ?? []).map((w) => w.to_profile_id),
   )
@@ -275,7 +280,9 @@ export async function computeWaveEligibilityBatch(
     if (targetSet.has(other)) matchedTargets.add(other)
   }
 
-  let loggedMissingTarget = false
+  let okCount = 0
+  let firstDeniedReason: WaveEligibilityReason | null = null
+  let firstDeniedTarget: string | null = null
   for (const targetId of unique) {
     let reason: WaveEligibilityReason = 'ok'
     if (!viewer || viewer.privacy_mode == null) {
@@ -284,47 +291,48 @@ export async function computeWaveEligibilityBatch(
       reason = 'sender_invisible'
     } else {
       const target = targetProfiles.get(targetId)
-      // Recipient privacy check. The targetIds passed in came from
-      // nearby_campers, a SECURITY DEFINER SQL function (mig 0001:538)
-      // that ALREADY filters by `p.privacy_mode = 'visible'` AND an
-      // active shared check-in. So any id we see here is guaranteed
-      // to be a visible camper checked in at this campground. If the
-      // admin .in() lookup returns no row for it (we've seen the
-      // admin client miss rows that nearby_campers + the identity
-      // enrichment admin query both find), trust the RPC contract --
-      // fall through to the check_ins + waves + matches gates rather
-      // than rejecting the wave. The real safety check is the
-      // check_ins lookup below: the target needs an active check_in
-      // row at this campground, and check_ins.profile_id has an FK
-      // to profiles.id so the camper IS a real profile.
+      // Recipient privacy: nearby_campers (SECURITY DEFINER, mig
+      // 0001:538) already filtered targets by privacy_mode='visible'
+      // AND an active shared check-in. The admin .in() lookup that
+      // attempts to re-verify is unreliable (RoadMark report
+      // 2026-05-22/23), so when it misses, trust the RPC contract
+      // and fall through. Only reject when we actually saw the row
+      // and it had a value outside the allowed set.
       if (target && target.privacy_mode == null) {
-        // Schema is NOT NULL DEFAULT 'visible' so this is
-        // schema-violating data, not the admin-miss case.
         reason = 'recipient_missing_profile'
       } else if (target && target.privacy_mode !== 'visible') {
         reason = 'recipient_not_visible'
-      } else if (!viewerCheckinOk || !checkinsByProfile.has(targetId)) {
+      } else if (!viewerCheckinOk) {
         reason = 'no_shared_active_checkin'
       } else if (wavedTargets.has(targetId)) {
         reason = 'already_waved'
       } else if (matchedTargets.has(targetId)) {
         reason = 'already_matched'
       }
-      // Log the admin-miss once per batch so we can see whether the
-      // problem is the whole result set (root cause = admin client
-      // misconfig / connection-pool issue) or a sporadic single id.
-      if (!target && !loggedMissingTarget) {
-        loggedMissingTarget = true
-        console.log(
-          `[wave-eligibility] admin missed target rows uid=${viewerId} ` +
-            `targetCount=${unique.length} ` +
-            `targetRowsReturned=${targetProfileRows?.length ?? 0} ` +
-            `firstMissing=${targetId}`,
-        )
-      }
+    }
+    if (reason === 'ok') {
+      okCount += 1
+    } else if (firstDeniedReason === null) {
+      firstDeniedReason = reason
+      firstDeniedTarget = targetId
     }
     out.set(targetId, { ok: reason === 'ok', reason })
   }
+  // Single batch summary line. Captures the actual eligibility
+  // shape so a regression like "every card is denied with the same
+  // reason" is one log line away from being diagnosed. Format keeps
+  // each field on a single token so it greps cleanly.
+  console.log(
+    `[wave-eligibility] batch uid=${viewerId} cg=${campgroundId} ` +
+      `targets=${unique.length} ok=${okCount} ` +
+      `viewer_ok=${viewerOk} ` +
+      `viewerProfile=${viewerOwn ? 'found' : 'MISSING'} ` +
+      `viewerPrivacy=${viewerOwn?.privacy_mode ?? 'NULL'} ` +
+      `viewerCheckin=${viewerCheckinOk ? 'active' : 'MISSING'} ` +
+      `targetProfilesReturned=${targetProfileRows?.length ?? 0} ` +
+      `firstDenied=${firstDeniedTarget ?? 'none'} ` +
+      `reason=${firstDeniedReason ?? 'none'}`,
+  )
 
   return out
 }

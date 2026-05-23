@@ -139,6 +139,7 @@ export function HappeningSection({
                   id: m.id,
                   title: m.title,
                   start_at: m.start_at,
+                  created_at: m.created_at,
                 })),
               },
             }),

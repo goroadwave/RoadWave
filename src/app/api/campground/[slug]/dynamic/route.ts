@@ -56,6 +56,11 @@ type MeetupRow = {
   location: string | null
   start_at: string
   end_at: string | null
+  // Required by the Lantern's "is this meetup new?" check. Without
+  // it, the Lantern falls back to start_at -- which silently marks
+  // a newly-created meetup as seen if a previously-seen meetup had
+  // a later start_at than the new one.
+  created_at: string
 }
 
 const LIST_CAP = 30
@@ -100,7 +105,7 @@ export async function GET(
       .returns<BulletinRow[]>(),
     admin
       .from('meetups')
-      .select('id, title, description, location, start_at, end_at')
+      .select('id, title, description, location, start_at, end_at, created_at')
       .eq('campground_id', cg.id)
       .gte('start_at', nowIso)
       .order('start_at', { ascending: true })

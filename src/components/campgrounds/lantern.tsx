@@ -83,7 +83,12 @@ type LanternItem = ReplyItem | BulletinItem | MeetupItem | CriticalItem
 
 type DynamicPayload = {
   bulletins?: { id: string; message: string; created_at: string }[]
-  meetups?: { id: string; title: string; start_at: string }[]
+  meetups?: {
+    id: string
+    title: string
+    start_at: string
+    created_at: string
+  }[]
   critical?: {
     id: string
     message: string
@@ -136,7 +141,7 @@ export function Lantern({
     { id: string; message: string; created_at: string }[]
   >([])
   const [meetupList, setMeetupList] = useState<
-    { id: string; title: string; start_at: string }[]
+    { id: string; title: string; start_at: string; created_at: string }[]
   >([])
   const [trackerVersion, setTrackerVersion] = useState(0)
   const [seen, setSeen] = useState(() => ({
@@ -235,7 +240,12 @@ export function Lantern({
     function onMeetups(e: Event) {
       const ce = e as CustomEvent<{
         campgroundId?: string
-        meetups?: { id: string; title: string; start_at: string }[]
+        meetups?: {
+          id: string
+          title: string
+          start_at: string
+          created_at: string
+        }[]
       }>
       if (ce.detail?.campgroundId !== campgroundId) return
       if (Array.isArray(ce.detail.meetups)) setMeetupList(ce.detail.meetups)
@@ -342,16 +352,21 @@ export function Lantern({
       }
     }
 
-    // Meetups newer than seen cursor. Use start_at as the monotone
-    // signal -- it's what the list orders by + what determines
-    // "still upcoming".
+    // Meetups newer than seen cursor. Use created_at -- the time
+    // the meetup row was inserted -- NOT start_at. start_at is the
+    // event's scheduled time, which can be earlier than a
+    // previously-seen meetup's start_at; using it as the seen cursor
+    // silently marks a newly-created meetup as already-seen whenever
+    // it's scheduled earlier than a prior one the camper saw. The
+    // bulletin path already uses created_at for this exact reason;
+    // meetups now match.
     const mSeen = seen.meetupSeenThrough
     for (const m of meetupList) {
-      if (!mSeen || m.start_at > mSeen) {
+      if (!mSeen || m.created_at > mSeen) {
         out.push({
           kind: 'meetup',
           id: m.id,
-          occurredAt: m.start_at,
+          occurredAt: m.created_at,
           title: m.title,
         })
       }
@@ -450,8 +465,11 @@ export function Lantern({
   }, [bulletinList])
 
   const latestMeetupTs = useMemo(() => {
+    // Cursor follows the same field the items derivation compares
+    // against (created_at). Was start_at -- see the items loop above.
     return meetupList.reduce<string | null>(
-      (acc, m) => (acc === null || m.start_at > acc ? m.start_at : acc),
+      (acc, m) =>
+        acc === null || m.created_at > acc ? m.created_at : acc,
       null,
     )
   }, [meetupList])

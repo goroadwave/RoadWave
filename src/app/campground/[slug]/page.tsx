@@ -200,7 +200,7 @@ export default async function CampgroundGuestHubPage({
         .returns<GuestHubBulletin[]>(),
       admin
         .from('meetups')
-        .select('id, title, description, location, start_at, end_at')
+        .select('id, title, description, location, start_at, end_at, created_at')
         .eq('campground_id', campground.id)
         .gte('start_at', nowIso)
         .order('start_at', { ascending: true })

@@ -116,6 +116,13 @@ export type GuestHubMeetup = {
   location: string | null
   start_at: string
   end_at: string | null
+  // When the meetup row was inserted (meetups.created_at, mig 0001).
+  // The Lantern uses this -- not start_at -- to decide whether the
+  // camper has seen the meetup yet. Otherwise a new meetup scheduled
+  // for an earlier date than a previously-seen one is silently
+  // marked as already-seen, because the seen cursor stored the
+  // furthest start_at the camper had ever seen.
+  created_at: string
 }
 
 // Phase 3c -- minimal shape needed by the CriticalBanner client
