@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { format, isSameDay } from 'date-fns'
 import { MeetupForm } from '@/components/meetups/meetup-form'
 import { DeleteMeetupForm } from '@/components/meetups/delete-meetup-form'
+import { DismissMeetupForm } from '@/components/meetups/dismiss-meetup-form'
 import { PageHeading } from '@/components/ui/page-heading'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { SafetyBanner } from '@/components/ui/safety-banner'
@@ -106,6 +107,17 @@ export default async function MeetupsPage() {
     .eq('campground_id', campgroundId)
     .order('start_at', { ascending: true })
 
+  // Per-camper dismissed meetup ids (mig 0061). RLS scopes this to
+  // the caller; we only need the id set to filter the list below.
+  // If the migration hasn't been applied yet, this query errors and
+  // we treat the dismissed set as empty -- the page still renders.
+  const { data: dismissedRows } = await supabase
+    .from('meetup_dismissals')
+    .select('meetup_id')
+  const dismissedIds = new Set(
+    (dismissedRows ?? []).map((r) => r.meetup_id as string),
+  )
+
   // Determine which meetups were posted by a campground host vs a regular
   // camper, so we can render the same hosted-vs-community split as the
   // demo. The set of admin user_ids for this campground answers the
@@ -138,8 +150,19 @@ export default async function MeetupsPage() {
 
   // eslint-disable-next-line react-hooks/purity -- server component, request-scoped now
   const now = Date.now()
-  const upcoming = (meetups ?? []).filter((m) => new Date(m.start_at).getTime() >= now)
-  const past = (meetups ?? []).filter((m) => new Date(m.start_at).getTime() < now)
+  // Filter out per-camper dismissed meetups before splitting into
+  // upcoming/past. A dismissed meetup is hidden everywhere on this
+  // page (hosted + camper + past). Other campers are unaffected;
+  // the meetup row itself is untouched.
+  const visibleMeetups = (meetups ?? []).filter(
+    (m) => !dismissedIds.has(m.id),
+  )
+  const upcoming = visibleMeetups.filter(
+    (m) => new Date(m.start_at).getTime() >= now,
+  )
+  const past = visibleMeetups.filter(
+    (m) => new Date(m.start_at).getTime() < now,
+  )
 
   const hostedUpcoming = upcoming.filter((m) => adminIds.has(m.posted_by))
   const camperUpcoming = upcoming.filter((m) => !adminIds.has(m.posted_by))
@@ -321,7 +344,10 @@ function HostedMeetupRow({
           </p>
         )}
       </div>
-      {canDelete && <DeleteMeetupForm meetupId={meetup.id} />}
+      <div className="shrink-0 flex flex-col items-end gap-2">
+        {canDelete && <DeleteMeetupForm meetupId={meetup.id} />}
+        <DismissMeetupForm meetupId={meetup.id} />
+      </div>
     </div>
   )
 }
@@ -365,7 +391,10 @@ function CamperMeetupRow({
           </p>
         )}
       </div>
-      {canDelete && <DeleteMeetupForm meetupId={meetup.id} />}
+      <div className="shrink-0 flex flex-col items-end gap-2">
+        {canDelete && <DeleteMeetupForm meetupId={meetup.id} />}
+        <DismissMeetupForm meetupId={meetup.id} />
+      </div>
     </div>
   )
 }
