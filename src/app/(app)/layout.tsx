@@ -6,6 +6,7 @@ import { TourOverlay } from '@/components/support/tour-overlay'
 import { AppNav } from '@/components/ui/app-nav'
 import { Logo } from '@/components/ui/logo'
 import { resolveIntendedNext } from '@/lib/auth/intended-next'
+import { loadNavBadgeCounts } from '@/lib/notifications/nav-badges'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 // Phase E (2026-05-21): the pending_checkin_token cookie bridge that
@@ -67,6 +68,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (profileRow?.suspended_at) redirect('/suspended')
   const isAdmin = profileRow?.is_admin === true
 
+  // First-paint badge counts for AppNav. The hook in AppNav polls
+  // every 60s after mount; seeding from the server avoids the brief
+  // flicker of "no badges -> badges appear" on the first navigation.
+  const initialBadgeCounts = await loadNavBadgeCounts(supabase)
+
   // Consent gate: every user must have a legal_acks row before reaching
   // the app. Email signups land one at signup; OAuth users go through
   // /consent on their first sign-in. This block is defense-in-depth in
@@ -118,7 +124,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </header>
-      <AppNav />
+      <AppNav initialBadgeCounts={initialBadgeCounts} />
       <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-6">{children}</main>
       <GuestSupportChat />
       <TourOverlay />

@@ -2,24 +2,35 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { type NavBadgeCounts } from '@/lib/notifications/nav-badges'
+import { useNavBadges } from '@/components/ui/use-nav-badges'
 
 // 8-tab nav matching the demo's GuestApp nav. 4-column grid wraps to
 // a clean 4x2 on phone widths. Renders as a sticky strip directly
 // below the layout header.
 //
 // Label evolution (2026-05-23):
-//   * "Privacy" -> "Profile". Campers parse "Profile" instantly;
-//     "Privacy" was overloaded with the visibility-mode picker AND
-//     felt clinical. The /profile route is an account index that
-//     surfaces the editable profile fields (display name, rig type,
-//     interests via /profile/setup) AND the visibility/privacy
+//   * "Privacy" -> "Profile". The /profile route is an account index
+//     that surfaces the editable profile fields (display name, rig
+//     type, interests via /profile/setup) AND the visibility/privacy
 //     controls (via /settings/privacy), so the label change is a
 //     copy fix, not a destination move.
-//   * Added "Bulletins". Campground bulletins are surfaced in the
-//     Campground tab + Lantern, but a dedicated nav slot gives a
-//     focused view + a shareable URL. Replaces the old 8th "Updates
-//     Only" slot conceptually -- this is a place, not a privacy
-//     mode toggle.
+//   * Added "Bulletins" -- focused view of campground bulletins.
+//
+// Per-category badge model (2026-05-23):
+//   Each tab can carry an unread count from the public.notifications
+//   table (populated by the mig 0025 triggers on waves / matches /
+//   messages / bulletins / meetups). The badge shows the count and
+//   adds .lantern-pulse so the tab glows. The pulse animation is
+//   suppressed under prefers-reduced-motion (rule lives in
+//   src/app/globals.css alongside the original Lantern pulse).
+//
+//   Read/dismiss: visiting a page does NOT auto-mark notifications
+//   read. The badge stays until the camper explicitly clicks the
+//   notification in the Lantern (or Mark All as Read). Toast dismiss
+//   does NOT touch the notification record either.
+type TabCategory = keyof NavBadgeCounts | null
+
 const TABS: {
   href: string
   label: string
@@ -29,16 +40,20 @@ const TABS: {
   // camper is actually on /campground/<slug> (the destination it
   // redirects to), not just on /checkin during the redirect flash.
   alsoActiveOn?: (string | RegExp)[]
+  // Which NavBadgeCounts key (if any) drives the badge on this tab.
+  // null means no badge ever appears for the tab (e.g. Home, Profile).
+  category: TabCategory
 }[] = [
-  { href: '/home', label: 'Home' },
+  { href: '/home', label: 'Home', category: null },
   {
     href: '/checkin',
     label: 'Campground',
     alsoActiveOn: [/^\/campground\//],
+    category: null,
   },
-  { href: '/nearby', label: 'Camper Connections' },
-  { href: '/meetups', label: 'Meetups' },
-  { href: '/waves', label: 'Waves' },
+  { href: '/nearby', label: 'Camper Connections', category: null },
+  { href: '/meetups', label: 'Meetups', category: 'meetups' },
+  { href: '/waves', label: 'Waves', category: 'waves' },
   {
     href: '/profile',
     label: 'Profile',
@@ -47,9 +62,10 @@ const TABS: {
     // picker is conceptually "profile -> privacy").
     matchPrefix: '/profile',
     alsoActiveOn: [/^\/settings\/privacy/],
+    category: null,
   },
-  { href: '/crossed-paths', label: 'Past Waves' },
-  { href: '/bulletins', label: 'Bulletins' },
+  { href: '/crossed-paths', label: 'Past Waves', category: 'pastWaves' },
+  { href: '/bulletins', label: 'Bulletins', category: 'bulletins' },
 ]
 
 type Props = {
@@ -60,10 +76,25 @@ type Props = {
    *  header. Without this opt-out the nav would float at top:56px
    *  in empty space on the hub. */
   sticky?: boolean
+  /** Initial per-category unread counts for first-paint badges.
+   *  Computed server-side by loadNavBadgeCounts in the (app) layout
+   *  (or hub) and seeded into the hook here. The hook polls every
+   *  60s thereafter to keep the badges fresh. When omitted (e.g.
+   *  the campground hub before the SSR fetch is wired), the hook
+   *  starts with zero counts and fills in on its first poll. */
+  initialBadgeCounts?: NavBadgeCounts
 }
 
-export function AppNav({ sticky = true }: Props) {
+export function AppNav({ sticky = true, initialBadgeCounts }: Props) {
   const pathname = usePathname()
+  const badges = useNavBadges(
+    initialBadgeCounts ?? {
+      bulletins: 0,
+      meetups: 0,
+      waves: 0,
+      pastWaves: 0,
+    },
+  )
 
   return (
     <nav
@@ -77,18 +108,35 @@ export function AppNav({ sticky = true }: Props) {
         <ul className="grid grid-cols-4 gap-1 text-[11px] sm:text-xs">
           {TABS.map((t) => {
             const active = isActive(pathname, t)
+            const count = t.category ? badges[t.category] : 0
+            const hasUnread = count > 0
+            const baseCls = active
+              ? 'block text-center rounded-md bg-flame/15 text-flame px-2 py-1.5 font-semibold'
+              : 'block text-center rounded-md text-mist px-2 py-1.5 hover:text-cream hover:bg-white/5 transition-colors'
+            // Reuse the existing lantern-pulse keyframe (defined in
+            // globals.css) for unread tabs. Pulse is suppressed
+            // automatically under prefers-reduced-motion.
+            const cls = hasUnread ? `${baseCls} lantern-pulse` : baseCls
             return (
               <li key={t.href}>
                 <Link
                   href={t.href}
-                  className={
-                    active
-                      ? 'block text-center rounded-md bg-flame/15 text-flame px-2 py-1.5 font-semibold'
-                      : 'block text-center rounded-md text-mist px-2 py-1.5 hover:text-cream hover:bg-white/5 transition-colors'
-                  }
+                  className={cls}
                   aria-current={active ? 'page' : undefined}
+                  aria-label={
+                    hasUnread
+                      ? `${t.label} -- ${count} unread`
+                      : undefined
+                  }
                 >
-                  {t.label}
+                  <span className="inline-flex items-center justify-center gap-1.5">
+                    {t.label}
+                    {hasUnread && (
+                      <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-flame px-1 text-[10px] font-bold tabular-nums leading-none text-night">
+                        {count > 99 ? '99+' : count}
+                      </span>
+                    )}
+                  </span>
                 </Link>
               </li>
             )

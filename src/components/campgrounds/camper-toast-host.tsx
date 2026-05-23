@@ -24,7 +24,13 @@ import {
 //     so the two sides feel consistent.
 //   * Subtle slide-up animation, disabled when
 //     prefers-reduced-motion is set.
-//   * Auto-dismiss after 7s; manual dismiss via the × button.
+//   * Persistent until explicit dismiss (× button) or CTA click.
+//     The previous 7s auto-dismiss was removed 2026-05-23 -- campers
+//     who looked away even briefly would miss notifications entirely,
+//     and the underlying record still lives in the Lantern, so
+//     persistence on the popup doesn't risk losing the camper's
+//     ability to clear it. Tap the ✕ to dismiss the popup only;
+//     the Lantern entry stays until the camper opens the Lantern.
 //   * Queue cap of 3 -- if a fourth event arrives, the oldest
 //     toast drops off so the screen never stacks more than three
 //     at once.
@@ -57,7 +63,6 @@ type Toast = {
   threadId?: string
 }
 
-const TOAST_DURATION_MS = 7_000
 const MAX_TOASTS = 3
 
 export function CamperToastHost({
@@ -121,22 +126,6 @@ export function CamperToastHost({
       window.removeEventListener(LANTERN_MEETUPS_EVENT, onMeetups)
     }
   }, [mounted, previewMode, campgroundId])
-
-  // Per-toast auto-dismiss. One timer per toast so a manual
-  // dismiss of one doesn't reset the others' timers.
-  useEffect(() => {
-    if (toasts.length === 0) return
-    const timers = toasts.map((t) =>
-      setTimeout(() => {
-        setToasts((prev) => prev.filter((x) => x.key !== t.key))
-      }, TOAST_DURATION_MS),
-    )
-    return () => {
-      for (const id of timers) clearTimeout(id)
-    }
-    // toasts as a dep is fine -- we re-arm every time the list
-    // changes, and the cleanup clears every prior timer.
-  }, [toasts])
 
   if (!mounted || toasts.length === 0) return null
 

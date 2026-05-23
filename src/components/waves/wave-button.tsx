@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { sendWaveAction } from '@/lib/actions/waves'
 import { WAVE_REASON_COPY } from '@/lib/wave/reason-copy'
 
@@ -76,13 +76,12 @@ export function WaveButton({
   const [eligibility, setEligibility] = useState<string>(initialEligibility)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  // Persistent until the camper takes another action -- the toast
+  // stays visible after a wave is sent (or a match is made) so a
+  // camper who looked away briefly doesn't miss the confirmation.
+  // Cleared on the next handleWave call or when the camper navigates
+  // away. The 4.5s auto-dismiss was removed 2026-05-23.
   const [showToast, setShowToast] = useState<'sent' | 'matched' | null>(null)
-
-  useEffect(() => {
-    if (!showToast) return
-    const t = window.setTimeout(() => setShowToast(null), 4500)
-    return () => window.clearTimeout(t)
-  }, [showToast])
 
   // INELIGIBLE branch -- the pre-flight already knows the wave would
   // be rejected. Render a quiet disabled state with the reason copy
