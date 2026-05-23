@@ -164,11 +164,6 @@ export type GuestHubAuthedViewer = {
   viewerInterests: string[]
   initialInterests: string[]
   privacyMode: PrivacyMode
-  /** True when the camper currently has any active check_ins row.
-   *  Drives the AppNav's "Updates Only" 8th-slot action button --
-   *  it's only meaningful when the camper is checked into a
-   *  campground. */
-  hasActiveCheckIn: boolean
 }
 
 type Props = {
@@ -421,13 +416,7 @@ export function CampgroundGuestHubBody({
               strip in empty space. previewMode is the owner-preview
               path where the nav doesn't belong (owner is not a
               camper). */}
-          {auth && !previewMode && (
-            <AppNav
-              showUpdatesOnly={auth.hasActiveCheckIn}
-              currentPrivacyMode={auth.privacyMode}
-              sticky={false}
-            />
-          )}
+          {auth && !previewMode && <AppNav sticky={false} />}
           {/* Phase 3c -- Critical weather / safety notice. Pinned at
               the very top of the page when there's an active
               is_critical bulletin. Renders nothing when there isn't.
