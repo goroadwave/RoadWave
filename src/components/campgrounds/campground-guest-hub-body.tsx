@@ -6,6 +6,7 @@ import { CriticalBanner } from '@/components/campgrounds/critical-banner'
 import { DisclosureSection } from '@/components/campgrounds/disclosure-section'
 import { HappeningSection } from '@/components/campgrounds/happening-section'
 import { Lantern } from '@/components/campgrounds/lantern'
+import { AppToastHost } from '@/components/lantern/app-toast-host'
 import { QrScrollTopGuard } from '@/components/campgrounds/qr-scroll-top-guard'
 import { TrackedLinkButton } from '@/components/campgrounds/tracked-link-button'
 import { WelcomeEngagement } from '@/components/campgrounds/welcome-engagement'
@@ -1146,6 +1147,19 @@ export function CampgroundGuestHubBody({
         initialBulletinIds={bulletins.map((b) => b.id)}
         initialMeetupIds={meetups.map((m) => m.id)}
       />
+      {/* AppToastHost adds wave / match / new-message popups on the
+          QR hub for signed-in campers. CamperToastHost already
+          handles bulletin / meetup / office-reply on this page from
+          local pollers, so exclude those types here to avoid
+          duplicate toasts for the same record. Anonymous visitors
+          have no auth.uid() so the inner poll returns empty -- no
+          need to gate mounting, but skip in previewMode to keep the
+          owner's own preview clean. */}
+      {!previewMode && auth && (
+        <AppToastHost
+          excludeTypes={['bulletin', 'meetup_invite', 'meetup_rsvp']}
+        />
+      )}
     </main>
   )
 }

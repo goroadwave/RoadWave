@@ -51,6 +51,14 @@ type NotificationType =
   | 'meetup_invite'
   | 'meetup_rsvp'
 
+// Types that should NEVER pop a toast regardless of where AppToastHost
+// is mounted. wave_sent is a sender confirmation -- the camper just
+// tapped Send a Wave and saw the inline "Your wave was sent" toast
+// from WaveButton; a second toast from the notifications poll would
+// be redundant. The Lantern entry survives so it still shows up in
+// history.
+const GLOBAL_SKIP_TYPES = new Set<NotificationType>(['wave_sent'])
+
 type NotificationRow = {
   id: string
   type: NotificationType
@@ -66,7 +74,16 @@ type Toast = {
   message: string
 }
 
-export function AppToastHost() {
+export function AppToastHost({
+  excludeTypes,
+}: {
+  /** Notification types this host should NOT toast. Used when
+   *  another toast surface on the same page already handles those
+   *  types (e.g. the QR campground hub's CamperToastHost fires
+   *  bulletin / meetup toasts from a local poller, so AppToastHost
+   *  mounted there excludes those types to avoid duplicates). */
+  excludeTypes?: NotificationType[]
+} = {}) {
   const router = useRouter()
   const [toasts, setToasts] = useState<Toast[]>([])
   const dedupeRef = useRef<Set<string>>(new Set())
@@ -74,6 +91,11 @@ export function AppToastHost() {
   // already unread when the camper arrived, so they belong in the
   // Lantern + nav badges, not in a popup.
   const firstPollRef = useRef(true)
+  // Merge the global skip set with the per-mount excludes into a
+  // single set checked on every poll.
+  const skipTypesRef = useRef<Set<NotificationType>>(
+    new Set([...GLOBAL_SKIP_TYPES, ...(excludeTypes ?? [])]),
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -105,11 +127,20 @@ export function AppToastHost() {
         return
       }
 
-      // Diff: any unread id not already in dedupe is a new arrival.
-      // Walk oldest-first so the toast queue order matches the
-      // arrival order, then trim to MAX_TOASTS at push time.
+      // Diff: any unread id not already in dedupe AND not on the
+      // skip-types list is a new arrival to toast. Walk oldest-first
+      // so the toast queue order matches the arrival order, then
+      // trim to MAX_TOASTS at push time. Skipped types still go into
+      // the dedupe set so they don't re-evaluate on every poll.
       const newArrivals = rows
-        .filter((row) => !dedupeRef.current.has(row.id))
+        .filter((row) => {
+          if (dedupeRef.current.has(row.id)) return false
+          if (skipTypesRef.current.has(row.type)) {
+            dedupeRef.current.add(row.id)
+            return false
+          }
+          return true
+        })
         .reverse()
       if (newArrivals.length === 0) return
 
