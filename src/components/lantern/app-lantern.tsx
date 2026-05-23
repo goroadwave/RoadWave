@@ -304,7 +304,18 @@ export function AppLantern({ pollIntervalMs = POLL_INTERVAL_DEFAULT }: Props) {
           ref={panelRef}
           role="dialog"
           aria-label="Recent notifications"
-          className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-card shadow-xl z-50 overflow-hidden"
+          // Viewport-anchored positioning so the 288px panel never
+          // overflows the LEFT edge on narrow phones. The Lantern
+          // button lives in a header flex row with siblings to its
+          // right (Admin link, Sign out), so `absolute right-0`
+          // (relative to the button's wrapper) cuts off on viewports
+          // narrower than ~420px. `fixed right-4 top-16` pins the
+          // panel to the viewport itself: 16px from the right edge,
+          // 64px from the top (clears the 56px sticky header on
+          // (app) routes + the static header on the QR page). Width
+          // stays w-72 but caps at viewport-32px so it always fits
+          // with margin on both sides.
+          className="fixed right-4 top-16 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-card shadow-xl z-50 overflow-hidden"
         >
           <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
             <p className="text-[11px] uppercase tracking-[0.18em] text-flame font-semibold">
@@ -335,7 +346,7 @@ export function AppLantern({ pollIntervalMs = POLL_INTERVAL_DEFAULT }: Props) {
               campground to get the lantern glowing.
             </p>
           ) : (
-            <ul className="divide-y divide-white/5 max-h-96 overflow-y-auto">
+            <ul className="divide-y divide-white/5 max-h-[60vh] overflow-y-auto">
               {notifications.map((n) => (
                 <li key={n.id}>
                   <button
