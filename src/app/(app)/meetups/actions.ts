@@ -92,30 +92,21 @@ export async function dismissMeetupAction(
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in.', ok: false }
 
-  // Upsert (PK is (user_id, meetup_id)) so a double-tap from a
-  // racing client never errors out.
-  const { error: dismissError } = await supabase
-    .from('meetup_dismissals')
-    .upsert(
-      { user_id: user.id, meetup_id: id },
-      { onConflict: 'user_id,meetup_id' },
-    )
-  if (dismissError) {
-    // If the table doesn't exist yet (migration 0061 not applied),
-    // surface the message so the operator knows; the camper-facing
-    // form treats it as a soft failure.
-    return { error: dismissError.message, ok: false }
+  // Use the SECURITY DEFINER RPC (mig 0062) instead of a direct
+  // table write. The direct .from('meetup_dismissals').upsert path
+  // was failing with PGRST205 ("Could not find the table in the
+  // schema cache") even after mig 0061 successfully created the
+  // table -- PostgREST's table cache can get wedged in ways that
+  // NOTIFY doesn't always recover from. RPC calls go through a
+  // separate code path that reloads more reliably. The function
+  // does the same upsert + notification-mark-read in a single
+  // transaction, gated on auth.uid() server-side.
+  const { error: rpcError } = await supabase.rpc('dismiss_meetup', {
+    _meetup_id: id,
+  })
+  if (rpcError) {
+    return { error: rpcError.message, ok: false }
   }
-
-  // Clear the related Lantern entries / Meetups nav badge counter.
-  // notifications.reference_id holds the meetup_id for both
-  // meetup_invite and meetup_rsvp types (mig 0025 trigger). The
-  // RLS on notifications scopes the update to auth.uid() rows.
-  await supabase
-    .from('notifications')
-    .update({ is_read: true })
-    .eq('reference_id', id)
-    .in('type', ['meetup_invite', 'meetup_rsvp'])
 
   revalidatePath('/meetups')
   return { error: null, ok: true }
