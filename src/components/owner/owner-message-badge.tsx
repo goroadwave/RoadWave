@@ -2,23 +2,47 @@
 
 import { useEffect, useState } from 'react'
 
-// Small live count + pulse-animated dot rendered inside the
-// "Messages" nav tab. Polls /api/owner/message-counts every 60s
-// while the tab is visible. Pauses when the tab is backgrounded.
+// Small live pill rendered inside the "Messages" nav tab.
 //
-// Color semantics:
-//   * unread_safety > 0  → red pill + red pulse ring (urgent).
-//   * unread_total  > 0  → amber pill + amber pulse ring.
-//   * both zero          → no pill, no ring, just the "Messages" label.
+// Two distinct visual states (2026-05-24 spec):
 //
-// Counts are read-only here -- updates happen via the
-// owner_set_message_status RPC fired by the inbox status buttons.
-// The page-revalidate after that RPC plus this 60s poll keep
-// everything converged without a Supabase Realtime subscription.
+//   * unread_total > 0           -> PULSING pill in red (safety) or
+//                                    amber (normal). "Brand new guest
+//                                    message arrived; needs the
+//                                    owner's attention right now."
+//   * active_total > 0 and
+//     unread_total == 0          -> STATIC pill in muted flame.
+//                                    "There are still messages to
+//                                    handle (read but not resolved/
+//                                    archived), but nothing brand new
+//                                    since the last visit."
+//   * active_total == 0          -> nothing (no pill, no glow).
+//                                    Resolved + archived messages
+//                                    never contribute -- they live
+//                                    under their dedicated tabs.
+//
+// Counts source: /api/owner/message-counts. The counts are scoped to
+// the campground the owner is currently viewing (resolved through
+// the same OWNER_CAMPGROUND_COOKIE the dashboard uses), so switching
+// campgrounds via the header dropdown immediately changes the badge
+// on the next poll / refresh event.
+//
+// Refresh model:
+//   * 60s background poll while the tab is visible.
+//   * Immediate refresh on tab visibility change.
+//   * Immediate refresh on a custom 'roadwave:owner-messages-read'
+//     event -- fired by /owner/messages after it auto-marks new->read
+//     so the nav badge stops glowing without waiting for the next
+//     poll tick.
 
 const POLL_INTERVAL_MS = 60_000
+export const OWNER_MESSAGES_READ_EVENT = 'roadwave:owner-messages-read'
 
-type Counts = { unread_total: number; unread_safety: number }
+type Counts = {
+  unread_total: number
+  unread_safety: number
+  active_total: number
+}
 
 async function fetchCounts(): Promise<Counts | null> {
   try {
@@ -32,6 +56,7 @@ async function fetchCounts(): Promise<Counts | null> {
     return {
       unread_total: Number(j.unread_total ?? 0),
       unread_safety: Number(j.unread_safety ?? 0),
+      active_total: Number(j.active_total ?? j.unread_total ?? 0),
     }
   } catch {
     return null
@@ -42,6 +67,7 @@ export function OwnerMessageBadge() {
   const [counts, setCounts] = useState<Counts>({
     unread_total: 0,
     unread_safety: 0,
+    active_total: 0,
   })
 
   useEffect(() => {
@@ -65,8 +91,6 @@ export function OwnerMessageBadge() {
       intervalId = null
     }
 
-    // Initial fetch + arm polling. Pause on tab background so we
-    // don't burn API calls while the owner isn't looking.
     void refresh()
     startPolling()
 
@@ -78,41 +102,59 @@ export function OwnerMessageBadge() {
         stopPolling()
       }
     }
+    function onMessagesRead() {
+      // /owner/messages just bulk-marked new -> read for the active
+      // campground. Refresh immediately so the glow stops without
+      // the owner having to wait for the next 60s poll tick.
+      void refresh()
+    }
     document.addEventListener('visibilitychange', onVisibility)
+    document.addEventListener(OWNER_MESSAGES_READ_EVENT, onMessagesRead)
 
     return () => {
       cancelled = true
       stopPolling()
       document.removeEventListener('visibilitychange', onVisibility)
+      document.removeEventListener(OWNER_MESSAGES_READ_EVENT, onMessagesRead)
     }
   }, [])
 
-  const hasSafety = counts.unread_safety > 0
-  const hasUnread = counts.unread_total > 0
+  const { unread_total: unread, unread_safety: safety, active_total: active } =
+    counts
+  const hasUnread = unread > 0
+  const hasSafety = safety > 0
+  const hasActive = active > 0
 
-  if (!hasUnread) return null
+  if (!hasActive) return null
 
-  // Display: red pill if any safety alert; amber otherwise.
-  // The number rendered IS the unread_total — safety is a subset.
-  const pillClass = hasSafety
-    ? 'inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold animate-pulse ml-1'
-    : 'inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-flame text-night text-[10px] font-bold animate-pulse ml-1'
+  // Three styles:
+  //   Safety pulse (red), normal pulse (flame), static (muted flame).
+  let pillClass: string
+  let label: string
+  let count: number
+  if (hasUnread && hasSafety) {
+    pillClass =
+      'inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold animate-pulse ml-1'
+    label = `${unread} unread, ${safety} urgent safety`
+    count = unread
+  } else if (hasUnread) {
+    pillClass =
+      'inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-flame text-night text-[10px] font-bold animate-pulse ml-1'
+    label = `${unread} unread`
+    count = unread
+  } else {
+    // Active but no longer brand-new: muted flame, no pulse. Tells
+    // the owner there's still work to do without screaming for
+    // attention.
+    pillClass =
+      'inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full border border-flame/40 bg-flame/10 text-flame text-[10px] font-bold ml-1'
+    label = `${active} active`
+    count = active
+  }
 
   return (
-    <span
-      className={pillClass}
-      aria-label={
-        hasSafety
-          ? `${counts.unread_total} unread, ${counts.unread_safety} urgent safety`
-          : `${counts.unread_total} unread`
-      }
-      title={
-        hasSafety
-          ? `${counts.unread_total} unread (${counts.unread_safety} safety)`
-          : `${counts.unread_total} unread`
-      }
-    >
-      {counts.unread_total > 9 ? '9+' : counts.unread_total}
+    <span className={pillClass} aria-label={label} title={label}>
+      {count > 9 ? '9+' : count}
     </span>
   )
 }

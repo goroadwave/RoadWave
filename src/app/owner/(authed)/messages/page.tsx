@@ -6,6 +6,7 @@ import { OwnerMessageReplyForm } from '@/components/owner/owner-message-reply-fo
 import { OwnerMessageSoundToggle } from '@/components/owner/owner-message-sound-toggle'
 import { OwnerMessageStatusButtons } from '@/components/owner/owner-message-status-buttons'
 import { OwnerMessagesAutoRefresh } from '@/components/owner/owner-messages-auto-refresh'
+import { OwnerMessagesReadSync } from '@/components/owner/owner-messages-read-sync'
 import { PageHeading } from '@/components/ui/page-heading'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loadOwnerCampground } from '../_helpers'
@@ -125,6 +126,20 @@ export default async function OwnerMessagesPage({
   }
 
   const supabase = await createSupabaseServerClient()
+
+  // Auto-mark all 'new' messages on this campground as 'read' as soon
+  // as the owner opens the inbox. The nav badge's pulsing glow is
+  // tied to status='new' (count via owner_message_counts), so this
+  // bulk-flip turns the glow off the moment the owner actually checks
+  // the page -- without requiring them to tap each row. The RPC is
+  // SECURITY DEFINER + membership-gated and idempotent (no-op when
+  // there are zero new rows). Fire-and-forget: if it errors, we still
+  // render the inbox below, and the badge will simply refresh on its
+  // next 60s tick.
+  await supabase.rpc('owner_mark_messages_read_for_campground', {
+    _campground_id: campground.id,
+  })
+
   const { data, error } = await supabase
     .rpc('owner_messages_for_campground', {
       _campground_id: campground.id,
@@ -182,6 +197,12 @@ export default async function OwnerMessagesPage({
           camper replies without realtime. Visibility-gated; no
           network calls while the tab is hidden. Renders nothing. */}
       <OwnerMessagesAutoRefresh />
+      {/* Fires a 'roadwave:owner-messages-read' custom event on mount
+          so OwnerMessageBadge in the nav refreshes its counts now
+          instead of waiting up to 60s for the next poll. The server-
+          side mark-read RPC above already flipped new->read; this
+          just makes the badge stop pulsing immediately. */}
+      <OwnerMessagesReadSync />
       <PageHeading
         eyebrow="Guest messages"
         title="Inbox"

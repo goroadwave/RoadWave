@@ -1,4 +1,6 @@
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { OWNER_CAMPGROUND_COOKIE } from '@/app/owner/(authed)/_constants'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -45,6 +47,10 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 type CountsRow = {
   unread_total: number | string
   unread_safety: number | string
+  // active_total added in mig 0063 -- count(*) where status in ('new','read').
+  // Optional so a pre-0063 deployment doesn't crash the API; falls back to
+  // unread_total when missing.
+  active_total?: number | string | null
 }
 
 type ReplyTsRow = {
@@ -68,24 +74,34 @@ export async function GET() {
     )
   }
 
-  // Most-recent admin link mirrors loadOwnerCampground -- an owner
-  // managing 2+ campgrounds sees counts for the same row the rest
-  // of the dashboard targets.
+  // Resolve the active campground the SAME way loadOwnerCampground
+  // does (mig 0063 / commit 63e00e7): cookie-stored selection takes
+  // priority, falling back to most-recent membership only when the
+  // cookie is absent or names a campground the user doesn't manage.
+  // Without this, the badge would always show counts for the most-
+  // recent membership campground regardless of which one the owner
+  // switched to via the header dropdown.
   const { data: links } = await supabase
     .from('campground_admins')
     .select('campground_id, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(1)
-  const link = links?.[0]
-  if (!link) {
+  if (!links || links.length === 0) {
     return NextResponse.json({
       ok: true,
       unread_total: 0,
       unread_safety: 0,
+      active_total: 0,
       latest_guest_reply_at: null,
     })
   }
+  const cookieStore = await cookies()
+  const cookieVal = cookieStore.get(OWNER_CAMPGROUND_COOKIE)?.value
+  const validCookie =
+    cookieVal && links.some((l) => l.campground_id === cookieVal)
+      ? cookieVal
+      : null
+  const link = { campground_id: validCookie ?? links[0]!.campground_id }
 
   // Two cheap queries in parallel. Replies query uses the admin
   // client (RLS no-read on this table); scoped strictly to the
@@ -124,6 +140,7 @@ export async function GET() {
         ok: false,
         unread_total: 0,
         unread_safety: 0,
+        active_total: 0,
         latest_guest_reply_at: null,
       },
       { status: 500 },
@@ -150,10 +167,19 @@ export async function GET() {
       ? replyRows[0]?.created_at ?? null
       : null
 
+  const unreadTotal = Number(row?.unread_total ?? 0)
+  // active_total falls back to unread_total when the column isn't
+  // present (pre-0063 deployment). That keeps the badge from
+  // flickering off the moment a 'new' becomes a 'read' if the new
+  // RPC hasn't shipped yet.
+  const activeTotal =
+    row?.active_total != null ? Number(row.active_total) : unreadTotal
+
   return NextResponse.json({
     ok: true,
-    unread_total: Number(row?.unread_total ?? 0),
+    unread_total: unreadTotal,
     unread_safety: Number(row?.unread_safety ?? 0),
+    active_total: activeTotal,
     latest_guest_reply_at: latestReplyAt,
   })
 }
