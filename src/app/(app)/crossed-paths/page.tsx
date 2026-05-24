@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
+import { ConversationMenu } from '@/components/crossed-paths/conversation-menu'
 import { TappableCard } from '@/components/crossed-paths/tappable-card'
 import { PageHeading } from '@/components/ui/page-heading'
 import { SafetyBanner } from '@/components/ui/safety-banner'
@@ -149,7 +150,7 @@ export default async function CrossedPathsPage() {
             `[past-waves] render card currentUserId=${user!.id} otherUserId=${otherId} crossedPathId=${p.id} canMessage=${canMessage}`,
           )
           return (
-            <li key={p.id}>
+            <li key={p.id} className="relative">
               <TappableCard
                 href={`/crossed-paths/${p.id}`}
                 ariaLabel={`Open conversation with ${otherName}`}
@@ -164,6 +165,20 @@ export default async function CrossedPathsPage() {
                   otherName={otherName}
                 />
               </TappableCard>
+              {/* Mounted ABOVE the TappableCard via absolute
+                  positioning so the menu's tap target doesn't
+                  bubble into the card-link click handler. The
+                  ConversationMenu's button + dropdown both
+                  call stopPropagation defensively as well. */}
+              <div className="absolute top-3 right-3">
+                <ConversationMenu
+                  crossedPathId={p.id}
+                  otherUserId={otherId}
+                  otherName={otherName}
+                  campgroundId={p.campground_id}
+                  variant="card"
+                />
+              </div>
             </li>
           )
         })}
@@ -215,7 +230,11 @@ function CrossedPathCard({
 
   return (
     <article className="rounded-2xl border border-flame/30 bg-card p-4 shadow-lg shadow-black/20">
-      <div className="flex items-start justify-between gap-3">
+      {/* pr-12 reserves space for the ConversationMenu's absolute-
+          positioned ⋯ button at top-3 right-3 of the <li>, so the
+          "Mutual Wave" chip doesn't collide with it on narrow
+          viewports. */}
+      <div className="flex items-start justify-between gap-3 pr-12">
         <div>
           <h3 className="font-semibold text-cream leading-tight">{name}</h3>
           <p className="text-xs text-mist">@{profile.username}</p>

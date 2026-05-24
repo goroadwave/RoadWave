@@ -16,6 +16,52 @@ export type WaveConsentResult = {
   status: WaveConsentStatus | null
   error: string | null
 }
+export type RemoveConnectionResult = { ok: boolean; error: string | null }
+
+// Camper-initiated "Remove Connection" from inside the Past Waves
+// conversation surface or the listing card menu. Routes through the
+// existing wave_consent RPC with connect=false -- same path the
+// pending-consent surface uses for "Not Yet". Sets crossed_paths.
+// status='declined' for the row, which:
+//   * Stops further crossed_paths_messages writes via the existing
+//     messages RLS (sender must be a participant on a non-declined
+//     row).
+//   * Causes the /crossed-paths/<id> page to render the "Connection
+//     closed" branch on next visit.
+//   * Drops the entry from the Past Waves listing's matched view
+//     (the listing page filter excludes declined rows -- the
+//     listing's render already handles that via the existing
+//     order/status filter shape).
+//
+// Note: this is NOT the same as Block. Block is meant to prevent
+// future re-discovery / re-matching as well -- that needs a
+// separate user_blocks table + a check in nearby_campers + the
+// waves insert RLS. Tracked as a follow-up.
+export async function removeConnectionAction(
+  crossedPathId: string,
+): Promise<RemoveConnectionResult> {
+  if (!isUuid(crossedPathId)) {
+    return { ok: false, error: 'Invalid request.' }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  const { error } = await supabase.rpc('wave_consent', {
+    _crossed_path_id: crossedPathId,
+    _connect: false,
+  })
+  if (error) return { ok: false, error: error.message }
+
+  revalidatePath('/crossed-paths')
+  revalidatePath(`/crossed-paths/${crossedPathId}`)
+  revalidatePath('/waves')
+  revalidatePath('/home')
+  return { ok: true, error: null }
+}
 
 export async function waveConsentAction(
   crossedPathId: string,

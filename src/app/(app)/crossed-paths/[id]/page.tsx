@@ -4,8 +4,8 @@ import { format, formatDistanceToNow, isSameDay } from 'date-fns'
 import { CrossedPathAutoRefresh } from '@/components/crossed-paths/crossed-path-auto-refresh'
 import { CrossedPathConversation } from '@/components/crossed-paths/crossed-path-conversation'
 import { ConsentPrompt } from '@/components/crossed-paths/consent-prompt'
+import { ConversationMenu } from '@/components/crossed-paths/conversation-menu'
 import { NewConnectionBanner } from '@/components/crossed-paths/new-connection-banner'
-import { ReportDialog } from '@/components/report/report-dialog'
 import { SafetyBanner } from '@/components/ui/safety-banner'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -130,7 +130,7 @@ export default async function CrossedPathDetailPage({ params }: Props) {
       <SafetyBanner message={SAFETY_COPY} />
       <header className="rounded-2xl border border-flame/30 bg-card p-4 space-y-2">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <Link
               href="/crossed-paths"
               className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
@@ -141,27 +141,25 @@ export default async function CrossedPathDetailPage({ params }: Props) {
               {otherFirstName}
             </h1>
           </div>
-          <span className="shrink-0 rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-flame">
-            Connected
-          </span>
+          <div className="shrink-0 flex items-center gap-2">
+            <span className="rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-flame">
+              Connected
+            </span>
+            <ConversationMenu
+              crossedPathId={cp.id}
+              otherUserId={otherId}
+              otherName={otherFirstName}
+              campgroundId={cp.campground_id}
+              variant="header"
+              onRemovedHref="/crossed-paths"
+            />
+          </div>
         </div>
-        <div className="flex items-center justify-between gap-3 border-t border-white/5 pt-2">
+        <div className="border-t border-white/5 pt-2">
           <p className="text-xs text-mist">
             You crossed paths at{' '}
             <span className="text-cream">{cgName}</span> · {matchedWhen}
           </p>
-          <ReportDialog
-            reportedUserId={otherId}
-            reportedLabel={otherFirstName}
-            campgroundId={cp.campground_id}
-          >
-            <button
-              type="button"
-              className="text-xs text-mist/70 hover:text-flame underline-offset-2 hover:underline"
-            >
-              Report
-            </button>
-          </ReportDialog>
         </div>
       </header>
 
