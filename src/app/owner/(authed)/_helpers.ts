@@ -111,37 +111,53 @@ export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
   } = await supabase.auth.getUser()
   if (!user) return []
 
-  // Step 1: list every campground_admins row the user owns. User-
-  // scoped client; RLS gates SELECTs on this table to self-rows
-  // (campground_admins_self policy, mig 0001). This returns the
-  // FULL set -- this is the source of truth for "how many
-  // campgrounds does this owner manage?".
-  const { data: links } = await supabase
+  // BOTH queries route through the admin client now. The user-scoped
+  // version was returning 1 row in production for a user who provably
+  // has 3 campground_admins rows (confirmed via Supabase SQL Editor
+  // Q1 result on 2026-05-24). Vercel runtime logs proved it: the
+  // [owner-switcher] line reported ui=static-label, never ui=dropdown.
+  // Whether the cause is an RLS quirk on campground_admins_self or
+  // the same shape-of-bug we hit on user-scoped .eq() in wave-
+  // eligibility, the practical answer is the same: bypass it.
+  //
+  // Security: the admin client respects the `eq('user_id', user.id)`
+  // filter just like any client, and `user.id` came from the
+  // authenticated session (supabase.auth.getUser above), so we
+  // cannot read other owners' memberships through this path. The
+  // campgrounds JOIN reads only the three non-sensitive display
+  // fields (id / slug / name).
+  const admin = createSupabaseAdminClient()
+
+  // Diagnostic: compare admin vs user-scoped counts so future
+  // regressions are diagnosable without redeploying. Run the user-
+  // scoped version too so the log carries both numbers.
+  const userScopedLinksPromise = supabase
+    .from('campground_admins')
+    .select('campground_id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  const { data: links, error: linksError } = await admin
     .from('campground_admins')
     .select('campground_id, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
+  if (linksError) {
+    console.error(
+      `[owner-memberships] uid=${user.id} admin-links-fetch-failed err=${linksError.message}`,
+    )
+  }
+
+  const { count: userScopedCount } = await userScopedLinksPromise
+
   if (!links || links.length === 0) {
-    console.log(`[owner-memberships] uid=${user.id} links=0 resolved=0`)
+    console.log(
+      `[owner-memberships] uid=${user.id} adminLinks=0 userScopedLinks=${userScopedCount ?? 'null'} resolved=0`,
+    )
     return []
   }
 
   const ids = links.map((l) => l.campground_id)
-
-  // Step 2: fetch the campground display data (id / slug / name) via
-  // the ADMIN client. The same shape-of-bug we hit in wave-eligibility
-  // (commits eb657c5, 00b3e01, 381196e) bites here too: a user-scoped
-  // `.in('id', [uuid, uuid, uuid])` on campgrounds returns FEWER rows
-  // than the input id list -- suspected Supabase JS / PostgREST quirk
-  // around the column-projection on .in() with this shape.
-  //
-  // Safe to use the admin client because (a) we've already proven
-  // the user has campground_admins membership for each of these
-  // campground_ids in step 1, and (b) we're reading only the three
-  // non-sensitive display fields (id / slug / name). No billing /
-  // PII / Stripe data crosses through this helper.
-  const admin = createSupabaseAdminClient()
   const { data: cgs, error: cgsError } = await admin
     .from('campgrounds')
     .select('id, slug, name')
@@ -161,12 +177,6 @@ export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
     .map((l) => {
       const cg = byId.get(l.campground_id)
       if (!cg) {
-        // Diagnostic: which membership ids were dropped by the
-        // campgrounds join. Should be empty in steady state; a row
-        // here means either a stale admin row (shouldn't exist due
-        // to FK CASCADE) or another shape-of-bug. The switcher
-        // will quietly omit it from the dropdown rather than
-        // surface a half-broken entry.
         console.warn(
           `[owner-memberships] uid=${user.id} unresolved-membership campground_id=${l.campground_id}`,
         )
@@ -181,13 +191,8 @@ export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
     })
     .filter((m): m is OwnerMembership => m !== null)
 
-  // Verbose diagnostic kept on (cheap; one line per owner page
-  // render). The user has reported a regression where the switcher
-  // collapses to a single-owner static label even when they have
-  // multiple memberships, so this log is the fastest way to confirm
-  // which step is returning fewer rows than expected.
   console.log(
-    `[owner-memberships] uid=${user.id} links=${links.length} cgs=${cgs?.length ?? 0} resolved=${memberships.length} names=${memberships.map((m) => m.name).join('|')}`,
+    `[owner-memberships] uid=${user.id} adminLinks=${links.length} userScopedLinks=${userScopedCount ?? 'null'} cgs=${cgs?.length ?? 0} resolved=${memberships.length} names=${memberships.map((m) => m.name).join('|')}`,
   )
 
   return memberships
