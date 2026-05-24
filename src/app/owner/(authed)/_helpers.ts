@@ -110,30 +110,52 @@ export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
   } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data } = await supabase
+  // Two separate queries instead of a PostgREST `!inner` join. The
+  // join syntax was silently returning fewer rows than memberships in
+  // production (suspected interaction with the user-scoped client +
+  // FK row-level resolution), which collapsed multi-campground owners
+  // to a single membership and made the switcher render its
+  // single-owner static-label branch. Splitting the query keeps each
+  // step trivial to reason about.
+  const { data: links } = await supabase
     .from('campground_admins')
-    .select('campground_id, created_at, campgrounds!inner(slug, name)')
+    .select('campground_id, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  type Row = {
-    campground_id: string
-    created_at: string
-    campgrounds: { slug: string; name: string } | { slug: string; name: string }[] | null
-  }
-  return (data ?? []).map((row) => {
-    const r = row as Row
-    // PostgREST's typings for !inner can shape the joined record as
-    // either an object or a 1-element array depending on the
-    // generated client version. Handle both defensively.
-    const cg = Array.isArray(r.campgrounds) ? r.campgrounds[0] : r.campgrounds
-    return {
-      campground_id: r.campground_id,
-      slug: cg?.slug ?? '',
-      name: cg?.name ?? 'Unknown campground',
-      created_at: r.created_at,
-    }
-  })
+  if (!links || links.length === 0) return []
+
+  const ids = links.map((l) => l.campground_id)
+  const { data: cgs } = await supabase
+    .from('campgrounds')
+    .select('id, slug, name')
+    .in('id', ids)
+
+  const byId = new Map<string, { id: string; slug: string; name: string }>(
+    (cgs ?? []).map((c) => [c.id, c]),
+  )
+
+  const memberships = links
+    .map((l) => {
+      const cg = byId.get(l.campground_id)
+      if (!cg) return null
+      return {
+        campground_id: l.campground_id,
+        slug: cg.slug,
+        name: cg.name,
+        created_at: l.created_at,
+      } as OwnerMembership
+    })
+    .filter((m): m is OwnerMembership => m !== null)
+
+  // Diagnostic only -- helps confirm in Vercel runtime logs that the
+  // user genuinely has N memberships when the switcher UI seems to
+  // disagree. Cheap (one line per owner page render).
+  console.log(
+    `[owner-memberships] uid=${user.id} links=${links.length} resolved=${memberships.length}`,
+  )
+
+  return memberships
 }
 
 export async function loadOwnerCampground() {
