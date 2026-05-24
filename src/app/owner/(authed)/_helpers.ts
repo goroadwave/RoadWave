@@ -94,171 +94,72 @@ export type OwnerCampground = {
   arrival_departure_note: string | null
 }
 
-// A single membership row + the campground's name/slug, used by the
-// switcher in the owner layout. Cheap query (one row per campground
-// the owner manages, typically 1-3).
+// A single membership row + the campground's name/slug/active flag,
+// used by the switcher in the owner layout and by the default-
+// selection logic in loadOwnerCampground().
 export type OwnerMembership = {
   campground_id: string
   slug: string
   name: string
+  /** From campgrounds.is_active. False = trial expired, paused, or
+   *  test campground. Not auto-selected as the default; surfaced in
+   *  the dropdown with an "(inactive)" tag so the owner can still
+   *  reach it on purpose. */
+  is_active: boolean
   created_at: string
 }
 
-export type OwnerMembershipDebug = {
-  uidPrefix: string
-  uidFull: string
-  email: string | null
-  adminLinks: number
-  userScopedLinks: number | null
-  emailJoinedLinks: number
-  emailJoinedDistinctUserIds: number
-  cgs: number
-  resolved: number
-}
-
-export async function loadOwnerMemberships(): Promise<{
-  memberships: OwnerMembership[]
-  debug: OwnerMembershipDebug
-}> {
+export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) {
-    return {
-      memberships: [],
-      debug: {
-        uidPrefix: 'no-user',
-        uidFull: '',
-        email: null,
-        adminLinks: 0,
-        userScopedLinks: 0,
-        emailJoinedLinks: 0,
-        emailJoinedDistinctUserIds: 0,
-        cgs: 0,
-        resolved: 0,
-      },
-    }
-  }
+  if (!user) return []
 
+  // BOTH queries route through the admin client. The user-scoped
+  // version was returning 1 row in production for a user with 3
+  // memberships (root cause turned out to be a dual-auth-user issue;
+  // unrelated query-shape behavior also bit us). Admin client +
+  // explicit eq('user_id', user.id) is the reliable path.
+  //
+  // Security: the user.id comes from the authenticated session
+  // (supabase.auth.getUser above), so we cannot read other owners'
+  // memberships. The campgrounds JOIN reads only the display + flag
+  // fields needed for the switcher.
   const admin = createSupabaseAdminClient()
 
-  // Run THREE parallel diagnostic queries so we can definitively
-  // pinpoint the bug if the dropdown stays missing:
-  //
-  //   (a) admin-scoped by user.id (current production path)
-  //   (b) user-scoped by user.id  (compare RLS behavior)
-  //   (c) email-joined            (find rows owned by another auth
-  //                                user that shares the email)
-  //
-  // (c) reads from auth.users via the admin client; only the count
-  // and distinct user_ids are logged, never any other PII.
-  const adminByUidPromise = admin
+  const { data: links } = await admin
     .from('campground_admins')
     .select('campground_id, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  const userScopedByUidPromise = supabase
-    .from('campground_admins')
-    .select('campground_id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-
-  const emailJoinedPromise = user.email
-    ? admin.auth.admin.listUsers().then(async ({ data: usersData }) => {
-        const ids = (usersData?.users ?? [])
-          .filter((u) => (u.email ?? '').toLowerCase() === (user.email ?? '').toLowerCase())
-          .map((u) => u.id)
-        if (ids.length === 0) return { total: 0, distinctUsers: 0 }
-        const { data: rows } = await admin
-          .from('campground_admins')
-          .select('user_id')
-          .in('user_id', ids)
-        return {
-          total: rows?.length ?? 0,
-          distinctUsers: new Set((rows ?? []).map((r) => r.user_id)).size,
-        }
-      })
-    : Promise.resolve({ total: 0, distinctUsers: 0 })
-
-  const [
-    { data: links, error: linksError },
-    { count: userScopedCount },
-    emailJoined,
-  ] = await Promise.all([
-    adminByUidPromise,
-    userScopedByUidPromise,
-    emailJoinedPromise,
-  ])
-
-  if (linksError) {
-    console.error(
-      `[owner-memberships] uid=${user.id} admin-links-fetch-failed err=${linksError.message}`,
-    )
-  }
-
-  const baseDebug = {
-    uidPrefix: user.id.slice(0, 8),
-    uidFull: user.id,
-    email: user.email ?? null,
-    adminLinks: links?.length ?? 0,
-    userScopedLinks: userScopedCount ?? null,
-    emailJoinedLinks: emailJoined.total,
-    emailJoinedDistinctUserIds: emailJoined.distinctUsers,
-    cgs: 0,
-    resolved: 0,
-  }
-
-  if (!links || links.length === 0) {
-    console.log(
-      `[owner-memberships-debug] ${JSON.stringify(baseDebug)}`,
-    )
-    return { memberships: [], debug: baseDebug }
-  }
+  if (!links || links.length === 0) return []
 
   const ids = links.map((l) => l.campground_id)
-  const { data: cgs, error: cgsError } = await admin
+  const { data: cgs } = await admin
     .from('campgrounds')
-    .select('id, slug, name')
+    .select('id, slug, name, is_active')
     .in('id', ids)
 
-  if (cgsError) {
-    console.error(
-      `[owner-memberships] uid=${user.id} cgs-fetch-failed err=${cgsError.message}`,
-    )
-  }
+  const byId = new Map<
+    string,
+    { id: string; slug: string; name: string; is_active: boolean }
+  >((cgs ?? []).map((c) => [c.id, c]))
 
-  const byId = new Map<string, { id: string; slug: string; name: string }>(
-    (cgs ?? []).map((c) => [c.id, c]),
-  )
-
-  const memberships = links
+  return links
     .map((l) => {
       const cg = byId.get(l.campground_id)
-      if (!cg) {
-        console.warn(
-          `[owner-memberships] uid=${user.id} unresolved-membership campground_id=${l.campground_id}`,
-        )
-        return null
-      }
+      if (!cg) return null
       return {
         campground_id: l.campground_id,
         slug: cg.slug,
         name: cg.name,
+        is_active: cg.is_active,
         created_at: l.created_at,
       } as OwnerMembership
     })
     .filter((m): m is OwnerMembership => m !== null)
-
-  const debug = {
-    ...baseDebug,
-    cgs: cgs?.length ?? 0,
-    resolved: memberships.length,
-  }
-
-  console.log(`[owner-memberships-debug] ${JSON.stringify(debug)}`)
-
-  return { memberships, debug }
 }
 
 export async function loadOwnerCampground() {
@@ -268,33 +169,32 @@ export async function loadOwnerCampground() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/owner/login')
 
-  // Pull ALL the owner's memberships so the layout can render a
-  // switcher AND we can validate any cookie-stored selection. The
-  // legacy bug was taking ORDER BY created_at DESC LIMIT 1 here,
-  // which silently pinned multi-campground owners to their newest
-  // link and hid all data on every other campground they own.
-  const { data: links } = await supabase
-    .from('campground_admins')
-    .select('campground_id, created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-
-  if (!links || links.length === 0) {
+  // Pull the full membership set (with is_active) so we can pick a
+  // sensible default for owners who manage multiple campgrounds.
+  const memberships = await loadOwnerMemberships()
+  if (memberships.length === 0) {
     return { user, campground: null as OwnerCampground | null }
   }
 
   // Resolve which campground to load. Priority:
   //   1. owner-selected cookie (validated against the user's
   //      memberships -- never trust a raw cookie value).
-  //   2. most-recent membership (legacy default; preserves
-  //      single-campground owner behaviour exactly).
+  //   2. first ACTIVE campground (most recent active membership).
+  //      Inactive / archived campgrounds remain in the dropdown but
+  //      are not auto-selected.
+  //   3. first inactive campground -- only if zero active ones exist
+  //      (else the dashboard would render nothing on first visit).
   const cookieStore = await cookies()
   const cookieVal = cookieStore.get(OWNER_CAMPGROUND_COOKIE)?.value
   const validCookie =
-    cookieVal && links.some((l) => l.campground_id === cookieVal)
+    cookieVal && memberships.some((m) => m.campground_id === cookieVal)
       ? cookieVal
       : null
-  const chosenId = validCookie ?? links[0]!.campground_id
+  const firstActive = memberships.find((m) => m.is_active)
+  const chosenId =
+    validCookie ??
+    firstActive?.campground_id ??
+    memberships[0]!.campground_id
 
   const { data: cg } = await supabase
     .from('campgrounds')

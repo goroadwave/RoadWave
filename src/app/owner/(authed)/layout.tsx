@@ -63,44 +63,24 @@ export default async function AuthedOwnerLayout({
   // tells us which campground the dashboard is currently pinned to;
   // loadOwnerCampground() in _helpers.ts validates the same cookie
   // server-side before resolving data, so the two stay in sync.
-  const { memberships, debug: membershipsDebug } = await loadOwnerMemberships()
+  const memberships = await loadOwnerMemberships()
   const cookieStore = await cookies()
   const cookieVal = cookieStore.get(OWNER_CAMPGROUND_COOKIE)?.value ?? null
   const validCookie =
     cookieVal && memberships.some((m) => m.campground_id === cookieVal)
       ? cookieVal
       : null
-  const activeCampgroundId = validCookie ?? memberships[0]?.campground_id ?? null
-  const switcherUi =
-    memberships.length > 1
-      ? 'dropdown'
-      : memberships.length === 1
-        ? 'static-label'
-        : 'hidden'
-  console.log(
-    `[owner-switcher] uid=${user.id} memberships=${memberships.length} activeId=${activeCampgroundId ?? 'null'} ui=${switcherUi}`,
-  )
+  // Default selection mirrors loadOwnerCampground's priority order:
+  // valid cookie -> first active membership -> first membership.
+  const firstActive = memberships.find((m) => m.is_active)
+  const activeCampgroundId =
+    validCookie ??
+    firstActive?.campground_id ??
+    memberships[0]?.campground_id ??
+    null
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* TEMPORARY debug strip -- diagnosing why the campground
-          switcher renders plain text instead of a dropdown for
-          multi-campground owners (user report 2026-05-24). Remove
-          this band as soon as we've identified the data path that's
-          collapsing the membership list. */}
-      <div className="border-b border-red-500/50 bg-red-500/10 text-red-100 text-[11px] px-4 py-1.5 font-mono leading-snug">
-        <div>
-          <span className="text-red-300">[switcher-debug]</span>{' '}
-          uid={membershipsDebug.uidPrefix}… email={membershipsDebug.email ?? '(none)'}
-        </div>
-        <div>
-          adminLinks={membershipsDebug.adminLinks} | userScopedLinks=
-          {membershipsDebug.userScopedLinks ?? 'null'} | emailJoinedLinks=
-          {membershipsDebug.emailJoinedLinks} (distinct uids=
-          {membershipsDebug.emailJoinedDistinctUserIds}) | cgs=
-          {membershipsDebug.cgs} | resolved={membershipsDebug.resolved} | ui={switcherUi}
-        </div>
-      </div>
       <header className="border-b border-white/5 bg-night/80 backdrop-blur sticky top-0 z-20">
         <div className="mx-auto max-w-3xl flex items-center justify-between px-4 py-3 h-14">
           {/* Inlined logo with explicit hex colors. The shared Logo component

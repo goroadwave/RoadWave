@@ -155,6 +155,11 @@ export function OwnerCampgroundSwitcher({
                           }
                         >
                           {m.name}
+                          {!m.is_active && (
+                            <span className="ml-1.5 text-[10px] uppercase tracking-wider text-mist/70 font-medium">
+                              (inactive)
+                            </span>
+                          )}
                         </span>
                         <span className="block text-[11px] text-mist mt-0.5 truncate">
                           /{m.slug}
