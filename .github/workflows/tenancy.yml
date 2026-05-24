@@ -1,0 +1,75 @@
+name: tenancy
+
+# Campground / camper data tenancy invariants. Static analysis only --
+# reads supabase/migrations + src/app/owner/(authed)/** and asserts the
+# structural facts from the 2026-05-24 tenancy audit (schema FKs,
+# RLS-enabled flags, owner page query patterns, no demo fallback).
+#
+# Runtime ~5s. Does NOT hit the live deployment, does NOT need any
+# Supabase keys, does NOT need to wait for Vercel. Safe to wire as a
+# required PR check.
+#
+# Companion to e2e-smoke.yml (live-URL smoke after deploy) and the
+# stub suite at tests/qa/cross-owner-isolation.test.js (RLS runtime
+# checks gated on a preview env + service-role key).
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      # Only the things these tests actually read. Keeps the
+      # workflow off the critical path for unrelated PRs.
+      - "supabase/migrations/**"
+      - "src/app/owner/**"
+      - "tests/qa/tenancy-*.test.js"
+      - ".github/workflows/tenancy.yml"
+      - "package.json"
+      - "package-lock.json"
+
+concurrency:
+  # One run per ref; cancel earlier in-flight runs when a new commit
+  # lands (these tests are deterministic against the checked-out source,
+  # so older runs are wasted work).
+  group: tenancy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tenancy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out HEAD
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Only chromium is needed -- the tenancy tests don't actually
+      # launch a browser (no `page` fixture), but Playwright's runner
+      # still expects at least one configured browser binary to be
+      # installed before it'll execute any project. chromium-with-deps
+      # is the fastest install path on ubuntu.
+      - name: Install Playwright (chromium only)
+        run: npx playwright install --with-deps chromium
+
+      - name: Run tenancy suite
+        run: npx playwright test tests/qa/tenancy-schema.test.js tests/qa/tenancy-queries.test.js --project=chromium --reporter=line
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenancy-report-${{ github.run_id }}
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
