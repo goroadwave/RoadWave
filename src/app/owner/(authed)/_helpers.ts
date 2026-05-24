@@ -1,5 +1,7 @@
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { OWNER_CAMPGROUND_COOKIE } from './_constants'
 
 export type OwnerCampground = {
   id: string
@@ -91,6 +93,49 @@ export type OwnerCampground = {
   arrival_departure_note: string | null
 }
 
+// A single membership row + the campground's name/slug, used by the
+// switcher in the owner layout. Cheap query (one row per campground
+// the owner manages, typically 1-3).
+export type OwnerMembership = {
+  campground_id: string
+  slug: string
+  name: string
+  created_at: string
+}
+
+export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data } = await supabase
+    .from('campground_admins')
+    .select('campground_id, created_at, campgrounds!inner(slug, name)')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+
+  type Row = {
+    campground_id: string
+    created_at: string
+    campgrounds: { slug: string; name: string } | { slug: string; name: string }[] | null
+  }
+  return (data ?? []).map((row) => {
+    const r = row as Row
+    // PostgREST's typings for !inner can shape the joined record as
+    // either an object or a 1-element array depending on the
+    // generated client version. Handle both defensively.
+    const cg = Array.isArray(r.campgrounds) ? r.campgrounds[0] : r.campgrounds
+    return {
+      campground_id: r.campground_id,
+      slug: cg?.slug ?? '',
+      name: cg?.name ?? 'Unknown campground',
+      created_at: r.created_at,
+    }
+  })
+}
+
 export async function loadOwnerCampground() {
   const supabase = await createSupabaseServerClient()
   const {
@@ -98,26 +143,40 @@ export async function loadOwnerCampground() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/owner/login')
 
-  // An owner can manage multiple campgrounds. Take the most-recent link
-  // and ignore the rest for dashboard purposes. Using .limit(1) +
-  // ordering avoids the .maybeSingle() trap (silent null on >1 row).
+  // Pull ALL the owner's memberships so the layout can render a
+  // switcher AND we can validate any cookie-stored selection. The
+  // legacy bug was taking ORDER BY created_at DESC LIMIT 1 here,
+  // which silently pinned multi-campground owners to their newest
+  // link and hid all data on every other campground they own.
   const { data: links } = await supabase
     .from('campground_admins')
     .select('campground_id, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(1)
-  const link = links?.[0]
-  if (!link) {
+
+  if (!links || links.length === 0) {
     return { user, campground: null as OwnerCampground | null }
   }
+
+  // Resolve which campground to load. Priority:
+  //   1. owner-selected cookie (validated against the user's
+  //      memberships -- never trust a raw cookie value).
+  //   2. most-recent membership (legacy default; preserves
+  //      single-campground owner behaviour exactly).
+  const cookieStore = await cookies()
+  const cookieVal = cookieStore.get(OWNER_CAMPGROUND_COOKIE)?.value
+  const validCookie =
+    cookieVal && links.some((l) => l.campground_id === cookieVal)
+      ? cookieVal
+      : null
+  const chosenId = validCookie ?? links[0]!.campground_id
 
   const { data: cg } = await supabase
     .from('campgrounds')
     .select(
       'id, name, slug, city, region, address, phone, website, logo_url, amenities, amenity_notes, timezone, is_verified, is_active, subscription_status, plan, trial_started_at, trial_ends_at, current_period_end, stripe_customer_id, onb_qr_printed, onb_qr_posted, onb_first_bulletin_sent, google_review_url, booking_url, booking_message, booking_promo_code, feature_facebook_enabled, facebook_review_url, facebook_button_label, feature_review_enabled, feature_book_again_enabled, feature_contact_office_enabled, feature_pulse_check_enabled, email_notifications_enabled, show_park_map, park_map_url, park_map_notes, park_map_path, park_map_file_type, park_map_file_name, park_map_updated_at, show_wifi, wifi_network_name, wifi_password, wifi_notes, show_rules, rules_text, show_emergency_info, emergency_contact_number, emergency_after_hours, emergency_shelter_notes, emergency_other_notes, show_local_recommendations, local_recommendations_text, check_in_time, check_out_time, early_check_in_note, late_check_out_note, arrival_departure_note',
     )
-    .eq('id', link.campground_id)
+    .eq('id', chosenId)
     .single()
 
   return { user, campground: (cg ?? null) as OwnerCampground | null }
