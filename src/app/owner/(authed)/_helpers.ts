@@ -104,43 +104,92 @@ export type OwnerMembership = {
   created_at: string
 }
 
-export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
+export type OwnerMembershipDebug = {
+  uidPrefix: string
+  uidFull: string
+  email: string | null
+  adminLinks: number
+  userScopedLinks: number | null
+  emailJoinedLinks: number
+  emailJoinedDistinctUserIds: number
+  cgs: number
+  resolved: number
+}
+
+export async function loadOwnerMemberships(): Promise<{
+  memberships: OwnerMembership[]
+  debug: OwnerMembershipDebug
+}> {
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return []
+  if (!user) {
+    return {
+      memberships: [],
+      debug: {
+        uidPrefix: 'no-user',
+        uidFull: '',
+        email: null,
+        adminLinks: 0,
+        userScopedLinks: 0,
+        emailJoinedLinks: 0,
+        emailJoinedDistinctUserIds: 0,
+        cgs: 0,
+        resolved: 0,
+      },
+    }
+  }
 
-  // BOTH queries route through the admin client now. The user-scoped
-  // version was returning 1 row in production for a user who provably
-  // has 3 campground_admins rows (confirmed via Supabase SQL Editor
-  // Q1 result on 2026-05-24). Vercel runtime logs proved it: the
-  // [owner-switcher] line reported ui=static-label, never ui=dropdown.
-  // Whether the cause is an RLS quirk on campground_admins_self or
-  // the same shape-of-bug we hit on user-scoped .eq() in wave-
-  // eligibility, the practical answer is the same: bypass it.
-  //
-  // Security: the admin client respects the `eq('user_id', user.id)`
-  // filter just like any client, and `user.id` came from the
-  // authenticated session (supabase.auth.getUser above), so we
-  // cannot read other owners' memberships through this path. The
-  // campgrounds JOIN reads only the three non-sensitive display
-  // fields (id / slug / name).
   const admin = createSupabaseAdminClient()
 
-  // Diagnostic: compare admin vs user-scoped counts so future
-  // regressions are diagnosable without redeploying. Run the user-
-  // scoped version too so the log carries both numbers.
-  const userScopedLinksPromise = supabase
-    .from('campground_admins')
-    .select('campground_id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-
-  const { data: links, error: linksError } = await admin
+  // Run THREE parallel diagnostic queries so we can definitively
+  // pinpoint the bug if the dropdown stays missing:
+  //
+  //   (a) admin-scoped by user.id (current production path)
+  //   (b) user-scoped by user.id  (compare RLS behavior)
+  //   (c) email-joined            (find rows owned by another auth
+  //                                user that shares the email)
+  //
+  // (c) reads from auth.users via the admin client; only the count
+  // and distinct user_ids are logged, never any other PII.
+  const adminByUidPromise = admin
     .from('campground_admins')
     .select('campground_id, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
+
+  const userScopedByUidPromise = supabase
+    .from('campground_admins')
+    .select('campground_id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  const emailJoinedPromise = user.email
+    ? admin.auth.admin.listUsers().then(async ({ data: usersData }) => {
+        const ids = (usersData?.users ?? [])
+          .filter((u) => (u.email ?? '').toLowerCase() === (user.email ?? '').toLowerCase())
+          .map((u) => u.id)
+        if (ids.length === 0) return { total: 0, distinctUsers: 0 }
+        const { data: rows } = await admin
+          .from('campground_admins')
+          .select('user_id')
+          .in('user_id', ids)
+        return {
+          total: rows?.length ?? 0,
+          distinctUsers: new Set((rows ?? []).map((r) => r.user_id)).size,
+        }
+      })
+    : Promise.resolve({ total: 0, distinctUsers: 0 })
+
+  const [
+    { data: links, error: linksError },
+    { count: userScopedCount },
+    emailJoined,
+  ] = await Promise.all([
+    adminByUidPromise,
+    userScopedByUidPromise,
+    emailJoinedPromise,
+  ])
 
   if (linksError) {
     console.error(
@@ -148,13 +197,23 @@ export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
     )
   }
 
-  const { count: userScopedCount } = await userScopedLinksPromise
+  const baseDebug = {
+    uidPrefix: user.id.slice(0, 8),
+    uidFull: user.id,
+    email: user.email ?? null,
+    adminLinks: links?.length ?? 0,
+    userScopedLinks: userScopedCount ?? null,
+    emailJoinedLinks: emailJoined.total,
+    emailJoinedDistinctUserIds: emailJoined.distinctUsers,
+    cgs: 0,
+    resolved: 0,
+  }
 
   if (!links || links.length === 0) {
     console.log(
-      `[owner-memberships] uid=${user.id} adminLinks=0 userScopedLinks=${userScopedCount ?? 'null'} resolved=0`,
+      `[owner-memberships-debug] ${JSON.stringify(baseDebug)}`,
     )
-    return []
+    return { memberships: [], debug: baseDebug }
   }
 
   const ids = links.map((l) => l.campground_id)
@@ -191,11 +250,15 @@ export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
     })
     .filter((m): m is OwnerMembership => m !== null)
 
-  console.log(
-    `[owner-memberships] uid=${user.id} adminLinks=${links.length} userScopedLinks=${userScopedCount ?? 'null'} cgs=${cgs?.length ?? 0} resolved=${memberships.length} names=${memberships.map((m) => m.name).join('|')}`,
-  )
+  const debug = {
+    ...baseDebug,
+    cgs: cgs?.length ?? 0,
+    resolved: memberships.length,
+  }
 
-  return memberships
+  console.log(`[owner-memberships-debug] ${JSON.stringify(debug)}`)
+
+  return { memberships, debug }
 }
 
 export async function loadOwnerCampground() {
