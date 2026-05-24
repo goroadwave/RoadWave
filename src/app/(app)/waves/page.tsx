@@ -68,15 +68,24 @@ export default async function WavesPage() {
       .returns<SentWaveRow[]>(),
     supabase
       .from('crossed_paths')
-      .select('profile_a_id, profile_b_id'),
+      .select('id, profile_a_id, profile_b_id, status'),
   ])
 
   const incomingList = incoming ?? []
   const sentList = sent ?? []
-  const matchedIds = new Set<string>()
+  // Map other-camper-id -> crossed_paths.id so the matched sent
+  // wave card can deep-link straight to /crossed-paths/<id>. The
+  // matched chip used to be a dead state -- the camper had no path
+  // to the conversation from here, just a Remove Wave button.
+  const matchedPathIdByOtherId = new Map<string, string>()
   for (const m of matches ?? []) {
     const otherId = m.profile_a_id === user!.id ? m.profile_b_id : m.profile_a_id
-    matchedIds.add(otherId)
+    // Skip declined matches -- those don't have a conversation
+    // surface, only the "Connection closed" branch on the detail
+    // page. The 'pending_consent' status DOES get a conversation
+    // entry: tapping it lands on the consent prompt + chat.
+    if (m.status === 'declined') continue
+    matchedPathIdByOtherId.set(otherId, m.id)
   }
 
   // Resolve sender campground for each incoming wave so the card can
@@ -239,7 +248,8 @@ export default async function WavesPage() {
             {sentList.map((w) => {
               const p = sentProfileById.get(w.to_profile_id)
               if (!p) return null
-              const matched = matchedIds.has(w.to_profile_id)
+              const crossedPathId = matchedPathIdByOtherId.get(w.to_profile_id)
+              const matched = Boolean(crossedPathId)
               const styleLabel =
                 p.share_travel_style && p.travel_style
                   ? TRAVEL_STYLE_LABEL[p.travel_style] ?? p.travel_style
@@ -270,9 +280,32 @@ export default async function WavesPage() {
                     </div>
                     <WaveStateBadge matched={matched} />
                   </div>
-                  <div className="pt-1 border-t border-white/5">
-                    <RemoveWaveButton waveId={w.id} />
-                  </div>
+                  {/* Matched sent waves: primary Message CTA + a quieter
+                      Remove. Pre-match: just Remove Wave (the matched
+                      camper hasn't reciprocated yet so there's nothing
+                      to open). Conversation is durable across
+                      campgrounds -- the /crossed-paths/<id> page
+                      handles the connected / pending_consent / declined
+                      branches and doesn't gate on activeCheckIn. */}
+                  {matched && crossedPathId ? (
+                    <div className="pt-1 border-t border-white/5 space-y-2">
+                      <Link
+                        href={`/crossed-paths/${crossedPathId}`}
+                        data-testid="waves-sent-open-conversation"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-flame text-night px-4 py-2 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
+                      >
+                        Message {name}
+                        <span aria-hidden>→</span>
+                      </Link>
+                      <div className="text-center">
+                        <RemoveWaveButton waveId={w.id} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="pt-1 border-t border-white/5">
+                      <RemoveWaveButton waveId={w.id} />
+                    </div>
+                  )}
                 </li>
               )
             })}

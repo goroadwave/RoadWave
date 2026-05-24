@@ -48,7 +48,7 @@ export default async function CrossedPathsPage() {
         <SafetyBanner message="Meet smart: Use public campground areas, let someone know where you are going, and report pressure, harassment, or suspicious behavior." />
         <PageHeading
           eyebrow="Mutual waves"
-          title="Crossed paths"
+          title="Past Waves"
           subtitle="People who waved back will land here."
         />
         <Link
@@ -111,7 +111,7 @@ export default async function CrossedPathsPage() {
       <SafetyBanner message="Meet smart: Use public campground areas, let someone know where you are going, and report pressure, harassment, or suspicious behavior." />
       <PageHeading
         eyebrow="Mutual waves"
-        title="Crossed paths"
+        title="Past Waves"
         subtitle="People who waved back."
       />
 
@@ -119,13 +119,35 @@ export default async function CrossedPathsPage() {
         {paths.map((p) => {
           const otherId = p.profile_a_id === user!.id ? p.profile_b_id : p.profile_a_id
           const profile = profileById.get(otherId)
-          if (!profile) return null
+          if (!profile) {
+            // Diagnostic: profile-row lookup missed for this camper.
+            // Card hides because we can't render a name/identity, but
+            // log the gap so we can pinpoint why the conversation
+            // entry point disappeared.
+            console.log(
+              `[past-waves] hiding card -- profile missing currentUserId=${user!.id} otherUserId=${otherId} crossedPathId=${p.id}`,
+            )
+            return null
+          }
           const slugs = interestsByProfile.get(otherId) ?? []
           const cgName = p.campground_id
             ? cgNameById.get(p.campground_id) ?? 'Unknown campground'
             : 'Unknown campground'
           const when = formatDistanceToNow(new Date(p.matched_at), { addSuffix: true })
           const otherName = profile.display_name ?? profile.username
+          // Per the 2026-05-24 spec, the conversation entry point
+          // must NOT be gated on the viewer being checked in at the
+          // original campground. crossed_paths is a durable account
+          // -level connection; the /crossed-paths/[id] page handles
+          // status='connected' / 'pending_consent' / 'declined'
+          // server-side and renders the right surface in each case.
+          // canMessage here just answers "do we have enough data to
+          // build the link?" -- always true if profile + path id
+          // both exist.
+          const canMessage = Boolean(p.id && profile.id)
+          console.log(
+            `[past-waves] render card currentUserId=${user!.id} otherUserId=${otherId} crossedPathId=${p.id} canMessage=${canMessage}`,
+          )
           return (
             <li key={p.id}>
               <TappableCard
@@ -138,6 +160,8 @@ export default async function CrossedPathsPage() {
                   interests={slugs}
                   campgroundName={cgName}
                   when={when}
+                  crossedPathId={p.id}
+                  otherName={otherName}
                 />
               </TappableCard>
             </li>
@@ -161,11 +185,15 @@ function CrossedPathCard({
   interests,
   campgroundName,
   when,
+  crossedPathId,
+  otherName,
 }: {
   profile: ProfileRow
   interests: string[]
   campgroundName: string
   when: string
+  crossedPathId: string
+  otherName: string
 }) {
   const name = profile.display_name ?? profile.username
   const pills: { label: string; value: string }[] = []
@@ -198,7 +226,7 @@ function CrossedPathCard({
           )}
         </div>
         <span className="inline-flex items-center gap-1 rounded-full border border-flame/40 bg-flame/15 px-2 py-0.5 text-xs font-semibold text-flame">
-          <span aria-hidden>👋</span> Crossed paths
+          <span aria-hidden>👋</span> Mutual Wave
         </span>
       </div>
       <p className="mt-1 text-xs text-mist">
@@ -238,6 +266,25 @@ function CrossedPathCard({
           ))}
         </ul>
       )}
+
+      {/* Visible message CTA. The TappableCard wrapping this article
+          already makes the entire card a link to /crossed-paths/<id>,
+          but the wrapper is invisible -- campers didn't know they
+          could tap. This button makes the action explicit at the
+          bottom of every card. Same destination; the parent
+          TappableCard intercepts the tap so this is a visual
+          affordance, not a competing handler. */}
+      <div className="mt-4 pt-3 border-t border-white/5">
+        <span
+          aria-hidden
+          data-testid="past-waves-open-conversation"
+          data-crossed-path-id={crossedPathId}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-flame text-night px-4 py-2.5 text-sm font-semibold shadow-md shadow-flame/15"
+        >
+          Message {otherName}
+          <span aria-hidden>→</span>
+        </span>
+      </div>
     </article>
   )
 }

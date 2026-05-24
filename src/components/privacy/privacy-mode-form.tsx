@@ -22,7 +22,7 @@ const OPTIONS: {
     bullets: [
       'You appear in the checked-in camper list at your campground.',
       'You can wave at others. They can wave at you.',
-      'Mutual waves create Crossed Paths.',
+      'Mutual waves create Past Waves.',
     ],
   },
   {

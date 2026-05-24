@@ -200,7 +200,7 @@ export default async function HomePage() {
           />
           <Tile
             Icon={HandHeart}
-            title="Crossed paths"
+            title="Past Waves"
             description="Mutual waves you've made."
             href="/crossed-paths"
           />

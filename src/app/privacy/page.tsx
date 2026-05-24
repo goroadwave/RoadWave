@@ -75,7 +75,7 @@ export default function PrivacyPolicyPage() {
             <p>
               Strictly to make the app work. We surface you to other campers at
               your campground when your privacy mode allows it, match mutual
-              waves, remember crossed paths so you can find someone again next
+              waves, remember Past Waves so you can find someone again next
               season, and send you the occasional product email you can opt out
               of with one click.
             </p>

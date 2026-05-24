@@ -74,7 +74,7 @@ const SLIDES: Slide[] = [
     id: 'magic',
     title: 'Wave Back = Magic',
     narration:
-      "When they wave back, magic happens. You've crossed paths. Now it's official, and the awkward part is already done.",
+      "When they wave back, magic happens. You've made a mutual wave. Now it's official, and the awkward part is already done.",
   },
   {
     id: 'meetup',
@@ -84,9 +84,9 @@ const SLIDES: Slide[] = [
   },
   {
     id: 'paths',
-    title: 'Crossed Paths',
+    title: 'Past Waves',
     narration:
-      "Every mutual wave becomes a crossed path. Your network of campground friends, ready when you roll back through.",
+      "Every mutual wave becomes a Past Wave. Your network of campground friends, ready when you roll back through.",
   },
 ]
 
@@ -712,7 +712,7 @@ function MagicMockup() {
       <div className="rounded-xl border border-flame/40 bg-flame/15 p-3 text-center space-y-1.5">
         <p className="text-2xl leading-none">👋👋</p>
         <p className="font-display text-base font-extrabold leading-tight">
-          Crossed paths!
+          Mutual wave!
         </p>
         <p className="text-[10px] text-cream/85 leading-snug">
           You and <span className="font-semibold">Sarah & Jim</span> waved at
@@ -757,7 +757,7 @@ function PathsMockup() {
   ]
   return (
     <div>
-      <MockupHeader title="Crossed paths" />
+      <MockupHeader title="Past Waves" />
       <div className="space-y-1.5">
         {matches.map((m) => (
           <div

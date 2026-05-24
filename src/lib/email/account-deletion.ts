@@ -19,7 +19,7 @@ export async function sendAccountDeletionConfirmEmail(
 
   const bodyHtml = `
     <p style="margin:0 0 16px;">
-      Confirming your RoadWave account and all associated data — profile, check-ins, wave history, crossed paths, and messages — were deleted on ${safeDeletedAt}.
+      Confirming your RoadWave account and all associated data — profile, check-ins, wave history, Past Waves, and messages — were deleted on ${safeDeletedAt}.
     </p>
     <p style="margin:0 0 16px;">
       We retained a small compliance record (your user id, an email snapshot, and the timestamp) but no profile or activity data.
@@ -43,7 +43,7 @@ export async function sendAccountDeletionConfirmEmail(
 
   const text = `Your RoadWave account has been deleted.
 
-Confirming your RoadWave account and all associated data — profile, check-ins, wave history, crossed paths, and messages — were deleted on ${args.deletedAt}.
+Confirming your RoadWave account and all associated data — profile, check-ins, wave history, Past Waves, and messages — were deleted on ${args.deletedAt}.
 
 We retained a small compliance record (your user id, an email snapshot, and the timestamp) but no profile or activity data.
 

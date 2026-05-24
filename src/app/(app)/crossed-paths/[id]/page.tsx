@@ -56,7 +56,7 @@ export default async function CrossedPathDetailPage({ params }: Props) {
             href="/crossed-paths"
             className="mt-2 inline-flex text-xs text-flame underline-offset-2 hover:underline"
           >
-            ← All crossed paths
+            ← All Past Waves
           </Link>
         </section>
       </div>
@@ -135,7 +135,7 @@ export default async function CrossedPathDetailPage({ params }: Props) {
               href="/crossed-paths"
               className="text-xs text-mist hover:text-cream underline-offset-2 hover:underline"
             >
-              ← All crossed paths
+              ← All Past Waves
             </Link>
             <h1 className="mt-1 font-display text-2xl font-extrabold text-cream leading-tight">
               {otherFirstName}

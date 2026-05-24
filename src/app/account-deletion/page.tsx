@@ -85,7 +85,7 @@ export default function AccountDeletionPage() {
             <p>
               We verify the request matches the address on file, then delete
               your account and all associated data — profile, check-ins, wave
-              history, crossed paths, and messages — within{' '}
+              history, Past Waves, and messages — within{' '}
               <strong className="text-cream">7 business days</strong>. You
               receive a confirmation email when the deletion is complete.
             </p>
