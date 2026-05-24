@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { OWNER_CAMPGROUND_COOKIE } from './_constants'
 
@@ -110,26 +111,47 @@ export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
   } = await supabase.auth.getUser()
   if (!user) return []
 
-  // Two separate queries instead of a PostgREST `!inner` join. The
-  // join syntax was silently returning fewer rows than memberships in
-  // production (suspected interaction with the user-scoped client +
-  // FK row-level resolution), which collapsed multi-campground owners
-  // to a single membership and made the switcher render its
-  // single-owner static-label branch. Splitting the query keeps each
-  // step trivial to reason about.
+  // Step 1: list every campground_admins row the user owns. User-
+  // scoped client; RLS gates SELECTs on this table to self-rows
+  // (campground_admins_self policy, mig 0001). This returns the
+  // FULL set -- this is the source of truth for "how many
+  // campgrounds does this owner manage?".
   const { data: links } = await supabase
     .from('campground_admins')
     .select('campground_id, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  if (!links || links.length === 0) return []
+  if (!links || links.length === 0) {
+    console.log(`[owner-memberships] uid=${user.id} links=0 resolved=0`)
+    return []
+  }
 
   const ids = links.map((l) => l.campground_id)
-  const { data: cgs } = await supabase
+
+  // Step 2: fetch the campground display data (id / slug / name) via
+  // the ADMIN client. The same shape-of-bug we hit in wave-eligibility
+  // (commits eb657c5, 00b3e01, 381196e) bites here too: a user-scoped
+  // `.in('id', [uuid, uuid, uuid])` on campgrounds returns FEWER rows
+  // than the input id list -- suspected Supabase JS / PostgREST quirk
+  // around the column-projection on .in() with this shape.
+  //
+  // Safe to use the admin client because (a) we've already proven
+  // the user has campground_admins membership for each of these
+  // campground_ids in step 1, and (b) we're reading only the three
+  // non-sensitive display fields (id / slug / name). No billing /
+  // PII / Stripe data crosses through this helper.
+  const admin = createSupabaseAdminClient()
+  const { data: cgs, error: cgsError } = await admin
     .from('campgrounds')
     .select('id, slug, name')
     .in('id', ids)
+
+  if (cgsError) {
+    console.error(
+      `[owner-memberships] uid=${user.id} cgs-fetch-failed err=${cgsError.message}`,
+    )
+  }
 
   const byId = new Map<string, { id: string; slug: string; name: string }>(
     (cgs ?? []).map((c) => [c.id, c]),
@@ -138,7 +160,18 @@ export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
   const memberships = links
     .map((l) => {
       const cg = byId.get(l.campground_id)
-      if (!cg) return null
+      if (!cg) {
+        // Diagnostic: which membership ids were dropped by the
+        // campgrounds join. Should be empty in steady state; a row
+        // here means either a stale admin row (shouldn't exist due
+        // to FK CASCADE) or another shape-of-bug. The switcher
+        // will quietly omit it from the dropdown rather than
+        // surface a half-broken entry.
+        console.warn(
+          `[owner-memberships] uid=${user.id} unresolved-membership campground_id=${l.campground_id}`,
+        )
+        return null
+      }
       return {
         campground_id: l.campground_id,
         slug: cg.slug,
@@ -148,11 +181,13 @@ export async function loadOwnerMemberships(): Promise<OwnerMembership[]> {
     })
     .filter((m): m is OwnerMembership => m !== null)
 
-  // Diagnostic only -- helps confirm in Vercel runtime logs that the
-  // user genuinely has N memberships when the switcher UI seems to
-  // disagree. Cheap (one line per owner page render).
+  // Verbose diagnostic kept on (cheap; one line per owner page
+  // render). The user has reported a regression where the switcher
+  // collapses to a single-owner static label even when they have
+  // multiple memberships, so this log is the fastest way to confirm
+  // which step is returning fewer rows than expected.
   console.log(
-    `[owner-memberships] uid=${user.id} links=${links.length} resolved=${memberships.length}`,
+    `[owner-memberships] uid=${user.id} links=${links.length} cgs=${cgs?.length ?? 0} resolved=${memberships.length} names=${memberships.map((m) => m.name).join('|')}`,
   )
 
   return memberships

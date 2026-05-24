@@ -71,6 +71,17 @@ export default async function AuthedOwnerLayout({
       ? cookieVal
       : null
   const activeCampgroundId = validCookie ?? memberships[0]?.campground_id ?? null
+  // Diagnostic to confirm which UI branch the switcher will render.
+  // dropdown when memberships > 1, static label when === 1, nothing
+  // when === 0. Pair with the [owner-memberships] log above to
+  // isolate whether a missing dropdown is a query problem (too few
+  // memberships came back) or a prop-flow problem (wrong shape
+  // reached the component).
+  console.log(
+    `[owner-switcher] uid=${user.id} memberships=${memberships.length} activeId=${activeCampgroundId ?? 'null'} ui=${
+      memberships.length > 1 ? 'dropdown' : memberships.length === 1 ? 'static-label' : 'hidden'
+    }`,
+  )
 
   return (
     <div className="min-h-screen flex flex-col">
