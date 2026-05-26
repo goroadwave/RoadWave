@@ -38,6 +38,17 @@
         - "docs/**"
         - ".github/**"
 
+  # Explicit least-privilege token scope. Checkout only needs to READ
+  # the repo, so we pin contents:read here rather than relying on the
+  # account/repo default. NOTE: this does NOT address the current CI
+  # failure — checkout is failing with "remote: Your account is
+  # suspended ... error: 403", which GitHub's git server returns based
+  # on ACCOUNT STATUS before token scope is ever evaluated. No token
+  # permission can override a suspended-account 403; the account must
+  # be reinstated via GitHub Support. This block is correctness/hardening.
+  permissions:
+    contents: read
+
   concurrency:
     group: e2e-smoke-${{ github.ref }}
     cancel-in-progress: false
