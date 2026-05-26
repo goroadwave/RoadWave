@@ -29,10 +29,13 @@ import Link from 'next/link'
 // Mock data
 // ---------------------------------------------------------------
 
+// Fake-but-realistic demo campground used consistently across the
+// reusable Demo Center (camper hub, owner hub, walkthrough). Never a
+// real customer campground. No personalized owner name — the greeting
+// stays generic so this demo is reusable for any owner we email.
 const CAMPGROUND = {
   name: 'Pine Ridge RV Resort',
   slug: 'pine-ridge',
-  ownerName: 'Mark',
 }
 
 const TODAY_STATS = [
@@ -234,7 +237,7 @@ function Header() {
         Owner Dashboard
       </p>
       <h1 className="mt-1 font-display text-2xl sm:text-3xl font-extrabold text-cream leading-tight">
-        Hey {CAMPGROUND.ownerName} 👋
+        Welcome back 👋
       </h1>
       <p className="mt-1 text-sm text-mist">
         {CAMPGROUND.name} · <span className="text-cream/80 font-mono">/{CAMPGROUND.slug}</span>

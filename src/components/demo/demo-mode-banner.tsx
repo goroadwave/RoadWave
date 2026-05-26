@@ -1,9 +1,14 @@
 import Link from 'next/link'
 
 // Persistent "Demo Mode" banner pinned to the top of every
-// /demo-center/* page. Tells the visitor (campground owner Mark
-// is showing) that nothing they do here will write to a real
-// campground, send real emails, or trigger Stripe.
+// /demo-center/* page. Tells the visiting campground owner that
+// nothing they do here writes to a real campground, sends real
+// emails, or triggers Stripe.
+//
+// The banner action keeps viewers INSIDE the demo: it routes to the
+// Demo Center hub (/demo-center), never to the public marketing
+// landing page. The only links that leave the demo are the explicit
+// conversion CTAs (Start 30-day trial / owner signup) on each page.
 //
 // Server component -- no interactivity, no state, no JS shipped.
 // Rendered by the /demo-center layout so subroutes inherit it for
@@ -27,10 +32,10 @@ export function DemoModeBanner() {
           </span>
         </span>
         <Link
-          href="/"
+          href="/demo-center"
           className="text-mist hover:text-cream underline-offset-2 hover:underline shrink-0"
         >
-          Exit demo →
+          ← Back to Demo Center
         </Link>
       </div>
     </div>

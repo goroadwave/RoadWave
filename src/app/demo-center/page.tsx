@@ -19,7 +19,10 @@ export default function DemoCenterPage() {
   return (
     <main className="flex-1">
       <section className="mx-auto max-w-5xl px-4 py-10 sm:py-16">
-        <Link href="/" className="inline-block">
+        {/* Logo returns to the Demo Center hub, not the public landing
+            page — demo viewers stay inside the demo unless they tap an
+            explicit signup/trial CTA. */}
+        <Link href="/demo-center" className="inline-block">
           <Logo className="text-3xl" />
         </Link>
 

@@ -573,9 +573,10 @@ test.describe('Demo Center', () => {
       await expect(page.locator('body')).not.toContainText(
         /Application error|Internal Server Error/i,
       )
-      // Dashboard greeting + the at-a-glance stats block.
+      // Dashboard greeting (generic/reusable — no personalized owner
+      // name) + the at-a-glance stats block.
       await expect(
-        page.getByRole('heading', { name: /Hey Mark/i }),
+        page.getByRole('heading', { name: /Welcome back/i }),
       ).toBeVisible()
       await expect(
         page.getByText('This week at a glance', { exact: true }).first(),
@@ -693,6 +694,53 @@ test.describe('Demo Center', () => {
         page.getByRole('link', { name: /Open owner demo/i }),
       ).toHaveAttribute('href', '/demo-center/owner')
     })
+  })
+
+  // -------------------------------------------------------------------------
+  // Demo Mode banner keeps viewers INSIDE the demo. The top banner must
+  // route to the Demo Center hub (/demo-center), never to the public
+  // marketing landing page (/). Guards against an "Exit demo → /"
+  // regression. The only links that should leave the demo are the
+  // explicit signup/trial CTAs (covered elsewhere).
+  // -------------------------------------------------------------------------
+  test.describe('Demo Mode banner stays inside the demo', () => {
+    for (const path of [
+      '/demo-center',
+      '/demo-center/camper',
+      '/demo-center/owner',
+      '/demo-center/walkthrough',
+    ]) {
+      test(`${path} banner returns to /demo-center, not the public landing`, async ({
+        page,
+      }) => {
+        await page.goto(path)
+        const banner = page
+          .getByRole('link', { name: /Back to Demo Center/i })
+          .first()
+        await expect(banner).toBeVisible()
+        await expect(banner).toHaveAttribute('href', '/demo-center')
+      })
+    }
+
+    // Acceptance test: clicking the banner from a subpage lands the owner
+    // back on the Demo Center hub, NOT the real RoadWave landing page.
+    for (const path of [
+      '/demo-center/camper',
+      '/demo-center/owner',
+      '/demo-center/walkthrough',
+    ]) {
+      test(`clicking the banner on ${path} lands on /demo-center`, async ({
+        page,
+      }) => {
+        await page.goto(path)
+        await page
+          .getByRole('link', { name: /Back to Demo Center/i })
+          .first()
+          .click()
+        await page.waitForURL(/\/demo-center$/)
+        await expect(page).toHaveURL(/\/demo-center$/)
+      })
+    }
   })
 })
 
