@@ -45,7 +45,7 @@ export default function DemoCenterPage() {
             buttons don't break for early shares. */}
         <div className="mt-10 grid gap-3 sm:grid-cols-2 max-w-2xl">
           <DemoCta
-            href="/demo"
+            href="/demo-center/camper"
             title="View Camper Demo"
             subtitle="What guests see after scanning your campground QR code."
             icon="📱"
