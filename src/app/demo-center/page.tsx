@@ -132,11 +132,14 @@ export default function DemoCenterPage() {
             Start your 30-day trial
             <span aria-hidden>→</span>
           </Link>
+          {/* "Learn more" stays INSIDE the demo — routes to the guided
+              walkthrough, not the public /campgrounds marketing page.
+              Only the trial/signup CTA above leaves the demo. */}
           <Link
-            href="/campgrounds"
+            href="/demo-center/walkthrough"
             className="text-sm text-mist hover:text-cream underline-offset-2 hover:underline"
           >
-            Or learn more about RoadWave for campgrounds
+            Or take the guided walkthrough
           </Link>
         </div>
       </section>

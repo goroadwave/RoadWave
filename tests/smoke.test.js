@@ -722,6 +722,20 @@ test.describe('Demo Center', () => {
       })
     }
 
+    // "Learn more" / navigation links must NOT leak to the public
+    // marketing site. The landing page's only outbound link should be
+    // the trial CTA (/owner/signup); the "learn more" path stays inside
+    // the demo (guided walkthrough), and there is no /campgrounds exit.
+    test('/demo-center has no public /campgrounds exit; learn-more stays in demo', async ({
+      page,
+    }) => {
+      await page.goto('/demo-center')
+      await expect(page.locator('a[href="/campgrounds"]')).toHaveCount(0)
+      await expect(
+        page.getByRole('link', { name: /take the guided walkthrough/i }),
+      ).toHaveAttribute('href', '/demo-center/walkthrough')
+    })
+
     // Acceptance test: clicking the banner from a subpage lands the owner
     // back on the Demo Center hub, NOT the real RoadWave landing page.
     for (const path of [
