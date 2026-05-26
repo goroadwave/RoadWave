@@ -351,30 +351,106 @@ function ArrivalDepartureCard() {
 }
 
 function WifiCard() {
-  const [copied, setCopied] = useState(false)
-  function handleCopy() {
-    navigator.clipboard.writeText(CAMPGROUND.wifi.password).catch(() => {})
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1500)
-  }
   return (
     <Card>
       <Eyebrow>Wi-Fi</Eyebrow>
-      <p className="mt-2 text-xs text-mist">Network</p>
-      <p className="font-semibold text-cream font-mono mt-0.5">{CAMPGROUND.wifi.network}</p>
-      <p className="mt-3 text-xs text-mist">Password</p>
-      <div className="mt-1 flex items-center gap-2">
-        <p className="font-semibold text-cream font-mono">{CAMPGROUND.wifi.password}</p>
+      <p className="mt-1 text-xs text-mist">
+        Tap the value or use the copy button.
+      </p>
+      <div className="mt-3 space-y-3">
+        <CopyableField
+          label="Network"
+          value={CAMPGROUND.wifi.network}
+        />
+        <CopyableField
+          label="Password"
+          value={CAMPGROUND.wifi.password}
+        />
+      </div>
+      <p className="mt-3 text-xs text-mist leading-snug">
+        {CAMPGROUND.wifi.notes}
+      </p>
+    </Card>
+  )
+}
+
+// Boxed Wi-Fi credential field with its own copy button + tap-to-
+// select fallback. Mirrors the production WifiCopyButton pattern
+// (src/components/campgrounds/wifi-copy-button.tsx): async
+// navigator.clipboard call wrapped in try/catch, 2-second
+// confirmation, explicit error state if the API is unavailable
+// (Safari iOS in some contexts, http-only origins, blocked by
+// permissions policy).
+function CopyableField({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const valueRef = useRef<HTMLSpanElement | null>(null)
+
+  async function handleCopy() {
+    setError(null)
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard API unavailable / denied. The value is already
+      // select-all'd via onClick below, so the camper can long-
+      // press the text to copy manually.
+      setError('Copy unavailable — tap the value to select.')
+    }
+  }
+
+  // Tap the value text -> select it so a manual long-press copy
+  // works on browsers without the clipboard API. The Selection
+  // API is supported everywhere browsers have any text rendering.
+  function handleSelect() {
+    const node = valueRef.current
+    if (!node) return
+    const range = document.createRange()
+    range.selectNodeContents(node)
+    const sel = window.getSelection()
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+  }
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+      <p className="text-[10px] uppercase tracking-wider text-mist font-semibold">
+        {label}
+      </p>
+      <div className="mt-1.5 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={handleSelect}
+          className="text-left min-w-0 flex-1 cursor-text"
+          aria-label={`${label}: ${value}. Tap to select.`}
+        >
+          <span
+            ref={valueRef}
+            className="block font-mono text-base text-cream font-semibold tracking-wide break-all select-all"
+          >
+            {value}
+          </span>
+        </button>
         <button
           type="button"
           onClick={handleCopy}
-          className="text-[11px] rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-mist hover:text-cream hover:border-white/20 transition-colors"
+          className={
+            copied
+              ? 'shrink-0 inline-flex items-center gap-1.5 rounded-md border border-leaf/40 bg-leaf/15 text-leaf px-3 py-1.5 text-xs font-semibold transition-colors'
+              : 'shrink-0 inline-flex items-center gap-1.5 rounded-md border border-flame/40 bg-flame/10 text-flame px-3 py-1.5 text-xs font-semibold hover:bg-flame/15 transition-colors'
+          }
         >
-          {copied ? '✓ Copied' : 'Copy'}
+          <span aria-hidden>{copied ? '✓' : '⧉'}</span>
+          {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
-      <p className="mt-3 text-xs text-mist leading-snug">{CAMPGROUND.wifi.notes}</p>
-    </Card>
+      {error && (
+        <p role="alert" className="mt-2 text-[11px] text-red-300">
+          {error}
+        </p>
+      )}
+    </div>
   )
 }
 
