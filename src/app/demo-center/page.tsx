@@ -34,14 +34,14 @@ export default function DemoCenterPage() {
             being pushed far down. The summary text uses the page's largest
             display size so it's the primary attention-grabber; the demo
             headline below steps down to a secondary size. */}
-        <details className="group mt-8 sm:mt-10 max-w-3xl rounded-2xl border border-flame/40 bg-flame/[0.08] shadow-lg shadow-flame/10 transition-colors open:bg-card">
-          <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-4 rounded-2xl px-6 py-6 sm:px-7 sm:py-7 [&::-webkit-details-marker]:hidden">
-            <span className="font-display text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight text-cream">
+        <details className="group mt-8 sm:mt-10 max-w-3xl rounded-2xl border border-flame/30 bg-flame/[0.06] shadow-md shadow-flame/5 transition-colors open:bg-card">
+          <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-3 rounded-2xl px-6 py-4 sm:px-7 sm:py-6 [&::-webkit-details-marker]:hidden">
+            <span className="font-display text-[1.75rem] leading-[1.15] sm:text-4xl sm:leading-tight md:text-5xl font-extrabold text-cream">
               What is RoadWave? 🤔
             </span>
             <span
               aria-hidden
-              className="shrink-0 text-2xl sm:text-3xl text-flame transition-transform duration-200 group-open:rotate-180"
+              className="shrink-0 text-xl sm:text-3xl text-flame transition-transform duration-200 group-open:rotate-180"
             >
               ▾
             </span>
@@ -68,7 +68,7 @@ export default function DemoCenterPage() {
           </div>
         </details>
 
-        <div className="mt-10 sm:mt-14 max-w-3xl">
+        <div className="mt-6 sm:mt-12 max-w-3xl">
           <p className="text-[11px] uppercase tracking-[0.25em] text-flame font-semibold">
             Demo Center
           </p>
