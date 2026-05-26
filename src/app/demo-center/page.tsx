@@ -35,13 +35,21 @@ export default function DemoCenterPage() {
             display size so it's the primary attention-grabber; the demo
             headline below steps down to a secondary size. */}
         <details className="group mt-8 sm:mt-10 max-w-3xl rounded-2xl border border-flame/30 bg-flame/[0.06] shadow-md shadow-flame/5 transition-colors open:bg-card">
-          <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-3 rounded-2xl px-6 py-4 sm:px-7 sm:py-6 [&::-webkit-details-marker]:hidden">
-            <span className="font-display text-[1.75rem] leading-[1.15] sm:text-4xl sm:leading-tight md:text-5xl font-extrabold text-cream">
-              What is RoadWave? 🤔
+          <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-3 rounded-2xl px-5 py-6 sm:px-7 [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0">
+              {/* Non-breaking space keeps the 🤔 locked to "RoadWave?" so
+                  it can never wrap onto a line of its own; the 1.375rem
+                  mobile size keeps the whole headline on one line. */}
+              <span className="block font-display text-[1.375rem] leading-tight sm:text-3xl font-extrabold text-cream">
+                What is RoadWave?&nbsp;🤔
+              </span>
+              <span className="mt-1 block text-xs sm:text-sm font-medium text-mist">
+                Quick 30-second explanation
+              </span>
             </span>
             <span
               aria-hidden
-              className="shrink-0 text-xl sm:text-3xl text-flame transition-transform duration-200 group-open:rotate-180"
+              className="shrink-0 text-xl sm:text-2xl text-flame transition-transform duration-200 group-open:rotate-180"
             >
               ▾
             </span>
@@ -68,7 +76,7 @@ export default function DemoCenterPage() {
           </div>
         </details>
 
-        <div className="mt-6 sm:mt-12 max-w-3xl">
+        <div className="mt-5 sm:mt-10 max-w-3xl">
           <p className="text-[11px] uppercase tracking-[0.25em] text-flame font-semibold">
             Demo Center
           </p>
