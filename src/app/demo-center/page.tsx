@@ -19,22 +19,29 @@ export default function DemoCenterPage() {
   return (
     <main className="flex-1">
       <section className="mx-auto max-w-5xl px-4 py-10 sm:py-16">
-        {/* "What is RoadWave?" primer, intentionally the FIRST thing an
-            owner sees on /demo-center (above the logo + headline). A native
+        {/* Logo returns to the Demo Center hub, not the public landing
+            page — demo viewers stay inside the demo unless they tap an
+            explicit signup/trial CTA. */}
+        <Link href="/demo-center" className="inline-block">
+          <Logo className="text-3xl" />
+        </Link>
+
+        {/* "What is RoadWave?" primer, sitting just below the logo and now
+            carrying the main headline weight on /demo-center. A native
             <details> accordion so it ships zero client JS (this page is a
             server component) and stays collapsed by default — a first-time
             owner gets the full pitch on demand without the demo buttons
-            being pushed far down. Sized up a touch (taller padding, larger
-            heading, a soft flame glow) for stronger presence while staying
-            on-brand and uncluttered. */}
-        <details className="group max-w-3xl rounded-2xl border border-flame/40 bg-flame/[0.08] shadow-lg shadow-flame/10 transition-colors open:bg-card">
-          <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-4 rounded-2xl px-6 py-5 sm:px-7 sm:py-6 [&::-webkit-details-marker]:hidden">
-            <span className="font-display text-lg sm:text-2xl font-extrabold text-cream">
+            being pushed far down. The summary text uses the page's largest
+            display size so it's the primary attention-grabber; the demo
+            headline below steps down to a secondary size. */}
+        <details className="group mt-8 sm:mt-10 max-w-3xl rounded-2xl border border-flame/40 bg-flame/[0.08] shadow-lg shadow-flame/10 transition-colors open:bg-card">
+          <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-4 rounded-2xl px-6 py-6 sm:px-7 sm:py-7 [&::-webkit-details-marker]:hidden">
+            <span className="font-display text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight text-cream">
               What is RoadWave? 🤔
             </span>
             <span
               aria-hidden
-              className="shrink-0 text-xl text-flame transition-transform duration-200 group-open:rotate-180"
+              className="shrink-0 text-2xl sm:text-3xl text-flame transition-transform duration-200 group-open:rotate-180"
             >
               ▾
             </span>
@@ -61,18 +68,11 @@ export default function DemoCenterPage() {
           </div>
         </details>
 
-        {/* Logo returns to the Demo Center hub, not the public landing
-            page — demo viewers stay inside the demo unless they tap an
-            explicit signup/trial CTA. */}
-        <Link href="/demo-center" className="mt-10 sm:mt-12 inline-block">
-          <Logo className="text-3xl" />
-        </Link>
-
         <div className="mt-10 sm:mt-14 max-w-3xl">
           <p className="text-[11px] uppercase tracking-[0.25em] text-flame font-semibold">
             Demo Center
           </p>
-          <h1 className="mt-3 font-display text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight text-cream">
+          <h1 className="mt-3 font-display text-lg sm:text-2xl font-extrabold leading-snug text-cream">
             See how RoadWave works for campers and campground owners
           </h1>
           <p className="mt-5 text-base sm:text-lg text-mist leading-relaxed">
