@@ -56,7 +56,7 @@ export default function DemoCenterPage() {
             title="View Owner Dashboard Demo"
             subtitle="Bulletins, meetups, office messages, stats."
             icon="🧭"
-            comingSoon
+            primary
           />
           <DemoCta
             href="/demo-center/walkthrough"
