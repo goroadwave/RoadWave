@@ -52,7 +52,14 @@ function watchForPageErrors(page, opts = {}) {
       // browser-extension messages in CI). Keep the bar tight on our
       // own domain.
       const text = msg.text()
-      if (allowed.some((s) => text.includes(s))) return
+      // Match the allow-list against both the message text AND the
+      // resource URL it came from. A failed fetch logs a generic
+      // "Failed to load resource: ... 404" whose URL lives on
+      // msg.location(), not in the text — so allowing a URL substring
+      // (e.g. a not-yet-built route's prefetch) must suppress that
+      // console.error too, not just the matching [network] entry.
+      const locUrl = msg.location()?.url ?? ''
+      if (allowed.some((s) => text.includes(s) || locUrl.includes(s))) return
       errors.push(`[console.error] ${text}`)
     }
   })
@@ -406,6 +413,216 @@ test.describe('Camper flow', () => {
     await page.goto('/home')
     await page.waitForURL(/\/login/)
     await expect(page).toHaveURL(/\/login/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 4b. Demo Center (sales hub) — the standalone /demo-center landing plus the
+//     camper (/demo-center/camper) and owner (/demo-center/owner) demos.
+//     Public, no auth, all mock data. These are NEW surfaces; the existing
+//     interactive /demo + /demo/[slug] pages are covered in section 4.
+//     Selectors below track real copy in:
+//       src/app/demo-center/page.tsx
+//       src/components/demo/demo-camper-hub.tsx
+//       src/components/demo/demo-owner-hub.tsx
+// ---------------------------------------------------------------------------
+
+test.describe('Demo Center', () => {
+  test('/demo-center landing loads with both demo CTAs', async ({ page }) => {
+    // The "Take Guided Walkthrough" CTA points at /demo-center/walkthrough,
+    // a Phase-4 route that doesn't exist yet (it renders a "Coming next"
+    // chip). Next's App Router prefetches <Link> targets via RSC, so that
+    // prefetch 404s — a benign, expected stub-link prefetch. Allow just
+    // that URL rather than masking 404s globally; remove this allowance
+    // once the walkthrough route ships in Phase 4.
+    const getErrors = watchForPageErrors(page, {
+      allowedUrlSubstrings: ['/demo-center/walkthrough'],
+    })
+
+    const resp = await page.goto('/demo-center')
+    expect(resp?.status(), '/demo-center HTTP status').toBeLessThan(400)
+
+    await expect(
+      page.getByRole('heading', {
+        name: /See how RoadWave works for campers and campground owners/i,
+      }),
+    ).toBeVisible()
+
+    // The two working CTAs link to the camper + owner demos.
+    const camperCta = page
+      .getByRole('link', { name: /View Camper Demo/i })
+      .first()
+    await expect(camperCta).toHaveAttribute('href', '/demo-center/camper')
+    const ownerCta = page
+      .getByRole('link', { name: /View Owner Dashboard Demo/i })
+      .first()
+    await expect(ownerCta).toHaveAttribute('href', '/demo-center/owner')
+
+    expect(getErrors()).toEqual([])
+  })
+
+  // -------------------------------------------------------------------------
+  // /demo-center/camper — standalone post-QR-scan camper experience
+  // -------------------------------------------------------------------------
+  test.describe('/demo-center/camper', () => {
+    test('loads with the camper-demo title (no crash)', async ({ page }) => {
+      const getErrors = watchForPageErrors(page)
+      const resp = await page.goto('/demo-center/camper')
+      expect(resp?.status()).toBeLessThan(400)
+      await expect(page).toHaveTitle(/Camper Demo · RoadWave/i)
+      await expect(page.locator('body')).not.toContainText(
+        /Application error|Internal Server Error/i,
+      )
+      expect(getErrors()).toEqual([])
+    })
+
+    test('Wi-Fi network + password are visible', async ({ page }) => {
+      await page.goto('/demo-center/camper')
+      // Wi-Fi card eyebrow + the mock credentials.
+      await expect(page.getByText('Wi-Fi', { exact: true }).first()).toBeVisible()
+      await expect(page.getByText('PineRidge-Guest').first()).toBeVisible()
+      await expect(page.getByText('pinecone2026').first()).toBeVisible()
+    })
+
+    test('Wi-Fi copy button exists and gracefully handles clipboard limits', async ({
+      page,
+    }) => {
+      await page.goto('/demo-center/camper')
+
+      // A real Copy affordance is present (one per credential field).
+      const copyBtn = page.getByRole('button', { name: /^Copy$/ }).first()
+      await expect(copyBtn).toBeVisible()
+
+      // Graceful fallback regardless of clipboard support: the value
+      // itself is a tap-to-select control, so a camper can long-press
+      // to copy even when navigator.clipboard is blocked (Safari/http).
+      await expect(
+        page.getByRole('button', {
+          name: /Network: PineRidge-Guest\. Tap to select\./i,
+        }),
+      ).toBeVisible()
+
+      // Clicking Copy must NEVER crash. Depending on whether the
+      // headless browser grants clipboard access, the button either
+      // confirms "Copied" or the field surfaces a friendly
+      // "Copy unavailable" hint — both are acceptable. A thrown error
+      // or blank screen is the regression we guard against.
+      await copyBtn.click()
+      await expect(
+        page.getByText(/Copied|Copy unavailable/i).first(),
+      ).toBeVisible({ timeout: 4000 })
+      // And the Wi-Fi value is still on screen (no navigation/crash).
+      await expect(page.getByText('PineRidge-Guest').first()).toBeVisible()
+    })
+
+    test('Lantern (notifications) section exists and opens', async ({
+      page,
+    }) => {
+      await page.goto('/demo-center/camper')
+      const lantern = page.getByRole('button', { name: /Notifications/i }).first()
+      await expect(lantern).toBeVisible()
+      // Opening it reveals the activity panel — proves it's wired, not
+      // just decorative.
+      await lantern.click()
+      await expect(
+        page.getByRole('dialog', { name: /Recent notifications/i }),
+      ).toBeVisible()
+    })
+
+    test('Office message demo (send-to-office form) exists', async ({
+      page,
+    }) => {
+      await page.goto('/demo-center/camper')
+      await expect(
+        page.getByText('Office Help & Messages', { exact: true }).first(),
+      ).toBeVisible()
+      await expect(
+        page.getByRole('button', { name: /Send to office/i }),
+      ).toBeVisible()
+    })
+
+    test('Wave / Camper Connections section exists', async ({ page }) => {
+      await page.goto('/demo-center/camper')
+      await expect(
+        page.getByRole('heading', {
+          name: /Want to meet other campers here/i,
+        }),
+      ).toBeVisible()
+      // At least one camper card with a "Send Wave" action.
+      await expect(
+        page.getByRole('button', { name: /Send Wave/i }).first(),
+      ).toBeVisible()
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // /demo-center/owner — standalone owner dashboard demo
+  // -------------------------------------------------------------------------
+  test.describe('/demo-center/owner', () => {
+    test('loads with the owner-demo title + dashboard header (no crash)', async ({
+      page,
+    }) => {
+      const getErrors = watchForPageErrors(page)
+      const resp = await page.goto('/demo-center/owner')
+      expect(resp?.status()).toBeLessThan(400)
+      await expect(page).toHaveTitle(/Owner Dashboard Demo · RoadWave/i)
+      await expect(page.locator('body')).not.toContainText(
+        /Application error|Internal Server Error/i,
+      )
+      // Dashboard greeting + the at-a-glance stats block.
+      await expect(
+        page.getByRole('heading', { name: /Hey Mark/i }),
+      ).toBeVisible()
+      await expect(
+        page.getByText('This week at a glance', { exact: true }).first(),
+      ).toBeVisible()
+      expect(getErrors()).toEqual([])
+    })
+
+    test('bulletin composer exists', async ({ page }) => {
+      await page.goto('/demo-center/owner')
+      await expect(
+        page.getByRole('button', { name: /Post bulletin/i }),
+      ).toBeVisible()
+    })
+
+    test('meetup composer exists', async ({ page }) => {
+      await page.goto('/demo-center/owner')
+      await expect(
+        page.getByRole('button', { name: /Post meetup/i }),
+      ).toBeVisible()
+    })
+
+    test('weather & safety notice composer exists', async ({ page }) => {
+      await page.goto('/demo-center/owner')
+      await expect(
+        page.getByText('Weather & Safety Alerts', { exact: true }).first(),
+      ).toBeVisible()
+      await expect(
+        page.getByRole('button', { name: /Post Weather & Safety notice/i }),
+      ).toBeVisible()
+    })
+
+    test('office messages inbox exists with seeded threads', async ({
+      page,
+    }) => {
+      await page.goto('/demo-center/owner')
+      await expect(
+        page.getByText('Office Messages', { exact: true }).first(),
+      ).toBeVisible()
+      // A seeded inbox message is rendered in the default Active tab.
+      await expect(page.getByText(/Site 24 · Lisa Tan/i)).toBeVisible()
+    })
+
+    test('reviews & rebooking section exists', async ({ page }) => {
+      await page.goto('/demo-center/owner')
+      await expect(
+        page.getByText('Reviews & Rebooking', { exact: true }).first(),
+      ).toBeVisible()
+      await expect(
+        page.getByText(/Show Google review link/i),
+      ).toBeVisible()
+    })
   })
 })
 
