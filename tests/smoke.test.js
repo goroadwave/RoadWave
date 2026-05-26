@@ -428,16 +428,13 @@ test.describe('Camper flow', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Demo Center', () => {
-  test('/demo-center landing loads with both demo CTAs', async ({ page }) => {
-    // The "Take Guided Walkthrough" CTA points at /demo-center/walkthrough,
-    // a Phase-4 route that doesn't exist yet (it renders a "Coming next"
-    // chip). Next's App Router prefetches <Link> targets via RSC, so that
-    // prefetch 404s — a benign, expected stub-link prefetch. Allow just
-    // that URL rather than masking 404s globally; remove this allowance
-    // once the walkthrough route ships in Phase 4.
-    const getErrors = watchForPageErrors(page, {
-      allowedUrlSubstrings: ['/demo-center/walkthrough'],
-    })
+  test('/demo-center landing loads with all three demo CTAs', async ({
+    page,
+  }) => {
+    // As of Phase 4 every CTA target exists (camper, owner, walkthrough),
+    // so the landing page no longer produces a stub-link prefetch 404 —
+    // the strict console/network error guard applies with no allowances.
+    const getErrors = watchForPageErrors(page)
 
     const resp = await page.goto('/demo-center')
     expect(resp?.status(), '/demo-center HTTP status').toBeLessThan(400)
@@ -448,7 +445,7 @@ test.describe('Demo Center', () => {
       }),
     ).toBeVisible()
 
-    // The two working CTAs link to the camper + owner demos.
+    // All three demo CTAs link to live routes.
     const camperCta = page
       .getByRole('link', { name: /View Camper Demo/i })
       .first()
@@ -457,6 +454,13 @@ test.describe('Demo Center', () => {
       .getByRole('link', { name: /View Owner Dashboard Demo/i })
       .first()
     await expect(ownerCta).toHaveAttribute('href', '/demo-center/owner')
+    const walkthroughCta = page
+      .getByRole('link', { name: /Take Guided Walkthrough/i })
+      .first()
+    await expect(walkthroughCta).toHaveAttribute(
+      'href',
+      '/demo-center/walkthrough',
+    )
 
     expect(getErrors()).toEqual([])
   })
@@ -622,6 +626,72 @@ test.describe('Demo Center', () => {
       await expect(
         page.getByText(/Show Google review link/i),
       ).toBeVisible()
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // /demo-center/walkthrough — Phase 4 self-guided product tour. Static
+  // mock data, a linear stepper across the four chapters. Selectors track
+  // src/components/demo/demo-walkthrough.tsx.
+  // -------------------------------------------------------------------------
+  test.describe('/demo-center/walkthrough', () => {
+    test('loads with the walkthrough title + intro (no crash)', async ({
+      page,
+    }) => {
+      const getErrors = watchForPageErrors(page)
+      const resp = await page.goto('/demo-center/walkthrough')
+      expect(resp?.status()).toBeLessThan(400)
+      await expect(page).toHaveTitle(/Guided Walkthrough · RoadWave/i)
+      await expect(page.locator('body')).not.toContainText(
+        /Application error|Internal Server Error/i,
+      )
+      await expect(
+        page.getByRole('heading', {
+          name: /The whole RoadWave flow, step by step/i,
+        }),
+      ).toBeVisible()
+      expect(getErrors()).toEqual([])
+    })
+
+    test('all four chapters are represented as tabs', async ({ page }) => {
+      await page.goto('/demo-center/walkthrough')
+      for (const label of [/Setup/i, /Dashboard/i, /Camper QR/i, /Connections/i]) {
+        await expect(
+          page.getByRole('button', { name: label }).first(),
+        ).toBeVisible()
+      }
+    })
+
+    test('Next advances the tour; chapter tab jumps', async ({ page }) => {
+      await page.goto('/demo-center/walkthrough')
+      // Starts on step 1.
+      await expect(page.getByText(/Step 1 of/i)).toBeVisible()
+      // First step is the campground-naming setup step.
+      await expect(
+        page.getByRole('heading', { name: /Name your campground/i }),
+      ).toBeVisible()
+
+      // Advancing moves to step 2.
+      await page.getByRole('button', { name: /^Next/i }).click()
+      await expect(page.getByText(/Step 2 of/i)).toBeVisible()
+
+      // Jumping to a later chapter swaps the step content (a camper step).
+      await page.getByRole('button', { name: /Camper QR/i }).first().click()
+      await expect(
+        page.getByRole('heading', { name: /A guest scans the QR code/i }),
+      ).toBeVisible()
+    })
+
+    test('links out to the interactive camper + owner demos', async ({
+      page,
+    }) => {
+      await page.goto('/demo-center/walkthrough')
+      await expect(
+        page.getByRole('link', { name: /Open camper demo/i }),
+      ).toHaveAttribute('href', '/demo-center/camper')
+      await expect(
+        page.getByRole('link', { name: /Open owner demo/i }),
+      ).toHaveAttribute('href', '/demo-center/owner')
     })
   })
 })

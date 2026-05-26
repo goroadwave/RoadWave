@@ -63,7 +63,7 @@ export default function DemoCenterPage() {
             title="Take Guided Walkthrough"
             subtitle="Step-by-step tour of every feature."
             icon="🚶"
-            comingSoon
+            primary
           />
           <DemoCta
             href="/owner/signup"
