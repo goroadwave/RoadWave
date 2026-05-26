@@ -108,25 +108,25 @@ export default async function RootPage({
             <div className="space-y-4 sm:space-y-5 text-center lg:text-left">
               <Eyebrow>RoadWave</Eyebrow>
               <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-cream leading-[1.05]">
-                Campground guests, connected on their terms.
+                The campground amenity that helps guests connect.
               </h1>
               <p className="text-mist text-base sm:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0">
-                RoadWave helps campground guests see updates, connect
-                around shared interests, and say hello only when they
-                want to.
+                Guests find friendly faces. Owners build a campground
+                people return to. No app download. No public group chat.
+                No extra work.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 pt-2 items-center sm:items-stretch lg:items-stretch lg:justify-start justify-center">
                 <Link
-                  href="/signup"
+                  href="/demo"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-leaf text-night px-6 py-3 text-base font-semibold shadow-lg shadow-leaf/20 hover:bg-leaf/85 transition-colors"
                 >
-                  Check In as a Camper
+                  Try the Demo <span aria-hidden>👋</span>
                 </Link>
                 <Link
-                  href="/demo"
+                  href="/owners"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-flame/40 bg-flame/[0.06] text-cream px-6 py-3 text-base font-semibold hover:bg-flame/15 hover:border-flame/60 transition-colors"
                 >
-                  Try the Demo <span aria-hidden>👋</span>
+                  For Campground Owners <span aria-hidden>→</span>
                 </Link>
               </div>
             </div>

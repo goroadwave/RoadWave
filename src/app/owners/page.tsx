@@ -134,10 +134,36 @@ export default function OwnersPage() {
           </div>
         </section>
 
+        {/* Interactive demo wizard — customizes the live demo with the
+            owner's campground name, logo, and city, then produces a
+            shareable preview link. Moved up to be the second section
+            (right after the hero) so prospects can build a branded
+            preview before reading the rest of the page. The hero "See
+            the live demo" CTA still goes straight to /demo; this section
+            is the "build my own branded version" path. */}
+        <section
+          id="request-demo"
+          className="px-4 py-16 border-t border-white/5 bg-flame/[0.06]"
+        >
+          <div className="mx-auto max-w-2xl">
+            <div className="text-center mb-8 space-y-2">
+              <Eyebrow>Build my free campground demo</Eyebrow>
+              <h2 className="font-display text-3xl font-extrabold tracking-tight text-cream">
+                Customize this with my campground name.
+              </h2>
+              <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
+                Three quick steps. A shareable preview branded with your
+                campground name, logo, and city.
+              </p>
+            </div>
+            <InteractiveDemo />
+          </div>
+        </section>
+
         {/* Six value props — the heart of the new positioning */}
         <section className="px-4 py-14 border-t border-white/5">
           <div className="mx-auto max-w-5xl">
-            <div className="text-center mb-10 space-y-2">
+            <div className="text-center mb-10 space-y-3">
               <Eyebrow>What RoadWave does for your campground</Eyebrow>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
                 Six tools, one QR code.
@@ -146,6 +172,15 @@ export default function OwnersPage() {
                 Each one runs on the same welcome page guests land on
                 after scanning. Turn any of them on or off from your
                 dashboard.
+              </p>
+              {/* "Why campgrounds offer it" intro — the emotional why,
+                  placed directly above the tool cards. */}
+              <p className="text-mist text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+                Guests remember campgrounds where they feel welcomed, not
+                just checked in. RoadWave gives owners a simple way to
+                spark friendly connections, share helpful info, and make
+                the stay feel more personal — without adding more work
+                for staff.
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -274,30 +309,6 @@ export default function OwnersPage() {
           </div>
         </section>
 
-        {/* Interactive demo wizard — customizes the live demo with the
-            owner's campground name, logo, and city, then produces a
-            shareable preview link. The hero "See the live demo" CTA
-            now goes straight to /demo (the Pages-Router live demo);
-            this section is the "build my own branded version" path. */}
-        <section
-          id="request-demo"
-          className="px-4 py-16 border-t border-white/5 bg-flame/[0.06]"
-        >
-          <div className="mx-auto max-w-2xl">
-            <div className="text-center mb-8 space-y-2">
-              <Eyebrow>Build my free campground demo</Eyebrow>
-              <h2 className="font-display text-3xl font-extrabold tracking-tight text-cream">
-                Customize this with my campground name.
-              </h2>
-              <p className="font-serif italic text-flame text-base sm:text-lg leading-snug">
-                Three quick steps. A shareable preview branded with your
-                campground name, logo, and city.
-              </p>
-            </div>
-            <InteractiveDemo />
-          </div>
-        </section>
-
         {/* Public pricing block — explicit per the May 2026 pricing
             audit. The canonical line lives in one place so demo
             scripts, owner-facing pages, the owners/start intake, and
@@ -334,6 +345,10 @@ export default function OwnersPage() {
                 Start My Campground Pilot
               </Link>
             </div>
+            <p className="text-sm text-mist/80 leading-snug">
+              Founding pilot pricing: $39/month. No hardware. No setup
+              fees. Cancel anytime.
+            </p>
           </div>
         </section>
       </main>

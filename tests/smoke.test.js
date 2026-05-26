@@ -94,23 +94,25 @@ test.describe('Public website', () => {
     const resp = await page.goto('/')
     expect(resp?.status(), 'homepage HTTP status').toBeLessThan(400)
 
-    // Hero headline — current copy "Campground guests, connected on
-    // their terms." Match loosely on a stable phrase.
+    // Hero headline — current copy "The campground amenity that helps
+    // guests connect." Match loosely on a stable phrase.
     await expect(
-      page.getByRole('heading', { name: /Campground guests, connected/i }),
+      page.getByRole('heading', {
+        name: /campground amenity that helps guests connect/i,
+      }),
     ).toBeVisible()
 
-    // Primary camper CTA points at /signup
-    const camperCta = page
-      .getByRole('link', { name: /Check In as a Camper/i })
-      .first()
-    await expect(camperCta).toBeVisible()
-    await expect(camperCta).toHaveAttribute('href', '/signup')
-
-    // Secondary "Try the Demo" CTA points at /demo
+    // Primary hero CTA "Try the Demo" points at /demo
     const demoCta = page.getByRole('link', { name: /Try the Demo/i }).first()
     await expect(demoCta).toBeVisible()
     await expect(demoCta).toHaveAttribute('href', '/demo')
+
+    // Secondary hero CTA "For Campground Owners" points at /owners
+    const ownersCta = page
+      .getByRole('link', { name: /For Campground Owners/i })
+      .first()
+    await expect(ownersCta).toBeVisible()
+    await expect(ownersCta).toHaveAttribute('href', '/owners')
 
     expect(getErrors()).toEqual([])
   })
@@ -940,13 +942,15 @@ test.describe('Mobile viewport sanity', () => {
   }) => {
     await page.goto('/')
     await expect(
-      page.getByRole('heading', { name: /Campground guests, connected/i }),
-    ).toBeVisible()
-    await expect(
-      page.getByRole('link', { name: /Check In as a Camper/i }).first(),
+      page.getByRole('heading', {
+        name: /campground amenity that helps guests connect/i,
+      }),
     ).toBeVisible()
     await expect(
       page.getByRole('link', { name: /Try the Demo/i }).first(),
+    ).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: /For Campground Owners/i }).first(),
     ).toBeVisible()
   })
 
