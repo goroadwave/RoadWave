@@ -171,7 +171,7 @@ export default function OwnersPage() {
               {/* "Why campgrounds offer it" intro — the emotional why,
                   directly above the tool cards (replaced the older
                   "Each one runs on the same welcome page" line). */}
-              <p className="text-mist text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+              <p className="text-mist/80 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
                 Guests remember campgrounds where they feel welcomed, not
                 just checked in. RoadWave gives owners a simple way to
                 spark friendly connections, share helpful info, and make
