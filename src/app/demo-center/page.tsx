@@ -40,6 +40,53 @@ export default function DemoCenterPage() {
           </p>
         </div>
 
+        {/* "What is RoadWave?" primer. A native <details> accordion so it
+            ships zero client JS (this page is a server component) and stays
+            collapsed by default — it gives a first-time owner the full pitch
+            on demand without pushing the demo buttons down the page. The
+            flame-tinted border makes it noticeable without overpowering the
+            hero. */}
+        <details className="group mt-8 max-w-3xl rounded-2xl border border-flame/30 bg-flame/[0.06] transition-colors open:bg-card">
+          <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-3 rounded-2xl px-5 py-4 [&::-webkit-details-marker]:hidden">
+            <span className="font-display text-base sm:text-lg font-extrabold text-cream">
+              What is RoadWave? 🤔
+            </span>
+            <span
+              aria-hidden
+              className="shrink-0 text-flame transition-transform duration-200 group-open:rotate-180"
+            >
+              ▾
+            </span>
+          </summary>
+          <div className="space-y-4 px-5 pb-5 text-sm sm:text-base text-mist leading-relaxed">
+            <p>
+              RoadWave is a simple QR-powered guest communication and camper
+              connection tool built for campgrounds and RV parks. Campers scan
+              your campground’s RoadWave QR code to quickly access important
+              park information like Wi-Fi, maps, rules, amenities, check-in and
+              checkout times, bulletins, meetups, weather notices, office
+              messaging, reviews, and rebooking links.
+            </p>
+            <p>
+              For campground owners and staff, RoadWave creates one easy
+              dashboard to manage guest-facing information, send updates, post
+              meetups, issue Weather &amp; Safety notices, respond to office
+              messages, and give guests a better way to stay informed during
+              their visit. RoadWave also includes optional Camper Connections,
+              where guests can meet other campers through shared interests and
+              mutual Waves — without public group chats, exact site numbers, or
+              always-on GPS.
+            </p>
+          </div>
+        </details>
+
+        {/* Short transition line into the demo. */}
+        <p className="mt-8 max-w-2xl text-sm sm:text-base text-mist leading-relaxed">
+          Use the demo below to see RoadWave from both sides: what campers see
+          after scanning the QR code, and what campground owners manage from the
+          dashboard.
+        </p>
+
         {/* Main CTA grid. Camper Demo + Start Trial work today
             (link to the existing interactive demo / signup
             flow). Owner Dashboard + Guided Walkthrough show a
