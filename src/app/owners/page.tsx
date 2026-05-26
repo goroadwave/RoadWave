@@ -163,19 +163,15 @@ export default function OwnersPage() {
         {/* Six value props — the heart of the new positioning */}
         <section className="px-4 py-14 border-t border-white/5">
           <div className="mx-auto max-w-5xl">
-            <div className="text-center mb-10 space-y-3">
+            <div className="text-center mb-10 space-y-2">
               <Eyebrow>What RoadWave does for your campground</Eyebrow>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-cream">
                 Six tools, one QR code.
               </h2>
-              <p className="text-mist text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
-                Each one runs on the same welcome page guests land on
-                after scanning. Turn any of them on or off from your
-                dashboard.
-              </p>
               {/* "Why campgrounds offer it" intro — the emotional why,
-                  placed directly above the tool cards. */}
-              <p className="text-mist text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+                  directly above the tool cards (replaced the older
+                  "Each one runs on the same welcome page" line). */}
+              <p className="text-mist text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
                 Guests remember campgrounds where they feel welcomed, not
                 just checked in. RoadWave gives owners a simple way to
                 spark friendly connections, share helpful info, and make
