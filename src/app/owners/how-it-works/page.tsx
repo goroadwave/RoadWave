@@ -156,7 +156,7 @@ export default function HowItWorksPage() {
             <div className="flex flex-col sm:flex-row gap-3 pt-2 justify-center">
               <Link
                 href="/owners/start"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-6 py-3 font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold trial-cta"
               >
                 Start My Campground Pilot
               </Link>
@@ -261,7 +261,7 @@ export default function HowItWorksPage() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
               <Link
                 href="/owners/start"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-6 py-3 font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-semibold trial-cta"
               >
                 Start My Campground Pilot
               </Link>
