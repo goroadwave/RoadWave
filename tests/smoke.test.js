@@ -443,21 +443,21 @@ test.describe('Demo Center', () => {
 
     await expect(
       page.getByRole('heading', {
-        name: /See how RoadWave works for campers and campground owners/i,
+        name: /Enhance Your Campground Experience with RoadWave/i,
       }),
     ).toBeVisible()
 
     // All three demo CTAs link to live routes.
     const camperCta = page
-      .getByRole('link', { name: /View Camper Demo/i })
+      .getByRole('link', { name: /Camper Demo/i })
       .first()
     await expect(camperCta).toHaveAttribute('href', '/demo-center/camper')
     const ownerCta = page
-      .getByRole('link', { name: /View Owner Dashboard Demo/i })
+      .getByRole('link', { name: /Owner Dashboard Demo/i })
       .first()
     await expect(ownerCta).toHaveAttribute('href', '/demo-center/owner')
     const walkthroughCta = page
-      .getByRole('link', { name: /Take Guided Walkthrough/i })
+      .getByRole('link', { name: /Guided Walkthrough/i })
       .first()
     await expect(walkthroughCta).toHaveAttribute(
       'href',
@@ -725,16 +725,17 @@ test.describe('Demo Center', () => {
     }
 
     // "Learn more" / navigation links must NOT leak to the public
-    // marketing site. The landing page's only outbound link should be
-    // the trial CTA (/owner/signup); the "learn more" path stays inside
-    // the demo (guided walkthrough), and there is no /campgrounds exit.
+    // marketing site. The landing page's only outbound links should be
+    // the trial CTAs (/owner/signup); the walkthrough path stays inside
+    // the demo (the Guided Walkthrough card), and there is no
+    // /campgrounds exit.
     test('/demo-center has no public /campgrounds exit; learn-more stays in demo', async ({
       page,
     }) => {
       await page.goto('/demo-center')
       await expect(page.locator('a[href="/campgrounds"]')).toHaveCount(0)
       await expect(
-        page.getByRole('link', { name: /take the guided walkthrough/i }),
+        page.getByRole('link', { name: /Guided Walkthrough/i }).first(),
       ).toHaveAttribute('href', '/demo-center/walkthrough')
     })
 

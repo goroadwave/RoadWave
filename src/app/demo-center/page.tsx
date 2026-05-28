@@ -1,13 +1,17 @@
 import Link from 'next/link'
 import { Logo } from '@/components/ui/logo'
 
-// RoadWave Demo Center -- the sales/onboarding hub for prospective
-// campground owners. Public, no auth required, no DB queries on
-// this page (all content is static). Reuses the existing
-// interactive Wave demo at /demo (src/pages/demo.jsx) as the
-// camper-side experience CTA. Owner + walkthrough subpages ship
-// in phases 3 and 4 -- their CTAs render with a "Coming next"
-// chip until those land.
+// RoadWave Demo Center -- the polished sales/onboarding hub a campground
+// owner receives. Public, no auth, no DB queries (all static content).
+// Layout mirrors the latest marketing prototype: a top nav with a green
+// trial CTA, a 2-column hero panel (copy + check-in illustration), a
+// four-up benefits row, the three demo paths, and a closing trial CTA.
+//
+// Routes preserved exactly:
+//   Camper Demo        -> /demo-center/camper
+//   Guided Walkthrough -> /demo-center/walkthrough
+//   Owner Dashboard    -> /demo-center/owner
+//   Start 30-Day Trial -> /owner/signup   (existing trial signup flow)
 
 export const metadata = {
   title: 'RoadWave Demo Center',
@@ -15,268 +19,232 @@ export const metadata = {
     'See how RoadWave works for campers and campground owners. Camper QR experience, owner dashboard, office messages, bulletins, meetups, weather alerts, and optional Camper Connections.',
 }
 
+// Shared darker-green CTA used in the nav, hero, and closing section.
+const TRIAL_HREF = '/owner/signup'
+const greenCta =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-5 py-2.5 text-sm font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 transition-colors'
+
+const BENEFITS: { icon: string; title: string; body: string }[] = [
+  {
+    icon: '🏕️',
+    title: 'Campground info in one scan',
+    body: 'Guests can quickly find Wi-Fi, maps, rules, amenities, check-in details, and important park info without calling the office.',
+  },
+  {
+    icon: '🖥️',
+    title: 'Owner dashboard',
+    body: 'Campground owners manage updates, meetups, weather notices, guest messages, QR materials, and settings from one simple place.',
+  },
+  {
+    icon: '💬',
+    title: 'Office messages',
+    body: 'Campers can privately contact the office for help, questions, maintenance, or safety concerns without creating a public chat.',
+  },
+  {
+    icon: '🤝',
+    title: 'Optional camper connections',
+    body: 'Campers who want to meet others can join privacy-first Camper Connections using shared interests and mutual Waves.',
+  },
+]
+
+const DEMOS: {
+  href: string
+  icon: string
+  title: string
+  body: string
+}[] = [
+  {
+    href: '/demo-center/camper',
+    icon: '📱',
+    title: 'Camper Demo',
+    body: 'See what guests experience when they scan your QR code for park info, office help, updates, meetups, and optional Camper Connections.',
+  },
+  {
+    href: '/demo-center/walkthrough',
+    icon: '🚶',
+    title: 'Guided Walkthrough',
+    body: 'Take a quick step-by-step tour that explains how RoadWave works for both owners and campers without needing to click around first.',
+  },
+  {
+    href: '/demo-center/owner',
+    icon: '🧭',
+    title: 'Owner Dashboard Demo',
+    body: 'Preview the owner side: update campground info, post bulletins, create meetups, manage messages, and control QR page settings.',
+  },
+]
+
 export default function DemoCenterPage() {
   return (
     <main className="flex-1">
-      <section className="mx-auto max-w-5xl px-4 py-10 sm:py-16">
-        {/* Logo returns to the Demo Center hub, not the public landing
-            page — demo viewers stay inside the demo unless they tap an
-            explicit signup/trial CTA. */}
-        <Link href="/demo-center" className="inline-block">
-          <Logo className="text-3xl" />
-        </Link>
-
-        {/* "What is RoadWave?" primer, sitting just below the logo and now
-            carrying the main headline weight on /demo-center. A native
-            <details> accordion so it ships zero client JS (this page is a
-            server component) and stays collapsed by default — a first-time
-            owner gets the full pitch on demand without the demo buttons
-            being pushed far down. The summary text uses the page's largest
-            display size so it's the primary attention-grabber; the demo
-            headline below steps down to a secondary size. */}
-        <details className="group mt-8 sm:mt-10 max-w-3xl rounded-2xl border border-flame/30 bg-flame/[0.06] shadow-md shadow-flame/5 transition-colors open:bg-card">
-          <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-3 rounded-2xl px-5 py-6 sm:px-7 [&::-webkit-details-marker]:hidden">
-            <span className="min-w-0">
-              {/* Non-breaking space keeps the 🤔 locked to "RoadWave?" so
-                  it can never wrap onto a line of its own; the 1.375rem
-                  mobile size keeps the whole headline on one line. */}
-              <span className="block font-display text-[1.375rem] leading-tight sm:text-3xl font-extrabold text-cream">
-                What is RoadWave?&nbsp;🤔
-              </span>
-              <span className="mt-1 block text-xs sm:text-sm font-medium text-mist">
-                Quick 30-second explanation
-              </span>
-            </span>
-            <span
-              aria-hidden
-              className="shrink-0 text-xl sm:text-2xl text-flame transition-transform duration-200 group-open:rotate-180"
-            >
-              ▾
-            </span>
-          </summary>
-          <div className="space-y-4 px-6 pb-6 sm:px-7 sm:pb-7 text-sm sm:text-base text-mist leading-relaxed">
-            <p>
-              RoadWave is a simple QR-powered guest communication and camper
-              connection tool built for campgrounds and RV parks. Campers scan
-              your campground’s RoadWave QR code to quickly access important
-              park information like Wi-Fi, maps, rules, amenities, check-in and
-              checkout times, bulletins, meetups, weather notices, office
-              messaging, reviews, and rebooking links.
-            </p>
-            <p>
-              For campground owners and staff, RoadWave creates one easy
-              dashboard to manage guest-facing information, send updates, post
-              meetups, issue Weather &amp; Safety notices, respond to office
-              messages, and give guests a better way to stay informed during
-              their visit. RoadWave also includes optional Camper Connections,
-              where guests can meet other campers through shared interests and
-              mutual Waves — without public group chats, exact site numbers, or
-              always-on GPS.
-            </p>
-          </div>
-        </details>
-
-        <div className="mt-5 sm:mt-10 max-w-3xl">
-          <p className="text-[11px] uppercase tracking-[0.25em] text-flame font-semibold">
-            Demo Center
-          </p>
-          <h1 className="mt-3 font-display text-lg sm:text-2xl font-extrabold leading-snug text-cream">
-            See how RoadWave works for campers and campground owners
-          </h1>
-          <p className="mt-5 text-base sm:text-lg text-mist leading-relaxed">
-            Explore the camper QR experience, the campground owner dashboard,
-            office messages, bulletins, meetups, weather alerts, and optional
-            Camper Connections.
-          </p>
-        </div>
-
-        {/* Short transition line into the demo. */}
-        <p className="mt-8 max-w-2xl text-sm sm:text-base text-mist leading-relaxed">
-          Use the demo below to see RoadWave from both sides: what campers see
-          after scanning the QR code, and what campground owners manage from the
-          dashboard.
-        </p>
-
-        {/* Main CTA grid. Camper Demo + Start Trial work today
-            (link to the existing interactive demo / signup
-            flow). Owner Dashboard + Guided Walkthrough show a
-            "Coming next" chip until phases 3 + 4 ship -- the
-            destinations exist as stubs (or 404 cleanly) so the
-            buttons don't break for early shares. */}
-        <div className="mt-10 grid gap-3 sm:grid-cols-2 max-w-2xl">
-          <DemoCta
-            href="/demo-center/camper"
-            title="View Camper Demo"
-            subtitle="What guests see after scanning your campground QR code."
-            icon="📱"
-            primary
-          />
-          <DemoCta
-            href="/demo-center/owner"
-            title="View Owner Dashboard Demo"
-            subtitle="Bulletins, meetups, office messages, stats."
-            icon="🧭"
-            primary
-          />
-          <DemoCta
-            href="/demo-center/walkthrough"
-            title="Take Guided Walkthrough"
-            subtitle="Step-by-step tour of every feature."
-            icon="🚶"
-            primary
-          />
-          <DemoCta
-            href="/owner/signup"
-            title="Start 30-Day Trial"
-            subtitle="Set up your campground in minutes."
-            icon="🚀"
-          />
-        </div>
-
-        <p className="mt-6 text-xs text-mist max-w-xl leading-relaxed">
-          Demo Mode only — no real guest data, no signup required.
-        </p>
-
-        {/* How it works */}
-        <div className="mt-14 sm:mt-20 max-w-4xl">
-          <p className="text-[11px] uppercase tracking-[0.25em] text-flame font-semibold">
-            How RoadWave works
-          </p>
-          <div className="mt-5 grid gap-4 sm:grid-cols-3">
-            <InfoCard
-              title="Campers"
-              body="Scan a campground QR code for Wi-Fi, maps, rules, updates, office messages, and optional Camper Connections."
-              icon="📷"
-            />
-            <InfoCard
-              title="Campground owners"
-              body="Manage bulletins, meetups, weather notices, office messages, review and rebooking links, and guest communication from the dashboard."
-              icon="🏕️"
-            />
-            <InfoCard
-              title="Camper Connections"
-              body="Optional and privacy-first. Based on mutual Waves. No exact site numbers. No public group chat."
-              icon="👋"
-            />
-          </div>
-        </div>
-
-        {/* Privacy reassurance */}
-        <div className="mt-14 max-w-3xl rounded-2xl border border-white/5 bg-card p-5 sm:p-6">
-          <h2 className="font-display text-lg font-extrabold text-cream">
-            What RoadWave isn’t
-          </h2>
-          <ul className="mt-3 space-y-1.5 text-sm text-mist leading-relaxed">
-            <li>· Not a public group chat.</li>
-            <li>· Not always-on GPS tracking.</li>
-            <li>· Not a 911 or emergency dispatch system.</li>
-            <li>
-              · Owners don’t read private camper-to-camper messages — Camper
-              Connections are between campers only.
-            </li>
-            <li>
-              · Exact site numbers are never shared in Camper Connections.
-            </li>
-          </ul>
-        </div>
-
-        {/* Footer CTA */}
-        <div className="mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
-          <Link
-            href="/owner/signup"
-            className="inline-flex items-center gap-2 rounded-lg bg-flame text-night px-5 py-2.5 text-sm font-semibold shadow-lg shadow-flame/15 hover:bg-amber-400 transition-colors"
-          >
-            Start your 30-day trial
-            <span aria-hidden>→</span>
+      {/* 1. Top nav bar */}
+      <header className="px-4 sm:px-6 py-4">
+        <div className="mx-auto max-w-6xl flex items-center justify-between gap-3">
+          {/* Logo returns to the Demo Center hub — viewers stay inside the
+              demo unless they tap an explicit trial CTA. */}
+          <Link href="/demo-center" className="inline-block shrink-0">
+            <Logo className="text-2xl sm:text-3xl" />
           </Link>
-          {/* "Learn more" stays INSIDE the demo — routes to the guided
-              walkthrough, not the public /campgrounds marketing page.
-              Only the trial/signup CTA above leaves the demo. */}
-          <Link
-            href="/demo-center/walkthrough"
-            className="text-sm text-mist hover:text-cream underline-offset-2 hover:underline"
-          >
-            Or take the guided walkthrough
+          <Link href={TRIAL_HREF} className={greenCta}>
+            Start 30-Day Trial
           </Link>
         </div>
-      </section>
-    </main>
-  )
-}
+      </header>
 
-function DemoCta({
-  href,
-  title,
-  subtitle,
-  icon,
-  primary,
-  comingSoon,
-}: {
-  href: string
-  title: string
-  subtitle: string
-  icon: string
-  primary?: boolean
-  comingSoon?: boolean
-}) {
-  const styleClass = primary
-    ? 'border-flame/50 bg-flame/15 hover:bg-flame/20'
-    : comingSoon
-      ? 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05]'
-      : 'border-white/10 bg-card hover:border-flame/40 hover:bg-white/[0.04]'
-  return (
-    <Link
-      href={href}
-      className={`group relative flex items-start gap-3 rounded-2xl border p-4 transition-colors ${styleClass}`}
-    >
-      <span aria-hidden className="text-2xl leading-none shrink-0 mt-0.5">
-        {icon}
-      </span>
-      <div className="flex-1 min-w-0">
-        <p
-          className={`font-semibold text-sm flex items-center gap-2 flex-wrap ${
-            primary ? 'text-flame' : 'text-cream'
-          }`}
-        >
-          {title}
-          {comingSoon && (
-            <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-mist font-medium">
-              Coming next
-            </span>
-          )}
-        </p>
-        <p className="mt-1 text-xs text-mist leading-snug">{subtitle}</p>
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pb-16 sm:pb-24 space-y-16 sm:space-y-24">
+        {/* 2 + 3. Hero panel */}
+        <section className="mt-4 sm:mt-6 rounded-3xl border border-white/10 bg-card/70 shadow-xl shadow-black/20 overflow-hidden">
+          <div className="grid items-stretch lg:grid-cols-2">
+            <div className="p-7 sm:p-10 lg:p-12 flex flex-col justify-center">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-flame font-semibold">
+                Campground guest experience demo
+              </p>
+              <h1 className="mt-4 font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-[1.08] tracking-tight text-cream">
+                Enhance Your Campground Experience with RoadWave
+              </h1>
+              <p className="mt-5 text-base sm:text-lg text-mist leading-relaxed max-w-md">
+                A simple QR-powered guest communication and camper
+                connection tool built for modern campgrounds.
+              </p>
+              <div className="mt-7">
+                <Link
+                  href={TRIAL_HREF}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-6 py-3 text-base font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 transition-colors"
+                >
+                  Start 30-Day Trial
+                </Link>
+              </div>
+            </div>
+
+            <div className="relative min-h-[260px] sm:min-h-[340px] lg:min-h-full p-4 sm:p-6 lg:py-8 lg:pr-8 lg:pl-0">
+              <div className="h-full w-full overflow-hidden rounded-2xl border border-white/10">
+                {/* eslint-disable-next-line @next/next/no-img-element -- static hero illustration; next/image SVG handling is more setup than this needs */}
+                <img
+                  src="/images/demo-hero.svg"
+                  alt="A camper scanning a RoadWave QR code at a campground front desk"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Benefits */}
+        <section>
+          <div className="max-w-3xl">
+            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-cream leading-tight">
+              Everything your campground needs in one simple experience.
+            </h2>
+            <p className="mt-4 text-base sm:text-lg text-mist leading-relaxed">
+              Give guests instant access to campground info while giving
+              your team a cleaner, more organized way to manage
+              communication, updates, and optional camper connections.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {BENEFITS.map((b) => (
+              <article
+                key={b.title}
+                className="rounded-2xl border border-white/10 bg-card/60 p-6"
+              >
+                <span
+                  aria-hidden
+                  className="block text-[42px] leading-none"
+                >
+                  {b.icon}
+                </span>
+                <h3 className="mt-4 font-display text-lg font-extrabold text-cream leading-snug">
+                  {b.title}
+                </h3>
+                <p className="mt-2 text-sm text-mist leading-relaxed">
+                  {b.body}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* 5. Demo paths */}
+        <section>
+          <div className="max-w-3xl">
+            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-cream leading-tight">
+              Choose the demo path that fits you best.
+            </h2>
+            <p className="mt-4 text-base sm:text-lg text-mist leading-relaxed">
+              Start with the owner view, walk through the full experience,
+              or preview what campers see when they scan your campground QR
+              code.
+            </p>
+          </div>
+
+          {/* Owner guidance box */}
+          <div className="mt-6 rounded-2xl border border-flame/30 bg-flame/[0.06] p-4 sm:p-5">
+            <p className="text-sm sm:text-base text-cream leading-relaxed">
+              <span aria-hidden className="mr-1">
+                🧭
+              </span>
+              Campground owner? Start with the Owner Dashboard Demo or take
+              the Guided Walkthrough — it covers everything in under 5
+              minutes.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
+            {DEMOS.map((d) => (
+              <Link
+                key={d.href}
+                href={d.href}
+                className="group flex flex-col rounded-2xl border border-white/10 bg-card/60 p-6 transition-colors hover:border-flame/40 hover:bg-card"
+              >
+                <span aria-hidden className="block text-[42px] leading-none">
+                  {d.icon}
+                </span>
+                <h3 className="mt-4 font-display text-lg font-extrabold text-cream leading-snug">
+                  {d.title}
+                </h3>
+                <p className="mt-2 flex-1 text-sm text-mist leading-relaxed">
+                  {d.body}
+                </p>
+                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-flame">
+                  Open demo
+                  <span
+                    aria-hidden
+                    className="transition-transform group-hover:translate-x-0.5"
+                  >
+                    →
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <p className="mt-6 text-xs text-mist leading-relaxed">
+            Demo Mode only — no real guest data, no signup required.
+          </p>
+        </section>
+
+        {/* 6. Bottom CTA */}
+        <section className="rounded-3xl border border-flame/30 bg-flame/[0.06] px-6 py-12 sm:px-10 sm:py-16 text-center">
+          <div className="mx-auto max-w-2xl space-y-5">
+            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-cream leading-tight">
+              Ready to activate your campground?
+            </h2>
+            <p className="text-base sm:text-lg text-mist leading-relaxed">
+              Start with a 30-day trial and see how RoadWave can improve
+              guest communication, park updates, reviews, rebookings, and
+              camper connection.
+            </p>
+            <div className="pt-1">
+              <Link
+                href={TRIAL_HREF}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-6 py-3 text-base font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 transition-colors"
+              >
+                Start 30-Day Trial
+              </Link>
+            </div>
+          </div>
+        </section>
       </div>
-      <span
-        aria-hidden
-        className={`shrink-0 self-center ${
-          primary ? 'text-flame' : 'text-mist group-hover:text-cream'
-        }`}
-      >
-        →
-      </span>
-    </Link>
-  )
-}
-
-function InfoCard({
-  title,
-  body,
-  icon,
-}: {
-  title: string
-  body: string
-  icon: string
-}) {
-  return (
-    <div className="rounded-2xl border border-white/5 bg-card p-5">
-      <span aria-hidden className="text-2xl">
-        {icon}
-      </span>
-      <h3 className="mt-3 font-display text-lg font-extrabold text-cream">
-        {title}
-      </h3>
-      <p className="mt-2 text-sm text-mist leading-relaxed">{body}</p>
-    </div>
+    </main>
   )
 }

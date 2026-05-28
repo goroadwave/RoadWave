@@ -12,6 +12,9 @@
   --color-cream: #f5ecd9;
   --color-mist: #94a3b8;
   --color-leaf: #22c55e;
+  /* Deep forest green for primary CTAs on the Demo Center — darker and
+     more premium than --color-leaf. */
+  --color-forest: #1f6f45;
 }
 
 html,
