@@ -119,8 +119,8 @@ export default function DemoCenterPage() {
               <div className="h-full w-full overflow-hidden rounded-2xl border border-white/10">
                 {/* eslint-disable-next-line @next/next/no-img-element -- static hero photo; plain <img> keeps this server component config-free */}
                 <img
-                  src="/images/roadwave-checkin-hero.png"
-                  alt="A camper scanning a RoadWave QR code at a campground front desk"
+                  src="/images/camper-checking-in.jpeg"
+                  alt="A camper checking in and scanning a RoadWave QR code at a campground front desk"
                   className="h-full w-full object-cover"
                 />
               </div>
