@@ -48,13 +48,39 @@ const CONTACT_LINKS: FooterLinkItem[] = [
   { label: 'getroadwave.com/contact', href: '/contact' },
 ]
 
-// Drives the mobile accordion. Mirrors the desktop columns 1:1 so every
-// link stays reachable on both layouts.
-const FOOTER_GROUPS: { title: string; links: FooterLinkItem[] }[] = [
-  { title: 'Guests', links: GUEST_LINKS },
-  { title: 'Campground Owners', links: OWNER_LINKS },
-  { title: 'Legal', links: LEGAL_LINKS },
-  { title: 'Contact', links: CONTACT_LINKS },
+// Drives the mobile accordion: a simpler Product / Company / Legal split.
+// Desktop keeps its own four-column layout (Guests / Campground Owners /
+// Legal / Contact) above; this only restructures the collapsed mobile
+// sections. Every unique destination from the desktop columns is
+// represented here (the two /contact entries are deduped to one).
+const MOBILE_GROUPS: { title: string; links: FooterLinkItem[] }[] = [
+  {
+    title: 'Product',
+    links: [
+      { label: 'See a sample campground page', href: '/demo' },
+      { label: 'For Campgrounds', href: '/owners' },
+      { label: 'Start a Campground Pilot', href: '/owners/start' },
+    ],
+  },
+  {
+    title: 'Company',
+    links: [
+      { label: 'Safety', href: '/safety' },
+      { label: 'Community Rules', href: '/community-rules' },
+      { label: 'Campground Safety Overview', href: '/campground-safety' },
+      { label: 'Account Deletion', href: '/account-deletion' },
+      { label: 'Contact', href: '/contact' },
+      { label: 'hello@getroadwave.com', href: 'mailto:hello@getroadwave.com' },
+      { label: 'safety@getroadwave.com', href: 'mailto:safety@getroadwave.com' },
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      ...LEGAL_LINKS,
+      { label: 'Campground Partner Terms', href: '/campground-partner-terms' },
+    ],
+  },
 ]
 
 export function SiteFooter() {
@@ -80,7 +106,7 @@ export function SiteFooter() {
         <div className="sm:hidden">
           <Logo className="text-xl" />
           <div className="mt-5 border-t border-white/10">
-            {FOOTER_GROUPS.map((g) => (
+            {MOBILE_GROUPS.map((g) => (
               <details
                 key={g.title}
                 className="group border-b border-white/10"
