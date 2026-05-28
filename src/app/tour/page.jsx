@@ -544,7 +544,7 @@ export default function RileyWalkthrough() {
                   on the camper-only /checkin route at the end of the
                   owner tour. Owners go to /owners/start (intake form),
                   campers go to /checkin. */}
-              <a href={isOwner ? "/owners/start" : "/checkin"} style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)", border: "none", borderRadius: "10px", padding: "7px 12px", color: "white", fontSize: "11px", fontWeight: "700", textDecoration: "none", fontFamily: "Georgia" }}>{isOwner ? "Start My Campground Pilot" : "Start Your Check-In"}</a>
+              <a href={isOwner ? "/owners/start" : "/checkin"} style={{ background: isOwner ? "#1f6f45" : "linear-gradient(135deg,#22c55e,#16a34a)", border: "none", borderRadius: "10px", padding: "7px 12px", color: "white", fontSize: "11px", fontWeight: "700", textDecoration: "none", fontFamily: "Georgia" }}>{isOwner ? "Start My Campground Pilot" : "Start Your Check-In"}</a>
             </div>
         }
       </div>

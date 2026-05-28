@@ -123,7 +123,7 @@ export function CampgroundRileyButton() {
               }}
               className={
                 cta.kind === 'start'
-                  ? 'block w-full rounded-lg bg-leaf text-night text-center px-3 py-2 text-sm font-semibold shadow-md shadow-leaf/15 hover:bg-leaf/85 transition-colors'
+                  ? 'block w-full rounded-lg bg-forest text-cream text-center px-3 py-2 text-sm font-semibold shadow-md shadow-forest/20 hover:bg-forest/90 transition-colors'
                   : 'block w-full rounded-lg border border-white/15 bg-white/5 text-cream text-center px-3 py-2 text-sm font-medium hover:bg-white/10 hover:border-flame/40 transition-colors'
               }
             >

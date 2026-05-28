@@ -308,7 +308,7 @@ export function OwnerPilotForm({ availablePlans = ['monthly'] }: Props) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-leaf text-night px-6 py-3 text-base font-semibold shadow-lg shadow-leaf/20 hover:bg-leaf/85 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-6 py-3 text-base font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {pending ? 'Sending you to checkout…' : 'Continue to Secure Checkout →'}
       </button>
