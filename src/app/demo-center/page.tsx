@@ -230,7 +230,7 @@ export default function DemoCenterPage() {
             <div className="pt-1">
               <Link
                 href={TRIAL_HREF}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-6 py-3 text-base font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-base font-semibold trial-cta"
               >
                 Start Free 30-Day Trial
               </Link>
