@@ -693,7 +693,7 @@ export function DemoWalkthrough() {
             href="/owner/signup"
             className="rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-forest/90"
           >
-            🚀 Start 30-day trial
+            🚀 Start free 30-day trial
           </Link>
         </div>
       </div>

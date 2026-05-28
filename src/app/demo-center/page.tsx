@@ -11,7 +11,7 @@ import { Logo } from '@/components/ui/logo'
 //   Camper Demo        -> /demo-center/camper
 //   Guided Walkthrough -> /demo-center/walkthrough
 //   Owner Dashboard    -> /demo-center/owner
-//   Start 30-Day Trial -> /owner/signup   (existing trial signup flow)
+//   Start free 30-day trial -> /owner/signup   (existing trial signup flow)
 
 export const metadata = {
   title: 'RoadWave Demo Center',
@@ -85,7 +85,7 @@ export default function DemoCenterPage() {
             <Logo className="text-2xl sm:text-3xl" />
           </Link>
           <Link href={TRIAL_HREF} className={greenCta}>
-            Start 30-Day Trial
+            Start free 30-day trial
           </Link>
         </div>
       </header>
@@ -110,7 +110,7 @@ export default function DemoCenterPage() {
                   href={TRIAL_HREF}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-6 py-3 text-base font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 transition-colors"
                 >
-                  Start 30-Day Trial
+                  Start free 30-day trial
                 </Link>
               </div>
             </div>
@@ -227,7 +227,7 @@ export default function DemoCenterPage() {
                 href={TRIAL_HREF}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-6 py-3 text-base font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 transition-colors"
               >
-                Start 30-Day Trial
+                Start free 30-day trial
               </Link>
             </div>
           </div>

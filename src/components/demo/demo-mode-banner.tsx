@@ -8,7 +8,7 @@ import Link from 'next/link'
 // The banner action keeps viewers INSIDE the demo: it routes to the
 // Demo Center hub (/demo-center), never to the public marketing
 // landing page. The only links that leave the demo are the explicit
-// conversion CTAs (Start 30-day trial / owner signup) on each page.
+// conversion CTAs (Start free 30-day trial / owner signup) on each page.
 //
 // Server component -- no interactivity, no state, no JS shipped.
 // Rendered by the /demo-center layout so subroutes inherit it for
