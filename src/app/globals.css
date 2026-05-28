@@ -220,3 +220,38 @@ body {
     display: inline-flex;
   }
 }
+
+/* Free-trial CTA — one shared look for every "Start Free 30-Day Trial"
+   button site-wide. Layout/size stays on the element via Tailwind; this
+   owns the forest-green fill (never yellow), a soft premium green glow,
+   the darker hover, and an accessible focus ring. The glow uses the
+   brighter leaf green at low alpha + tight negative spread so it reads
+   as a tasteful halo on the dark navy, not a neon ring. */
+.trial-cta {
+  background-color: var(--color-forest);
+  color: var(--color-cream);
+  box-shadow:
+    0 6px 16px -8px rgba(0, 0, 0, 0.6),
+    0 0 18px -5px rgba(34, 197, 94, 0.45);
+  transition:
+    background-color 150ms ease,
+    box-shadow 200ms ease;
+}
+.trial-cta:hover {
+  background-color: #1a5d3a;
+  box-shadow:
+    0 6px 18px -8px rgba(0, 0, 0, 0.65),
+    0 0 26px -3px rgba(34, 197, 94, 0.62);
+}
+.trial-cta:focus-visible {
+  outline: 2px solid #34d399;
+  outline-offset: 2px;
+  box-shadow:
+    0 6px 18px -8px rgba(0, 0, 0, 0.65),
+    0 0 26px -3px rgba(34, 197, 94, 0.62);
+}
+@media (prefers-reduced-motion: reduce) {
+  .trial-cta {
+    transition: none;
+  }
+}

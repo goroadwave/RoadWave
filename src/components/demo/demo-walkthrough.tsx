@@ -691,9 +691,9 @@ export function DemoWalkthrough() {
           </Link>
           <Link
             href="/owner/signup"
-            className="rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-forest/90"
+            className="rounded-lg px-4 py-2 text-sm font-semibold trial-cta"
           >
-            🚀 Start free 30-day trial
+            🚀 Start Free 30-Day Trial
           </Link>
         </div>
       </div>

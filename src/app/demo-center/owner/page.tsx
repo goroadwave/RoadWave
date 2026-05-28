@@ -36,9 +36,9 @@ export default function DemoOwnerPage() {
         </Link>
         <Link
           href="/owner/signup"
-          className="ml-auto inline-flex items-center gap-2 rounded-lg bg-forest text-cream px-4 py-2 text-sm font-semibold shadow-md shadow-forest/25 hover:bg-forest/90 transition-colors"
+          className="ml-auto inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold trial-cta"
         >
-          Start free 30-day trial →
+          Start Free 30-Day Trial →
         </Link>
       </div>
     </main>

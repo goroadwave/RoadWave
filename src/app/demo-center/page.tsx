@@ -11,7 +11,7 @@ import { Logo } from '@/components/ui/logo'
 //   Camper Demo        -> /demo-center/camper
 //   Guided Walkthrough -> /demo-center/walkthrough
 //   Owner Dashboard    -> /demo-center/owner
-//   Start free 30-day trial -> /owner/signup   (existing trial signup flow)
+//   Start Free 30-Day Trial -> /owner/signup   (existing trial signup flow)
 
 export const metadata = {
   title: 'RoadWave Demo Center',
@@ -20,9 +20,14 @@ export const metadata = {
 }
 
 // Shared darker-green CTA used in the nav, hero, and closing section.
+// Color/glow/hover/focus live in the .trial-cta class (globals.css); the
+// classes here are layout + sizing only.
 const TRIAL_HREF = '/owner/signup'
+// Top-nav trial button: compact on phones (smaller text + tighter
+// padding), never wraps, and shrink-0 so it stays put without crowding
+// the logo. Steps up to the roomier size from sm+.
 const greenCta =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-5 py-2.5 text-sm font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 transition-colors'
+  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold sm:px-5 sm:py-2.5 sm:text-sm trial-cta'
 
 const BENEFITS: { icon: string; title: string; body: string }[] = [
   {
@@ -82,10 +87,10 @@ export default function DemoCenterPage() {
           {/* Logo returns to the Demo Center hub — viewers stay inside the
               demo unless they tap an explicit trial CTA. */}
           <Link href="/demo-center" className="inline-block shrink-0">
-            <Logo className="text-2xl sm:text-3xl" />
+            <Logo className="text-xl sm:text-3xl" />
           </Link>
           <Link href={TRIAL_HREF} className={greenCta}>
-            Start free 30-day trial
+            Start Free 30-Day Trial
           </Link>
         </div>
       </header>
@@ -108,9 +113,9 @@ export default function DemoCenterPage() {
               <div className="mt-7">
                 <Link
                   href={TRIAL_HREF}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-6 py-3 text-base font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-base font-semibold trial-cta"
                 >
-                  Start free 30-day trial
+                  Start Free 30-Day Trial
                 </Link>
               </div>
             </div>
@@ -227,7 +232,7 @@ export default function DemoCenterPage() {
                 href={TRIAL_HREF}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-forest text-cream px-6 py-3 text-base font-semibold shadow-lg shadow-forest/25 hover:bg-forest/90 transition-colors"
               >
-                Start free 30-day trial
+                Start Free 30-Day Trial
               </Link>
             </div>
           </div>
