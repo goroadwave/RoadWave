@@ -36,7 +36,7 @@ export default function DemoWalkthroughPage() {
         </Link>
         <Link
           href="/owner/signup"
-          className="ml-auto inline-flex items-center gap-2 rounded-lg bg-flame text-night px-4 py-2 text-sm font-semibold shadow-md shadow-flame/15 hover:bg-amber-400 transition-colors"
+          className="ml-auto inline-flex items-center gap-2 rounded-lg bg-forest text-cream px-4 py-2 text-sm font-semibold shadow-md shadow-forest/25 hover:bg-forest/90 transition-colors"
         >
           Start your 30-day trial →
         </Link>
