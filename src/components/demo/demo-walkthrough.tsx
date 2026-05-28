@@ -690,7 +690,7 @@ export function DemoWalkthrough() {
             🧭 Open owner demo
           </Link>
           <Link
-            href="/owner/signup"
+            href="/owners/start"
             className="rounded-lg px-4 py-2 text-sm font-semibold trial-cta"
           >
             🚀 Start Free 30-Day Trial

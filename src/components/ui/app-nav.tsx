@@ -83,9 +83,19 @@ type Props = {
    *  the campground hub before the SSR fetch is wired), the hook
    *  starts with zero counts and fills in on its first poll. */
   initialBadgeCounts?: NavBadgeCounts
+  /** Slug-aware destination for the "Camper Connections" tab. The (app)
+   *  layout resolves the camper's active check-in →
+   *  /campground/<slug>#camper-connections (or /checkin); the campground
+   *  hub passes "#camper-connections" for an in-page jump. Falls back to
+   *  /nearby (a thin redirect) when omitted, so the tab never dead-ends. */
+  connectionsHref?: string
 }
 
-export function AppNav({ sticky = true, initialBadgeCounts }: Props) {
+export function AppNav({
+  sticky = true,
+  initialBadgeCounts,
+  connectionsHref,
+}: Props) {
   const pathname = usePathname()
   const badges = useNavBadges(
     initialBadgeCounts ?? {
@@ -108,6 +118,12 @@ export function AppNav({ sticky = true, initialBadgeCounts }: Props) {
         <ul className="grid grid-cols-4 gap-1 text-[11px] sm:text-xs">
           {TABS.map((t) => {
             const active = isActive(pathname, t)
+            // "Camper Connections" links straight to the active
+            // campground's connections section; the destination is
+            // supplied per render site. Falls back to /nearby (a thin
+            // redirect) for old links.
+            const href =
+              t.href === '/nearby' ? connectionsHref ?? t.href : t.href
             const count = t.category ? badges[t.category] : 0
             const hasUnread = count > 0
             const baseCls = active
@@ -120,7 +136,7 @@ export function AppNav({ sticky = true, initialBadgeCounts }: Props) {
             return (
               <li key={t.href}>
                 <Link
-                  href={t.href}
+                  href={href}
                   className={cls}
                   aria-current={active ? 'page' : undefined}
                   aria-label={

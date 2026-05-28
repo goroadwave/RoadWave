@@ -11,7 +11,7 @@ import { Logo } from '@/components/ui/logo'
 //   Camper Demo        -> /demo-center/camper
 //   Guided Walkthrough -> /demo-center/walkthrough
 //   Owner Dashboard    -> /demo-center/owner
-//   Start Free 30-Day Trial -> /owner/signup   (existing trial signup flow)
+//   Start Free 30-Day Trial -> /owners/start   (canonical Stripe trial intake)
 
 export const metadata = {
   title: 'RoadWave Demo Center',
@@ -22,7 +22,7 @@ export const metadata = {
 // Shared darker-green CTA used in the nav, hero, and closing section.
 // Color/glow/hover/focus live in the .trial-cta class (globals.css); the
 // classes here are layout + sizing only.
-const TRIAL_HREF = '/owner/signup'
+const TRIAL_HREF = '/owners/start'
 // Top-nav trial button: compact on phones (smaller text + tighter
 // padding), never wraps, and shrink-0 so it stays put without crowding
 // the logo. Steps up to the roomier size from sm+.

@@ -26,7 +26,7 @@ import {
 //
 //   3. OPTIONAL -- Camper Connection QR. Encodes /checkin?token=<uuid>
 //      for guests who want to opt into the social side (private
-//      waves, visibility modes, Crossed Paths). Most campgrounds
+//      waves, visibility modes, Past Waves). Most campgrounds
 //      won't need to print this -- it's offered as a share-digitally
 //      option for guests who ask about the social features. Anon
 //      scans are bridged through /signup?next= by the proxy

@@ -417,7 +417,9 @@ export function CampgroundGuestHubBody({
               strip in empty space. previewMode is the owner-preview
               path where the nav doesn't belong (owner is not a
               camper). */}
-          {auth && !previewMode && <AppNav sticky={false} />}
+          {auth && !previewMode && (
+            <AppNav sticky={false} connectionsHref="#camper-connections" />
+          )}
           {/* Phase 3c -- Critical weather / safety notice. Pinned at
               the very top of the page when there's an active
               is_critical bulletin. Renders nothing when there isn't.

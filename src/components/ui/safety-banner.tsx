@@ -1,5 +1,5 @@
 // Single-line, muted safety reminder shown at the top of social-feature
-// screens (Nearby, Waves, Crossed Paths) and at the top of the demo
+// screens (Nearby, Waves, Past Waves) and at the top of the demo
 // preview shell. Server component — pure presentation, no state.
 //
 // Pass `message` to override the default. The default ends with a

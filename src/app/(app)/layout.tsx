@@ -89,6 +89,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect(`/consent?next=${encodeURIComponent(consentNext)}`)
   }
 
+  // Resolve the camper's active campground so the "Camper Connections"
+  // nav tab links straight to that hub's connections section instead of
+  // bouncing through the /nearby redirect. Mirrors the /nearby resolver:
+  // active check-in → /campground/<slug>#camper-connections; otherwise
+  // /checkin (the no-context fallback that prompts a QR scan).
+  const { data: activeCheckin } = await supabase
+    .from('check_ins')
+    .select('campgrounds(slug, is_active)')
+    .eq('profile_id', user.id)
+    .eq('status', 'active')
+    .gt('expires_at', new Date().toISOString())
+    .order('checked_in_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<{ campgrounds: { slug: string; is_active: boolean } | null }>()
+  const connectionsHref =
+    activeCheckin?.campgrounds?.slug && activeCheckin.campgrounds.is_active
+      ? `/campground/${activeCheckin.campgrounds.slug}#camper-connections`
+      : '/checkin'
+
   // Riley is the single entry point for both the in-page tour and the
   // chat panel. Both UI components mount here in (app); the providers
   // themselves live in the root layout so Riley's button (also at the
@@ -125,7 +144,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </header>
-      <AppNav initialBadgeCounts={initialBadgeCounts} />
+      <AppNav
+        initialBadgeCounts={initialBadgeCounts}
+        connectionsHref={connectionsHref}
+      />
       <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-6">{children}</main>
       <AppToastHost />
       <GuestSupportChat />

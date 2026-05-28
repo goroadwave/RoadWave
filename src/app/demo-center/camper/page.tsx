@@ -32,7 +32,7 @@ export default function DemoCamperPage() {
           ← Back to Demo Center
         </Link>
         <Link
-          href="/owner/signup"
+          href="/owners/start"
           className="ml-auto inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold trial-cta"
         >
           Start Free 30-Day Trial →
