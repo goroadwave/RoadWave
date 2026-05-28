@@ -117,9 +117,9 @@ export default function DemoCenterPage() {
 
             <div className="relative min-h-[260px] sm:min-h-[340px] lg:min-h-full p-4 sm:p-6 lg:py-8 lg:pr-8 lg:pl-0">
               <div className="h-full w-full overflow-hidden rounded-2xl border border-white/10">
-                {/* eslint-disable-next-line @next/next/no-img-element -- static hero illustration; next/image SVG handling is more setup than this needs */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- static hero photo; plain <img> keeps this server component config-free */}
                 <img
-                  src="/images/demo-hero.svg"
+                  src="/images/roadwave-checkin-hero.png"
                   alt="A camper scanning a RoadWave QR code at a campground front desk"
                   className="h-full w-full object-cover"
                 />
