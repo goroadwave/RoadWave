@@ -86,6 +86,13 @@ export function FloatingTourButton() {
   // /owner/login — looking like an unintentional signup wall on
   // /owners. CampgroundRileyButton's "Take the Tour" already routes
   // correctly to /tour?audience=owner so we let it own those pages.
+  // Also hide across the whole demo experience — /demo-center and its
+  // subpages (camper / owner / guided walkthrough), plus the interactive
+  // /demo and saved-demo /demo/[slug] viewers. The demo is meant to feel
+  // clean and focused; Riley's FAB floats over the demo content and
+  // crowds the CTAs on phones. Returning null renders nothing (the FAB is
+  // position:fixed, so it never reserved layout space) — no leftover
+  // wrapper, spacer, or scroll area.
   if (
     !pathname ||
     pathname === '/tour' ||
@@ -95,6 +102,9 @@ export function FloatingTourButton() {
     pathname === '/signup' ||
     pathname === '/login' ||
     pathname === '/verify' ||
+    pathname === '/demo' ||
+    pathname.startsWith('/demo/') ||
+    pathname.startsWith('/demo-center') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/owner/login') ||
     pathname.startsWith('/owner/signup')
