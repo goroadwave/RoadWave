@@ -124,11 +124,16 @@ test.describe('Public website', () => {
     await expect(signIn).toHaveAttribute('href', '/login')
 
     // Footer legal/safety hrefs we expect to find anywhere on the
-    // homepage (they live in <SiteFooter />). Just confirm presence —
-    // navigation-correctness is covered by their own tests below.
+    // homepage (they live in <SiteFooter />). Confirm presence — the
+    // footer is responsive (multi-column on desktop, collapsible
+    // accordion groups on mobile), so on phones these links live inside
+    // a collapsed <details> and aren't visible until tapped. Assert they
+    // are attached to the DOM rather than visible so the check holds at
+    // every viewport; navigation-correctness is covered by their own
+    // tests below.
     for (const expected of ['/privacy', '/terms', '/safety', '/contact']) {
-      const link = page.locator(`a[href="${expected}"]`).first()
-      await expect(link, `footer link to ${expected}`).toBeVisible()
+      const link = page.locator(`footer a[href="${expected}"]`).first()
+      await expect(link, `footer link to ${expected}`).toBeAttached()
     }
   })
 
