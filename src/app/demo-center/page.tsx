@@ -90,7 +90,7 @@ export default function DemoCenterPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 pb-16 sm:pb-24 space-y-16 sm:space-y-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pb-8 sm:pb-12 space-y-16 sm:space-y-24">
         {/* 2 + 3. Hero panel */}
         <section className="mt-4 sm:mt-6 rounded-3xl border border-white/10 bg-card/70 shadow-xl shadow-black/20 overflow-hidden">
           <div className="grid items-stretch lg:grid-cols-2">
@@ -174,18 +174,6 @@ export default function DemoCenterPage() {
               Start with the owner view, walk through the full experience,
               or preview what campers see when they scan your campground QR
               code.
-            </p>
-          </div>
-
-          {/* Owner guidance box */}
-          <div className="mt-6 rounded-2xl border border-flame/30 bg-flame/[0.06] p-4 sm:p-5">
-            <p className="text-sm sm:text-base text-cream leading-relaxed">
-              <span aria-hidden className="mr-1">
-                🧭
-              </span>
-              Campground owner? Start with the Owner Dashboard Demo or take
-              the Guided Walkthrough — it covers everything in under 5
-              minutes.
             </p>
           </div>
 

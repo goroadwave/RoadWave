@@ -37,9 +37,9 @@ const LEGAL_LINKS: { label: string; href: string }[] = [
 
 export function SiteFooter() {
   return (
-    <footer className="mt-12 border-t border-white/10 bg-night text-cream">
-      <div className="mx-auto max-w-6xl px-4 pt-10 pb-6 sm:pt-14 sm:pb-8">
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-5">
+    <footer className="mt-10 border-t border-white/10 bg-night text-cream">
+      <div className="mx-auto max-w-6xl px-4 pt-8 pb-6 sm:pt-12 sm:pb-8">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-7 sm:grid-cols-5">
           <div className="col-span-2 sm:col-span-1 space-y-3">
             <Logo className="text-2xl" />
             <p className="text-xs text-mist leading-snug max-w-[18rem]">
@@ -54,7 +54,7 @@ export function SiteFooter() {
           <ContactColumn />
         </div>
 
-        <div className="mt-10 pt-6 border-t border-white/10">
+        <div className="mt-8 pt-6 border-t border-white/10">
           <p className="text-xs text-mist/70 text-center">
             © {new Date().getUTCFullYear()} RoadWave USA LLC. All rights reserved.
           </p>
