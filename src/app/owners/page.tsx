@@ -321,14 +321,44 @@ export default function OwnersPage() {
             <p className="text-xs text-mist leading-snug">
               No long-term contract. No hardware. No app-store setup.
             </p>
-            <p className="text-xs leading-snug pt-1">
-              <Link
-                href="/app-my-community-alternative"
-                className="text-flame underline-offset-2 hover:underline"
-              >
-                Comparing us to App My Community? See the side-by-side →
-              </Link>
+          </div>
+        </section>
+
+        {/* Helpful resources — subtle cross-links to the SEO/positioning
+            pages. Sits between the pricing block and the final CTA so a
+            prospect who is comparing options can dig deeper without
+            cluttering the main funnel. */}
+        <section className="px-4 py-8 border-t border-white/5">
+          <div className="mx-auto max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-flame text-center">
+              Helpful resources
             </p>
+            <ul className="mt-4 grid gap-2 sm:grid-cols-3 text-sm text-mist text-center">
+              <li>
+                <Link
+                  href="/app-my-community-alternative"
+                  className="hover:text-flame underline-offset-2 hover:underline"
+                >
+                  Comparing us to App My Community?
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/qr-code-app-for-campgrounds"
+                  className="hover:text-flame underline-offset-2 hover:underline"
+                >
+                  QR Code App for Campgrounds
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/campground-guest-app"
+                  className="hover:text-flame underline-offset-2 hover:underline"
+                >
+                  Campground Guest App guide
+                </Link>
+              </li>
+            </ul>
           </div>
         </section>
 

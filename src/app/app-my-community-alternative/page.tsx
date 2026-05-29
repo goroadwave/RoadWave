@@ -445,6 +445,35 @@ export default function AppMyCommunityAlternativePage() {
           </div>
         </section>
 
+        {/* Related RoadWave resources — cross-links to the other SEO
+            positioning pages. Sits before the final CTA so a curious
+            visitor can dig deeper without leaving the funnel. */}
+        <section className="px-4 py-10 border-t border-white/5">
+          <div className="mx-auto max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-flame text-center">
+              Related RoadWave resources
+            </p>
+            <ul className="mt-4 grid gap-2 sm:grid-cols-2 text-sm text-mist text-center">
+              <li>
+                <Link
+                  href="/qr-code-app-for-campgrounds"
+                  className="hover:text-flame underline-offset-2 hover:underline"
+                >
+                  QR Code App for Campgrounds →
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/campground-guest-app"
+                  className="hover:text-flame underline-offset-2 hover:underline"
+                >
+                  Campground Guest App guide →
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </section>
+
         {/* Final CTA */}
         <section className="px-4 py-16 border-t border-flame/30 bg-flame/[0.06]">
           <div className="mx-auto max-w-2xl text-center space-y-5">

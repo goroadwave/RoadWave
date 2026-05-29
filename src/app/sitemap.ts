@@ -34,8 +34,10 @@ const ENTRIES: Entry[] = [
   { path: '/owners/how-it-works', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/owners/start', priority: 0.9, changeFrequency: 'monthly' },
 
-  // SEO comparison pages
+  // SEO comparison + product-positioning pages
   { path: '/app-my-community-alternative', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/qr-code-app-for-campgrounds', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/campground-guest-app', priority: 0.8, changeFrequency: 'monthly' },
 
   // Demo
   { path: '/demo-center', priority: 0.8, changeFrequency: 'weekly' },
