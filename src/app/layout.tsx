@@ -33,6 +33,12 @@ const instrument = Instrument_Serif({
 })
 
 export const metadata: Metadata = {
+  // Ensures relative URLs in route-level metadata (og:image/twitter:image
+  // from the opengraph-image.tsx / twitter-image.tsx file conventions, plus
+  // any other relative og/twitter image paths) resolve to the canonical
+  // production domain rather than localhost in dev or the auto-detected
+  // Vercel deployment URL in prod.
+  metadataBase: new URL('https://www.getroadwave.com'),
   title: 'RoadWave',
   description: 'A private way to see campground updates, find shared interests, and say hello only when you want to.',
 }

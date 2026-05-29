@@ -75,6 +75,19 @@ The sitemap excludes auth, camper/owner authed surfaces, `/admin`, redirect stub
 | `src/app/app-my-community-alternative/page.tsx` | Added a "Related RoadWave resources" section before the final CTA linking to the two new SEO pages |
 | `docs/owner-acquisition-funnel.md` | **New** — this file |
 
+### Branded social-preview images (follow-up to Phase 2)
+
+Each of the three public SEO landing pages now ships a dynamically generated, on-brand 1200×630 Open Graph / Twitter card image. They use Next.js App Router's `opengraph-image.tsx` and `twitter-image.tsx` file conventions, so Next emits `<meta property="og:image">` and `<meta name="twitter:image">` automatically — no `page.tsx` metadata edits required.
+
+| File | Purpose |
+|---|---|
+| `src/lib/og/page-og.tsx` | Shared `renderRoadwaveOg({ headline, subtext, eyebrow? })` template (dark-navy bg, amber glow accents, RoadWave wordmark with 👋 _after_ the word, cream headline, mist subtext, amber footer rule). |
+| `src/app/app-my-community-alternative/opengraph-image.tsx` + `twitter-image.tsx` | "App My Community Alternative for Campgrounds" / "A simpler QR-powered guest app with a free 30-day pilot." |
+| `src/app/qr-code-app-for-campgrounds/opengraph-image.tsx` + `twitter-image.tsx` | "QR Code App for Campgrounds" / "Wi-Fi, maps, updates, office messages, reviews, rebooking, and camper connections." |
+| `src/app/campground-guest-app/opengraph-image.tsx` + `twitter-image.tsx` | "Campground Guest App for RV Parks" / "A simple guest communication and camper connection tool — no app download required." |
+
+Each `twitter-image.tsx` is a one-line re-export of the route's `opengraph-image.tsx`, so the artwork stays DRY across the two file conventions. The 👋 emoji renders via Twemoji (`emoji: 'twemoji'` ImageResponse option). After Vercel deploys, the live image URLs are reachable at `https://www.getroadwave.com/<route>/opengraph-image` and `/<route>/twitter-image` for paste-into-debugger verification (Facebook Sharing Debugger, LinkedIn Post Inspector, X Card Validator).
+
 ---
 
 ## Future SEO page ideas (Phase 3 candidates)
@@ -89,7 +102,7 @@ These are deliberate "what would we write next" notes, not commitments. Each wou
 - `/campground-app-without-annual-contract` — explicit month-to-month / no-annual-contract positioning.
 
 ### Phase 3 considerations
-- Add `og:image` to every SEO page (none currently — Twitter/Facebook fall back to a generic preview).
+- ~~Add `og:image` to every SEO page~~ — ✅ done for the three Phase 2 SEO pages (see "Branded social-preview images" above). Any future SEO page should add its own `opengraph-image.tsx` + `twitter-image.tsx` using the shared `renderRoadwaveOg()` helper in `src/lib/og/page-og.tsx`.
 - After 4–6 SEO pages, consider a small public `/compare` or `/resources` index so the cross-links don't depend only on per-page "Related resources" blocks.
 - Track which SEO pages convert to `/owners/start` form starts so we know which themes to expand.
 
