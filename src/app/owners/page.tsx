@@ -321,6 +321,14 @@ export default function OwnersPage() {
             <p className="text-xs text-mist leading-snug">
               No long-term contract. No hardware. No app-store setup.
             </p>
+            <p className="text-xs leading-snug pt-1">
+              <Link
+                href="/app-my-community-alternative"
+                className="text-flame underline-offset-2 hover:underline"
+              >
+                Comparing us to App My Community? See the side-by-side →
+              </Link>
+            </p>
           </div>
         </section>
 
