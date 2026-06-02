@@ -43,6 +43,34 @@ export const metadata: Metadata = {
   description: 'A private way to see campground updates, find shared interests, and say hello only when you want to.',
 }
 
+// JSON-LD Organization schema, emitted once into every page's <body>
+// (Google reads structured data from anywhere in the document). Deliberately
+// minimal and accurate:
+//   - No `logo`: RoadWave has no raster brand-mark asset — the `Logo`
+//     component is pure CSS text + emoji. Pointing at the favicon, the
+//     riley mascot, or one of the page OG cards would all be misleading.
+//   - No `sameAs`: RoadWave has no public social profiles linked from
+//     the codebase or footer.
+//   - No LocalBusiness / address / rating: RoadWave is an app, not a
+//     visitable place, and we have no real reviews to cite.
+// If/when real assets are added (brand logo, X/LinkedIn profile, etc.)
+// this is the one place to extend.
+const ORGANIZATION_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'RoadWave',
+  url: 'https://www.getroadwave.com',
+  description:
+    'RoadWave is a QR-powered guest communication and camper connection tool for campgrounds.',
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'customer service',
+    email: 'hello@getroadwave.com',
+    url: 'https://www.getroadwave.com/contact',
+    availableLanguage: ['English'],
+  },
+} as const
+
 export const viewport: Viewport = {
   themeColor: '#0a0f1c',
   width: 'device-width',
@@ -61,6 +89,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${bricolage.variable} ${dmSans.variable} ${instrument.variable} antialiased`}
     >
       <body className="bg-night text-cream font-sans">
+        {/* Organization JSON-LD for Google's Knowledge Graph. Emitted via
+            a plain <script> tag rather than next/script so it ships in
+            the initial SSR HTML (Googlebot reads the body, no JS exec). */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_SCHEMA) }}
+        />
         {/* Riley's tour + chat state lives at the root so the floating
             Riley button (mounted here) and the actual chat panels +
             tour overlays (mounted inside the (app) and owner (authed)
