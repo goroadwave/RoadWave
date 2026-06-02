@@ -15,6 +15,7 @@ export const metadata = {
   title: 'Camper Demo · RoadWave',
   description:
     'What a camper sees after scanning your campground’s RoadWave QR code: Wi-Fi, map, bulletins, meetups, weather alerts, office messages, and optional Camper Connections.',
+  alternates: { canonical: '/demo-center/camper' },
 }
 
 export default function DemoCamperPage() {

@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Terms of Service — RoadWave',
   description:
     'The rules of the road. Plain-English terms for using RoadWave.',
+  alternates: { canonical: '/terms' },
 }
 
 export default function TermsPage() {

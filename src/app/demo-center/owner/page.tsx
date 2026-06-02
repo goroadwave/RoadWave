@@ -14,6 +14,7 @@ export const metadata = {
   title: 'Owner Dashboard Demo · RoadWave',
   description:
     'Inside the RoadWave owner dashboard: bulletins, meetups, weather alerts, office messages, reviews, rebooking, and a high-level Camper Connections summary.',
+  alternates: { canonical: '/demo-center/owner' },
 }
 
 export default function DemoOwnerPage() {

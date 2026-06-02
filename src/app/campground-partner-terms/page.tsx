@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Campground Partner Terms — RoadWave',
   description:
     'The terms that govern campgrounds offering RoadWave to their guests. Conduct expectations, data-access limits, and termination conditions.',
+  alternates: { canonical: '/campground-partner-terms' },
 }
 
 export default function PartnerTermsPage() {

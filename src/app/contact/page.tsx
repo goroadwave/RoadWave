@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Contact RoadWave',
   description:
     'Three ways to reach RoadWave: hello@ for general questions, safety@ for safety / legal / urgent matters, and 911 first for emergencies.',
+  alternates: { canonical: '/contact' },
 }
 
 export default function ContactPage() {

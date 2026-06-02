@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Campground Owner Safety Overview — RoadWave',
   description:
     'A short, plain-language overview of how RoadWave protects guests and how it fits alongside your existing operations.',
+  alternates: { canonical: '/campground-safety' },
 }
 
 export default function CampgroundSafetyPage() {

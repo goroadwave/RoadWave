@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Community Rules — RoadWave',
   description:
     'How we expect every RoadWave guest to behave. Eight rules, plain English, agreed to at signup.',
+  alternates: { canonical: '/community-rules' },
 }
 
 export default function CommunityRulesPage() {

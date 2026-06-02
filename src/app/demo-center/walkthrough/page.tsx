@@ -14,6 +14,7 @@ export const metadata = {
   title: 'Guided Walkthrough · RoadWave',
   description:
     'A self-guided, step-by-step tour of RoadWave for campground owners: setup, the owner dashboard, the camper QR experience, and optional Camper Connections — all on demo data.',
+  alternates: { canonical: '/demo-center/walkthrough' },
 }
 
 export default function DemoWalkthroughPage() {

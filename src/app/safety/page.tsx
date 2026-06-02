@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Safety on RoadWave — Stay safe. Stay in control.',
   description:
     'Practical safety guidance for RoadWave users. Meet in public, control your visibility, report what feels off, and call 911 in an emergency.',
+  alternates: { canonical: '/safety' },
 }
 
 export default function SafetyPage() {

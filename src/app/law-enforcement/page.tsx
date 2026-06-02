@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Law Enforcement Request Policy — RoadWave',
   description:
     "How RoadWave handles requests from law enforcement for user data, including the emergency-disclosure exception.",
+  alternates: { canonical: '/law-enforcement' },
 }
 
 export default function LawEnforcementPage() {

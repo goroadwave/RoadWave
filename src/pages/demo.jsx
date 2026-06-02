@@ -396,8 +396,9 @@ export default function DemoPage({ campgroundName = 'Riverbend RV Park' } = {}) 
         <title>RoadWave · Demo</title>
         <meta
           name="description"
-          content="A private way to see campground updates, find shared interests, and say hello only when you want to. Interactive demo."
+          content="Try the RoadWave camper experience without signing up — scan a campground QR, check in privately, browse updates, and see how optional camper connections work."
         />
+        <link rel="canonical" href="https://www.getroadwave.com/demo" />
       </Head>
 
       <main className="min-h-screen bg-night text-cream font-sans">

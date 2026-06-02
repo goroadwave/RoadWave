@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Data Breach Response Policy — RoadWave',
   description:
     "RoadWave's written procedure for detecting, containing, and disclosing security incidents involving user data.",
+  alternates: { canonical: '/data-breach-policy' },
 }
 
 export default function DataBreachPolicyPage() {

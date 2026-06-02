@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   title: 'Account deletion — RoadWave',
   description:
     'How to delete your RoadWave account and the data we keep for compliance.',
+  alternates: { canonical: '/account-deletion' },
   robots: { index: true, follow: true },
 }
 

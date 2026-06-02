@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'How RoadWave works at your campground — RoadWave',
   description:
     'Step-by-step walkthrough of the camper experience at a RoadWave campground: scan, check in privately, see updates, connect optionally. Built for campground owners considering a pilot.',
+  alternates: { canonical: '/owners/how-it-works' },
 }
 
 // Owner-facing deep-dive on the camper experience. The /owners page

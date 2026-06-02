@@ -17,6 +17,7 @@ export const metadata = {
   title: 'RoadWave Demo Center',
   description:
     'See how RoadWave works for campers and campground owners. Camper QR experience, owner dashboard, office messages, bulletins, meetups, weather alerts, and optional Camper Connections.',
+  alternates: { canonical: '/demo-center' },
 }
 
 // Shared darker-green CTA used in the nav, hero, and closing section.

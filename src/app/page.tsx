@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { HomePhonePreview } from '@/components/home/home-phone-preview'
@@ -5,6 +6,17 @@ import { Eyebrow } from '@/components/ui/eyebrow'
 import { Logo } from '@/components/ui/logo'
 import { getPostAuthDestination } from '@/lib/auth/post-auth-destination'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+
+// Page-level SEO metadata. The root layout's metadata.title="RoadWave"
+// is replaced here with a longer, descriptive homepage title; the
+// description is also overridden so / and /demo no longer share the
+// same root-layout default snippet in SERPs.
+export const metadata: Metadata = {
+  title: 'RoadWave — A private way to connect with campers at your campground',
+  description:
+    "Scan your campground's QR code to see updates, find shared interests with other campers, and say hello — only when you want to. No app download required.",
+  alternates: { canonical: '/' },
+}
 
 // Force per-request rendering. The homepage reads the user's auth
 // state and redirects signed-in owners to /owner/dashboard via

@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: 'RoadWave for Campgrounds — A QR guest engagement hub',
   description:
     'A QR-code guest engagement hub for campgrounds — more reviews, repeat bookings, campground updates, contact the office, private stay feedback, and optional camper connection. Complements your reservation system.',
+  alternates: { canonical: '/owners' },
 }
 
 // Phase 3 owner-page rewrite. Repositions RoadWave as a QR guest

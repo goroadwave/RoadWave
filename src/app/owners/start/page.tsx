@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: 'Start Your Campground Pilot — RoadWave',
   description:
     'Set up your RoadWave QR guest hub. Short intake, then Stripe checkout. Pilot is free for 30 days. After that, Founding Campground plans start at $39/month. Cancel anytime.',
+  alternates: { canonical: '/owners/start' },
 }
 
 // /owners/start is the canonical self-serve entry to RoadWave. The

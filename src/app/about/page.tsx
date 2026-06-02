@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'About RoadWave — Help good people find each other',
   description:
     "How RoadWave started, why we built it, and what we believe about privacy and connection on the road.",
+  alternates: { canonical: '/about' },
 }
 
 export default function AboutPage() {

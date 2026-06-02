@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Privacy Policy — RoadWave',
   description:
     'How RoadWave handles your data. Plain language, no dark patterns.',
+  alternates: { canonical: '/privacy' },
 }
 
 export default function PrivacyPolicyPage() {
