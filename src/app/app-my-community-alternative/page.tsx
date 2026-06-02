@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Logo } from '@/components/ui/logo'
+import { buildBreadcrumbList } from '@/lib/seo/schema'
 
 // SEO comparison page: "App My Community Alternative for Campgrounds".
 // Content (copy, table, FAQ, JSON-LD) comes from the source HTML provided
@@ -515,6 +516,24 @@ export default function AppMyCommunityAlternativePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_LD) }}
+      />
+      {/* BreadcrumbList — RoadWave › Owners › this page. Matches the
+          breadcrumb shape we emit on the Phase 4 SEO cluster pages so
+          rich-results parsers see a consistent surface. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            buildBreadcrumbList([
+              { name: 'RoadWave', path: '/' },
+              { name: 'For Campground Owners', path: '/owners' },
+              {
+                name: 'App My Community Alternative',
+                path: '/app-my-community-alternative',
+              },
+            ])
+          ),
+        }}
       />
     </>
   )

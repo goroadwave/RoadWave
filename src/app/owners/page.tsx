@@ -325,41 +325,73 @@ export default function OwnersPage() {
           </div>
         </section>
 
-        {/* Helpful resources — subtle cross-links to the SEO/positioning
-            pages. Sits between the pricing block and the final CTA so a
-            prospect who is comparing options can dig deeper without
-            cluttering the main funnel. */}
-        <section className="px-4 py-8 border-t border-white/5">
-          <div className="mx-auto max-w-2xl">
+        {/* Resources for Campground Owners — cross-links into the SEO
+            cluster. Two categories so the section stays readable on
+            mobile and a prospect can quickly find the angle they care
+            about (guides vs. comparisons). Sits between the pricing
+            block and the final CTA. */}
+        <section className="px-4 py-10 border-t border-white/5">
+          <div className="mx-auto max-w-4xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-flame text-center">
-              Helpful resources
+              Resources for Campground Owners
             </p>
-            <ul className="mt-4 grid gap-2 sm:grid-cols-3 text-sm text-mist text-center">
-              <li>
-                <Link
-                  href="/app-my-community-alternative"
-                  className="hover:text-flame underline-offset-2 hover:underline"
-                >
-                  Comparing us to App My Community?
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/qr-code-app-for-campgrounds"
-                  className="hover:text-flame underline-offset-2 hover:underline"
-                >
-                  QR Code App for Campgrounds
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/campground-guest-app"
-                  className="hover:text-flame underline-offset-2 hover:underline"
-                >
-                  Campground Guest App guide
-                </Link>
-              </li>
-            </ul>
+            <div className="mt-6 grid gap-8 sm:grid-cols-2">
+              <div>
+                <p className="text-xs uppercase tracking-[0.16em] text-mist/70 mb-3">Guides</p>
+                <ul className="space-y-2 text-sm text-mist">
+                  <li>
+                    <Link href="/best-qr-code-app-for-campgrounds" className="hover:text-flame underline-offset-2 hover:underline">
+                      Best QR code app for campgrounds
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/campground-guest-app-without-download" className="hover:text-flame underline-offset-2 hover:underline">
+                      Campground guest app without a download
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/campground-digital-welcome-packet" className="hover:text-flame underline-offset-2 hover:underline">
+                      Digital welcome packet for campgrounds
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/campground-guest-communication-software" className="hover:text-flame underline-offset-2 hover:underline">
+                      Guest communication software for RV parks
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/campground-camper-connections" className="hover:text-flame underline-offset-2 hover:underline">
+                      Help campers connect safely
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.16em] text-mist/70 mb-3">Comparisons</p>
+                <ul className="space-y-2 text-sm text-mist">
+                  <li>
+                    <Link href="/app-my-community-alternative" className="hover:text-flame underline-offset-2 hover:underline">
+                      App My Community alternative
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/campersapp-alternative" className="hover:text-flame underline-offset-2 hover:underline">
+                      CampersAPP alternative
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/campground-app-vs-qr-guest-hub" className="hover:text-flame underline-offset-2 hover:underline">
+                      Campground app vs QR guest hub
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/roadwave-vs-facebook-groups-for-campgrounds" className="hover:text-flame underline-offset-2 hover:underline">
+                      RoadWave vs Facebook groups
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </section>
 

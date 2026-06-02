@@ -34,10 +34,19 @@ const ENTRIES: Entry[] = [
   { path: '/owners/how-it-works', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/owners/start', priority: 0.9, changeFrequency: 'monthly' },
 
-  // SEO comparison + product-positioning pages
+  // SEO comparison + product-positioning pages (Phase 2 + Phase 4)
   { path: '/app-my-community-alternative', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/qr-code-app-for-campgrounds', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/campground-guest-app', priority: 0.8, changeFrequency: 'monthly' },
+  // Phase 4 AI/SEO cluster — cornerstone + guides + comparisons
+  { path: '/best-qr-code-app-for-campgrounds', priority: 0.85, changeFrequency: 'monthly' },
+  { path: '/campground-guest-app-without-download', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/campground-digital-welcome-packet', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/campground-guest-communication-software', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/campersapp-alternative', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/campground-app-vs-qr-guest-hub', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/campground-camper-connections', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/roadwave-vs-facebook-groups-for-campgrounds', priority: 0.8, changeFrequency: 'monthly' },
 
   // Demo
   { path: '/demo-center', priority: 0.8, changeFrequency: 'weekly' },

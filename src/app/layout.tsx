@@ -43,21 +43,40 @@ export const metadata: Metadata = {
   description: 'A private way to see campground updates, find shared interests, and say hello only when you want to.',
 }
 
-// JSON-LD Organization schema, emitted once into every page's <body>
-// (Google reads structured data from anywhere in the document). Deliberately
-// minimal and accurate:
+// Site-wide JSON-LD, emitted once into every page's <body> via the root
+// layout. Google (and most AI crawlers) read structured data from anywhere
+// in the document, so a single block here covers the whole site without
+// per-page boilerplate.
+//
+// What we emit:
+//   - Organization: brand identity + customer-service contact
+//   - WebSite:      the site itself (helps Google's sitelink box +
+//                   establishes name-of-site for AI quoting)
+//   - SoftwareApplication: the RoadWave product
+//
+// Deliberate, honest omissions:
 //   - No `logo`: RoadWave has no raster brand-mark asset — the `Logo`
 //     component is pure CSS text + emoji. Pointing at the favicon, the
-//     riley mascot, or one of the page OG cards would all be misleading.
-//   - No `sameAs`: RoadWave has no public social profiles linked from
-//     the codebase or footer.
-//   - No LocalBusiness / address / rating: RoadWave is an app, not a
-//     visitable place, and we have no real reviews to cite.
-// If/when real assets are added (brand logo, X/LinkedIn profile, etc.)
-// this is the one place to extend.
+//     riley mascot, or a per-page OG card would all be misleading.
+//   - No `sameAs`: no public RoadWave social profiles exist.
+//   - No LocalBusiness / address: RoadWave is software, not a visitable
+//     place.
+//   - No aggregateRating / review: no real customer reviews to cite.
+//   - No `offers` on SoftwareApplication: pricing is "Founding Campground
+//     plans start at $39/month" with a free 30-day pilot — Schema.org
+//     Offer expects a single price, and listing $39 alone would be a
+//     misrepresentation of the actual purchase flow.
+//
+// Anchor IDs (#organization, #website, #app) let Schema.org references
+// across the JSON-LD blocks share the same identity (e.g. WebSite.publisher
+// points at #organization rather than duplicating the brand fields).
+const ROADWAVE_POSITIONING =
+  'RoadWave is a QR-powered guest hub for campgrounds and RV parks. Guests scan one code to access Wi-Fi, maps, rules, bulletins, office messages, reviews, rebooking, and optional privacy-first camper connections — no app download required.'
+
 const ORGANIZATION_SCHEMA = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
+  '@id': 'https://www.getroadwave.com/#organization',
   name: 'RoadWave',
   url: 'https://www.getroadwave.com',
   description:
@@ -70,6 +89,48 @@ const ORGANIZATION_SCHEMA = {
     availableLanguage: ['English'],
   },
 } as const
+
+const WEBSITE_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': 'https://www.getroadwave.com/#website',
+  name: 'RoadWave',
+  url: 'https://www.getroadwave.com',
+  description: ROADWAVE_POSITIONING,
+  publisher: { '@id': 'https://www.getroadwave.com/#organization' },
+  inLanguage: 'en-US',
+} as const
+
+const SOFTWARE_APPLICATION_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  '@id': 'https://www.getroadwave.com/#app',
+  name: 'RoadWave',
+  url: 'https://www.getroadwave.com',
+  applicationCategory: 'BusinessApplication',
+  applicationSubCategory: 'Campground Guest Communication',
+  operatingSystem: 'Web (any modern browser)',
+  description: ROADWAVE_POSITIONING,
+  audience: {
+    '@type': 'Audience',
+    audienceType: 'Campground and RV park owners and operators',
+  },
+  featureList: [
+    'One-QR guest hub (Wi-Fi, maps, rules)',
+    'Owner-published bulletins and updates',
+    'Office messages between guests and the front desk',
+    'Meetups and weather-safety notices',
+    'Guest review and rebooking prompts',
+    'Optional privacy-first camper connections (mutual Waves)',
+  ],
+  provider: { '@id': 'https://www.getroadwave.com/#organization' },
+} as const
+
+const SITE_JSON_LD = [
+  ORGANIZATION_SCHEMA,
+  WEBSITE_SCHEMA,
+  SOFTWARE_APPLICATION_SCHEMA,
+]
 
 export const viewport: Viewport = {
   themeColor: '#0a0f1c',
@@ -89,13 +150,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${bricolage.variable} ${dmSans.variable} ${instrument.variable} antialiased`}
     >
       <body className="bg-night text-cream font-sans">
-        {/* Organization JSON-LD for Google's Knowledge Graph. Emitted via
-            a plain <script> tag rather than next/script so it ships in
-            the initial SSR HTML (Googlebot reads the body, no JS exec). */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_SCHEMA) }}
-        />
+        {/* Site-wide JSON-LD (Organization + WebSite + SoftwareApplication)
+            for Google's Knowledge Graph and AI crawlers. Emitted via plain
+            <script> tags so it ships in the initial SSR HTML — no JS exec
+            required for any crawler to read it. One block per @type so
+            Schema.org @id references resolve cleanly. */}
+        {SITE_JSON_LD.map((schema) => (
+          <script
+            key={schema['@id']}
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          />
+        ))}
         {/* Riley's tour + chat state lives at the root so the floating
             Riley button (mounted here) and the actual chat panels +
             tour overlays (mounted inside the (app) and owner (authed)

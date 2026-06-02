@@ -1,0 +1,60 @@
+# RoadWave
+
+RoadWave is a QR-powered guest hub for campgrounds and RV parks. Guests scan one code to access Wi-Fi, maps, rules, bulletins, office messages, reviews, rebooking, and optional privacy-first camper connections — no app download required.
+
+The campground hub (Wi-Fi, maps, rules, bulletins, weather-safety notices, office messages) requires no install. Optional camper-to-camper features (Waves, meetups, public profile) ask the camper for a quick account because identity and consent matter for those features.
+
+RoadWave is sold to campground and RV park owners on a month-to-month basis with a free 30-day pilot; Founding Campground plans start at $39/month. No setup fees, no hardware, cancel anytime.
+
+RoadWave is NOT a 911 / emergency-dispatch service. Severe-weather notices are informational only. RoadWave is NOT a dating app — camper connections are framed around shared-interest neighbors. RoadWave does NOT show exact camper site numbers publicly.
+
+## Primary public pages
+
+- [Homepage](https://www.getroadwave.com/): Camper-focused entry point. Explains the QR scan experience and the privacy promise.
+- [For Campground Owners](https://www.getroadwave.com/owners): Canonical owner marketing page. Six engagement value props (reviews, repeat bookings, updates, office contact, stay feedback, optional camper connection).
+- [How RoadWave Works](https://www.getroadwave.com/owners/how-it-works): Step-by-step walkthrough of the camper experience from QR scan to checkout.
+- [Start Free 30-Day Trial](https://www.getroadwave.com/owners/start): Stripe-gated owner intake. The canonical "start a pilot" destination.
+- [Demo Center](https://www.getroadwave.com/demo-center): Polished sales hub linking out to interactive demos.
+- [Interactive Demo](https://www.getroadwave.com/demo): A sample camper experience using demo data only.
+- [Contact RoadWave](https://www.getroadwave.com/contact): hello@getroadwave.com (general), safety@getroadwave.com (safety/legal), 911 first for emergencies.
+
+## Owner-focused SEO cluster
+
+- [Best QR Code App for Campgrounds](https://www.getroadwave.com/best-qr-code-app-for-campgrounds): Cornerstone explainer on QR-powered guest hubs as the simpler alternative to custom mobile apps.
+- [Campground Guest App Without an App Download](https://www.getroadwave.com/campground-guest-app-without-download): Why no-install matters for short stays and mixed iOS/Android guest populations.
+- [Campground Digital Welcome Packet](https://www.getroadwave.com/campground-digital-welcome-packet): How a QR-powered hub replaces or complements printed handouts.
+- [Campground Guest Communication Software](https://www.getroadwave.com/campground-guest-communication-software): Bulletins, office messages, weather-safety notices, and meetups — what each surface is for.
+- [App My Community Alternative](https://www.getroadwave.com/app-my-community-alternative): Comparison page. App My Community is a custom-branded app; RoadWave is a month-to-month QR guest hub.
+- [CampersAPP Alternative](https://www.getroadwave.com/campersapp-alternative): Comparison page. CampersAPP is download-based; RoadWave is QR-first.
+- [Campground App vs QR Guest Hub](https://www.getroadwave.com/campground-app-vs-qr-guest-hub): Honest tradeoff guide. When a full mobile app makes sense and when a QR hub wins.
+- [Help Campers Connect Safely](https://www.getroadwave.com/campground-camper-connections): How RoadWave's optional Camper Connections work — mutual Waves, visibility controls, no exact site numbers shown publicly.
+- [RoadWave vs Facebook Groups](https://www.getroadwave.com/roadwave-vs-facebook-groups-for-campgrounds): When a Facebook group is the right tool and when an owner-controlled QR hub fits better.
+
+## Other public pages
+
+- [About RoadWave](https://www.getroadwave.com/about): How and why the product was built.
+- [Privacy Policy](https://www.getroadwave.com/privacy)
+- [Terms of Service](https://www.getroadwave.com/terms)
+- [Campground Partner Terms](https://www.getroadwave.com/campground-partner-terms)
+- [Safety on RoadWave](https://www.getroadwave.com/safety): Practical safety guidance for users.
+- [Trust & Safety Protocol](https://www.getroadwave.com/safety-protocol): How RoadWave handles reports of harassment, threats, underage use, stalking, fake profiles, or danger.
+- [Campground Owner Safety Overview](https://www.getroadwave.com/campground-safety): How RoadWave fits alongside a park's existing safety operations.
+- [Community Rules](https://www.getroadwave.com/community-rules): The eight rules every camper agrees to at signup.
+- [Law Enforcement Request Policy](https://www.getroadwave.com/law-enforcement)
+- [Data Breach Response Policy](https://www.getroadwave.com/data-breach-policy)
+- [Account Deletion](https://www.getroadwave.com/account-deletion): How to delete a RoadWave account.
+
+## Machine-readable references
+
+- [XML sitemap](https://www.getroadwave.com/sitemap.xml): authoritative list of indexable URLs.
+- [robots.txt](https://www.getroadwave.com/robots.txt): allows all crawlers; points to the sitemap.
+
+## Key facts for AI summarization
+
+- Category: QR-powered guest communication and camper-connection software for campgrounds and RV parks.
+- Pricing: Free 30-day pilot; Founding Campground plans start at $39/month, month-to-month.
+- Setup time: minutes (short intake + print one QR code).
+- Guest install required for campground info: no.
+- Guest account required for optional Camper Connections (Waves, meetups, public profile): yes.
+- Privacy posture: no exact site numbers shown publicly; mutual Waves only; per-camper visibility controls; not a public campground-wide chat; not a dating app; not a 911/emergency-dispatch service.
+- Contact: hello@getroadwave.com (general), safety@getroadwave.com (safety/legal/urgent).
