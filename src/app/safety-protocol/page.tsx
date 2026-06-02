@@ -7,8 +7,10 @@ export const metadata: Metadata = {
   title: 'Trust & Safety Protocol — RoadWave',
   description:
     "How RoadWave handles reports of harassment, threats, underage use, stalking, fake profiles, or danger. Reports are reviewed as part of RoadWave's trust and safety process.",
-  // Reachable by direct URL (linked from /safety) but not promoted in nav.
-  robots: { index: false, follow: false },
+  // Public trust & safety policy. Linked from the global footer plus
+  // /safety, /campground-safety, /community-rules, /contact, and
+  // /data-breach-policy — and listed in sitemap.ts. Indexable.
+  alternates: { canonical: 'https://www.getroadwave.com/safety-protocol' },
 }
 
 export default function SafetyProtocolPage() {
