@@ -1,0 +1,84 @@
+name: cleanup-demo-accounts
+
+# Scheduled hygiene job: sweeps expired throwaway demo/test auth accounts
+# (demo-camper-N@example.com, quickcheckin-<random>@example.com) so they
+# don't accumulate unbounded the way they did for 72 days before this job
+# existed (1,306 accounts had piled up — see README.md "Maintenance"
+# section for the full incident).
+#
+# Safety, enforced in scripts/cleanup-expired-demo-accounts.mjs itself (not
+# just this workflow):
+#   - only ever matches the two known throwaway email patterns on
+#     @example.com, a domain no real person can hold
+#   - only deletes accounts older than 48h, so a check-in from a
+#     concurrently-running smoke test is never touched
+#   - aborts without deleting anything if the eligible count is
+#     anomalously large (circuit breaker)
+#   - exports a CSV audit of every account before deleting it
+#
+# Triggers:
+#   schedule          — weekly, Sunday 06:00 UTC. Accumulation is slow
+#                        (~2-4 throwaway accounts/day from the daily smoke
+#                        test), so weekly is frequent enough to prevent
+#                        buildup without adding daily noise.
+#   workflow_dispatch — manual run. `dry_run` defaults to true so a manual
+#                        trigger previews what WOULD be deleted unless you
+#                        explicitly opt into deleting.
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run only (true) or actually delete (false)"
+        required: false
+        default: "true"
+  schedule:
+    - cron: "0 6 * * 0"
+
+concurrency:
+  group: cleanup-demo-accounts
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out HEAD
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Scheduled runs always apply. Manual (workflow_dispatch) runs default
+      # to dry-run and only delete when explicitly told not to.
+      - name: Run cleanup (dry-run)
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/cleanup-expired-demo-accounts.mjs
+
+      - name: Run cleanup (apply)
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run != 'true')
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/cleanup-expired-demo-accounts.mjs --apply
+
+      - name: Upload cleanup audit CSV
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cleanup-audit-${{ github.run_id }}
+          path: cleanup-audit-*.csv
+          if-no-files-found: ignore
+          retention-days: 90

@@ -18,6 +18,7 @@
 import path from 'node:path'
 import dotenv from 'dotenv'
 import { createClient } from '@supabase/supabase-js'
+import { CLEANUP_EMAIL_RE } from './lib/demo-account-patterns.mjs'
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 
@@ -30,8 +31,6 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 const APPLY = process.argv.includes('--apply')
 const DEMO_SLUG = 'roadwave-demo-campground'
-const CAMPER_EMAIL_RE =
-  /^(demo-camper-\d+|quickcheckin-[a-z0-9]+)@example\.com$/i
 
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -99,7 +98,7 @@ const perPage = 200
 for (;;) {
   const data = await listUsersPage(page, perPage)
   for (const u of data?.users ?? []) {
-    if (u.email && CAMPER_EMAIL_RE.test(u.email)) camperIds.push(u.id)
+    if (u.email && CLEANUP_EMAIL_RE.test(u.email)) camperIds.push(u.id)
   }
   if (!data?.users || data.users.length < perPage) break
   page += 1

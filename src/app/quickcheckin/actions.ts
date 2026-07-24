@@ -102,6 +102,17 @@ async function findUserByEmail(
   }
 }
 
+// Structured (JSON) log lines for the retry path specifically, distinct
+// from the ad-hoc console.error calls elsewhere in this file — these are
+// meant to be grepped/aggregated (Vercel log search, a log drain, etc.) to
+// answer "how often does createUser actually need to retry" rather than
+// just read by a human debugging one incident.
+function logRetryEvent(event: string, fields: Record<string, unknown>) {
+  console.warn(
+    JSON.stringify({ ts: new Date().toISOString(), scope: 'quickcheckin.createUser', event, ...fields }),
+  )
+}
+
 // Supabase Auth occasionally errors transiently on createUser (seen in CI
 // 2026-07-24: a Mobile Safari smoke-test run hit it, but the failure is
 // server-side and browser-agnostic — any client could have hit the same
@@ -123,16 +134,24 @@ async function createDemoUserWithRetry(
       email_confirm: true,
       user_metadata: metadata,
     })
-    if (!error && data?.user) return { user: data.user, error: null }
+    if (!error && data?.user) {
+      if (attempt > 1) logRetryEvent('retry_succeeded', { attempt, maxAttempts: MAX_ATTEMPTS })
+      return { user: data.user, error: null }
+    }
     lastError = error
+    logRetryEvent('attempt_failed', { attempt, maxAttempts: MAX_ATTEMPTS, error: error?.message ?? 'unknown' })
     if (isDuplicateEmailError(error)) {
       const existing = await findUserByEmail(admin, email)
-      if (existing) return { user: existing, error: null }
+      if (existing) {
+        logRetryEvent('recovered_via_duplicate_lookup', { attempt })
+        return { user: existing, error: null }
+      }
     }
     if (attempt < MAX_ATTEMPTS) {
       await new Promise((resolve) => setTimeout(resolve, attempt * 400))
     }
   }
+  logRetryEvent('exhausted', { maxAttempts: MAX_ATTEMPTS, error: lastError?.message ?? 'unknown' })
   return { user: null, error: lastError }
 }
 
