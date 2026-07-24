@@ -76,15 +76,28 @@ for (const table of ['bulletins', 'meetups', 'check_ins', 'campground_events']) 
 // Enumerate the throwaway auth users we'd delete by walking listUsers and
 // matching either the seeded demo-camper-N@example.com pattern or the
 // quickcheckin-<random>@example.com pattern from the QR check-in smoke test.
+//
+// listUsers has shown transient "invalid JWT / unrecognized kid" errors on
+// Supabase's side (same class of error that caused the createUser failure
+// this cleanup exists to work around). Retry each page a few times before
+// giving up -- silently breaking the loop on the first error would
+// undercount and leave this script's own --apply run incomplete.
+async function listUsersPage(page, perPage) {
+  const MAX_ATTEMPTS = 5
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
+    if (!error) return data
+    console.warn(`  listUsers page ${page} attempt ${attempt} failed: ${error.message}`)
+    if (attempt < MAX_ATTEMPTS) await new Promise((r) => setTimeout(r, attempt * 500))
+    else throw new Error(`listUsers page ${page} failed after ${MAX_ATTEMPTS} attempts: ${error.message}`)
+  }
+}
+
 const camperIds = []
 let page = 1
 const perPage = 200
 for (;;) {
-  const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
-  if (error) {
-    console.error('listUsers:', error.message)
-    break
-  }
+  const data = await listUsersPage(page, perPage)
   for (const u of data?.users ?? []) {
     if (u.email && CAMPER_EMAIL_RE.test(u.email)) camperIds.push(u.id)
   }
@@ -105,11 +118,30 @@ await admin.from('meetups').delete().eq('campground_id', cg.id)
 await admin.from('check_ins').delete().eq('campground_id', cg.id)
 console.log('  cleared bulletins / meetups / check_ins / events')
 
+let deletedCount = 0
+const failedIds = []
 for (const uid of camperIds) {
-  const { error } = await admin.auth.admin.deleteUser(uid)
-  if (error) console.warn(`  delete user ${uid}: ${error.message}`)
+  let lastError = null
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const { error } = await admin.auth.admin.deleteUser(uid)
+    if (!error) {
+      lastError = null
+      break
+    }
+    lastError = error
+    if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 400))
+  }
+  if (lastError) {
+    console.warn(`  delete user ${uid} failed after retries: ${lastError.message}`)
+    failedIds.push(uid)
+  } else {
+    deletedCount++
+  }
 }
-console.log(`  deleted ${camperIds.length} demo camper auth users`)
+console.log(`  deleted ${deletedCount} of ${camperIds.length} demo camper auth users`)
+if (failedIds.length > 0) {
+  console.log(`  FAILED to delete ${failedIds.length} account(s): ${failedIds.join(', ')}`)
+}
 
 console.log('\n=== Counts AFTER reset')
 for (const table of ['bulletins', 'meetups', 'check_ins', 'campground_events']) {
