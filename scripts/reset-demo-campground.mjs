@@ -3,6 +3,8 @@
 // Resets the per-run activity on the RoadWave Demo Campground:
 //   - clears bulletins / meetups / check_ins / campground_events
 //   - deletes the 6 demo camper auth users (demo-camper-N@example.com)
+//   - deletes throwaway quickcheckin-<random>@example.com auth users
+//     created by the tests/smoke.test.js QR check-in flow (one per CI run)
 //
 // Keeps the campground row, the QR token, and the demo owner auth user
 // intact so re-seeding is fast and the QR URL stays stable.
@@ -28,7 +30,8 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 const APPLY = process.argv.includes('--apply')
 const DEMO_SLUG = 'roadwave-demo-campground'
-const CAMPER_EMAIL_RE = /^demo-camper-\d+@example\.com$/
+const CAMPER_EMAIL_RE =
+  /^(demo-camper-\d+|quickcheckin-[a-z0-9]+)@example\.com$/i
 
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -70,8 +73,9 @@ for (const table of ['bulletins', 'meetups', 'check_ins', 'campground_events']) 
   console.log(`  ${table.padEnd(20)}: ${count ?? 0}`)
 }
 
-// Enumerate the demo campers we'd delete by walking listUsers and
-// matching the demo-camper-N@example.com pattern.
+// Enumerate the throwaway auth users we'd delete by walking listUsers and
+// matching either the seeded demo-camper-N@example.com pattern or the
+// quickcheckin-<random>@example.com pattern from the QR check-in smoke test.
 const camperIds = []
 let page = 1
 const perPage = 200

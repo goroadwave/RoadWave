@@ -68,6 +68,74 @@ function makeUsername(userId: string): string {
   return `rv_${tail}`
 }
 
+type AdminClient = ReturnType<typeof createSupabaseAdminClient>
+type AdminUser = Awaited<
+  ReturnType<AdminClient['auth']['admin']['createUser']>
+>['data']['user']
+
+// Supabase returns this shape when createUser collides with an email that
+// already exists — the only way that happens here (email is a fresh
+// crypto.randomUUID per call) is if a PRIOR attempt in the same retry loop
+// actually succeeded server-side but its response was lost to the same
+// transient error we're retrying past.
+function isDuplicateEmailError(
+  error: { message?: string; code?: string } | null | undefined,
+): boolean {
+  if (!error) return false
+  if (error.code === 'email_exists') return true
+  return /already.*registered|already exists/i.test(error.message ?? '')
+}
+
+async function findUserByEmail(
+  admin: AdminClient,
+  email: string,
+): Promise<AdminUser | null> {
+  let page = 1
+  const perPage = 200
+  for (;;) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
+    if (error || !data?.users?.length) return null
+    const match = data.users.find((u) => u.email === email)
+    if (match) return match
+    if (data.users.length < perPage) return null
+    page += 1
+  }
+}
+
+// Supabase Auth occasionally errors transiently on createUser (seen in CI
+// 2026-07-24: a Mobile Safari smoke-test run hit it, but the failure is
+// server-side and browser-agnostic — any client could have hit the same
+// blip). Retries a few times with backoff; if a retry comes back
+// "duplicate email" it means an earlier attempt actually landed, so we
+// recover that user instead of erroring out a real camper's check-in.
+async function createDemoUserWithRetry(
+  admin: AdminClient,
+  email: string,
+  password: string,
+  metadata: Record<string, string>,
+): Promise<{ user: AdminUser | null; error: { message: string } | null }> {
+  const MAX_ATTEMPTS = 3
+  let lastError: { message: string } | null = null
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: metadata,
+    })
+    if (!error && data?.user) return { user: data.user, error: null }
+    lastError = error
+    if (isDuplicateEmailError(error)) {
+      const existing = await findUserByEmail(admin, email)
+      if (existing) return { user: existing, error: null }
+    }
+    if (attempt < MAX_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 400))
+    }
+  }
+  return { user: null, error: lastError }
+}
+
 /**
  * Public, no-signup check-in for allow-listed test campgrounds.
  *
@@ -151,24 +219,20 @@ export async function quickCheckInAction(
   // ── 3. Provision throwaway auth user ────────────────────────────────
   const email = makeDemoEmail()
   const password = makeRandomPassword()
-  const { data: created, error: createError } =
-    await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        signup_source: 'quickcheckin',
-        campground_slug: slug,
-      },
-    })
-  if (createError || !created?.user) {
+  const { user: created, error: createError } = await createDemoUserWithRetry(
+    admin,
+    email,
+    password,
+    { signup_source: 'quickcheckin', campground_slug: slug },
+  )
+  if (createError || !created) {
     console.error(
-      '[quickcheckin] createUser failed:',
+      '[quickcheckin] createUser failed after retries:',
       createError?.message ?? 'unknown',
     )
     return { error: "We couldn't set up your demo check-in. Try again." }
   }
-  const userId = created.user.id
+  const userId = created.id
 
   // ── 4. Update profile row created by handle_new_user trigger ───────
   //
