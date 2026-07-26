@@ -47,12 +47,35 @@ import { CLEANUP_EMAIL_RE } from './lib/demo-account-patterns.mjs'
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+// .trim() defends against the single most common way this fails in CI: a
+// secret pasted into GitHub's UI with a trailing newline/whitespace
+// character, which makes a raw URL fail fetch() outright (a generic
+// "TypeError: fetch failed" with no HTTP-level detail at all, since the
+// request never actually goes out) rather than a clean Supabase auth error.
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error('Missing Supabase admin creds (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)')
   process.exit(1)
 }
+
+// Diagnostic only -- reveals shape (length, whitespace, valid-URL-ness),
+// never the actual value, so this is safe to log even in a public CI run.
+const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+const rawKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+console.log(JSON.stringify({
+  event: 'cleanup.env_shape_check',
+  url: {
+    length: rawUrl.length,
+    hadWhitespaceTrimmed: rawUrl.length !== SUPABASE_URL.length,
+    looksLikeValidSupabaseUrl: /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(SUPABASE_URL),
+  },
+  serviceRoleKey: {
+    length: rawKey.length,
+    hadWhitespaceTrimmed: rawKey.length !== SUPABASE_SERVICE_ROLE_KEY.length,
+    looksLikeJwt: SUPABASE_SERVICE_ROLE_KEY.split('.').length === 3,
+  },
+}))
 
 const APPLY = process.argv.includes('--apply')
 const DEMO_SLUG = 'roadwave-demo-campground'
