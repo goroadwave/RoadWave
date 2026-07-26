@@ -128,12 +128,19 @@ log('cleanup.started', {
 
 // Safety guard 2: re-verify campground identity, exactly like
 // reset-demo-campground.mjs, before touching anything.
-const { data: cg } = await admin
+const { data: cg, error: cgError } = await admin
   .from('campgrounds')
   .select('id, name, slug')
   .eq('slug', DEMO_SLUG)
   .maybeSingle()
 
+if (cgError) {
+  // Surfaced separately from "not found" -- a real Supabase error here
+  // (auth/permissions/network) looks identical to "no such campground" if
+  // silently discarded, and the two have very different fixes.
+  log('cleanup.aborted', { reason: 'demo campground identity check errored', error: cgError.message, code: cgError.code })
+  process.exit(1)
+}
 if (!cg || cg.name !== 'RoadWave Demo Campground') {
   log('cleanup.aborted', { reason: 'demo campground identity check failed', found: cg ?? null })
   process.exit(1)
